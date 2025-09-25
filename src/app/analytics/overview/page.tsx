@@ -164,14 +164,6 @@ export default function AnalyticsOverview() {
                     <i className="bi bi-person-circle me-1"></i>
                     Saket
                   </Link>
-                  <button 
-                    className="btn btn-outline-secondary btn-sm"
-                    onClick={fetchOverviewData}
-                    disabled={loading}
-                  >
-                    <i className="bi bi-arrow-clockwise me-1"></i>
-                    Refresh
-                  </button>
                 </div>
               </div>
             </div>

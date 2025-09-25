@@ -450,7 +450,7 @@ export default function Home() {
           <div className="d-flex justify-content-between align-items-center mb-4">
             <h1 className="h3 mb-0">
               <i className="bi bi-house-door me-2"></i>
-              Dashboard - {getUserDisplayName()}
+              Dashboard
             </h1>
             <div className="d-flex gap-2">
               {/* User Selector Dropdown */}
@@ -495,14 +495,6 @@ export default function Home() {
                   </li>
                 </ul>
               </div>
-              <button 
-                className="btn btn-outline-secondary btn-sm"
-                onClick={() => fetchDashboardData(selectedUser)}
-                disabled={loading}
-              >
-                <i className="bi bi-arrow-clockwise me-1"></i>
-                Refresh
-              </button>
             </div>
           </div>
           

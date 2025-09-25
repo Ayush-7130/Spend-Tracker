@@ -214,14 +214,6 @@ export default function UserAnalyticsPage() {
                   <i className="bi bi-person-circle me-2"></i>
                   {userName === 'saket' ? 'Ayush' : 'Saket'}
                 </Link>
-                <button 
-                  className="btn btn-outline-secondary"
-                  onClick={fetchUserData}
-                  disabled={loading}
-                >
-                  <i className="bi bi-arrow-clockwise me-2"></i>
-                  Refresh
-                </button>
               </div>
             </div>
           </div>

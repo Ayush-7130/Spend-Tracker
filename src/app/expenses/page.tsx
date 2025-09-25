@@ -392,22 +392,44 @@ function ExpensesContent() {
                   </select>
                 </div>
                 <div className="col-md-2">
-                  <input
-                    type="date"
-                    className="form-control"
-                    placeholder="Start Date"
-                    value={filters.startDate}
-                    onChange={(e) => handleFilterChange('startDate', e.target.value)}
-                  />
+                  <div className="position-relative">
+                    <input
+                      type="date"
+                      id="startDate"
+                      className="form-control"
+                      value={filters.startDate}
+                      onChange={(e) => handleFilterChange('startDate', e.target.value)}
+                      style={!filters.startDate ? { color: 'transparent' } : {}}
+                    />
+                    {!filters.startDate && (
+                      <span 
+                        className="position-absolute top-50 start-0 translate-middle-y ms-3 text-muted"
+                        style={{ pointerEvents: 'none', fontSize: '14px' }}
+                      >
+                        Start Date
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <div className="col-md-2">
-                  <input
-                    type="date"
-                    className="form-control"
-                    placeholder="End Date"
-                    value={filters.endDate}
-                    onChange={(e) => handleFilterChange('endDate', e.target.value)}
-                  />
+                  <div className="position-relative">
+                    <input
+                      type="date"
+                      id="endDate"
+                      className="form-control"
+                      value={filters.endDate}
+                      onChange={(e) => handleFilterChange('endDate', e.target.value)}
+                      style={!filters.endDate ? { color: 'transparent' } : {}}
+                    />
+                    {!filters.endDate && (
+                      <span 
+                        className="position-absolute top-50 start-0 translate-middle-y ms-3 text-muted"
+                        style={{ pointerEvents: 'none', fontSize: '14px' }}
+                      >
+                        End Date
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <div className="col-md-1">
                   <button

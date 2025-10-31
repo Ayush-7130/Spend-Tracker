@@ -300,7 +300,7 @@ export default function AnalyticsOverview() {
           <div className="row">
             {/* Top Categories */}
             <div className="col-lg-4 mb-4">
-              <div className="card h-100 hp-100">
+              <div className="card h-100">
                 <div className="card-header">
                   <h5 className="mb-0">
                     <i className="bi bi-bar-chart me-2"></i>

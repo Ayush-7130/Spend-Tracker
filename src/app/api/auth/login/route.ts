@@ -75,8 +75,37 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Login error:', error);
+    
+    // Handle specific MongoDB connection errors
+    if (error instanceof Error) {
+      const errorMessage = error.message;
+      
+      // Check for MongoDB connection timeout errors
+      if (errorMessage.includes('ETIMEDOUT') || errorMessage.includes('MongoServerSelectionError')) {
+        return NextResponse.json(
+          { 
+            success: false, 
+            error: 'Database connection failed. Please check your internet connection and try again.' 
+          },
+          { status: 503 } // Service Unavailable
+        );
+      }
+      
+      // Check for MongoDB network errors
+      if (errorMessage.includes('MongoNetworkError') || errorMessage.includes('connect ECONNREFUSED')) {
+        return NextResponse.json(
+          { 
+            success: false, 
+            error: 'Unable to connect to the database. The service may be temporarily unavailable.' 
+          },
+          { status: 503 }
+        );
+      }
+    }
+    
+    // Generic error response
     return NextResponse.json(
-      { success: false, error: 'Login failed' },
+      { success: false, error: 'An error occurred during login. Please try again later.' },
       { status: 500 }
     );
   }

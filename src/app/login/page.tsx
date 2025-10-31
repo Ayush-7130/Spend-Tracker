@@ -16,7 +16,6 @@ export default function LoginPage() {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<{[key: string]: string}>({});
-  const [showPassword, setShowPassword] = useState(false);
 
   // Redirect if already authenticated
   useEffect(() => {
@@ -24,19 +23,6 @@ export default function LoginPage() {
       window.location.href = '/';
     }
   }, [isAuthenticated, loading]);
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value, type, checked } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value
-    }));
-    
-    // Clear error when user starts typing
-    if (errors[name]) {
-      setErrors(prev => ({ ...prev, [name]: '' }));
-    }
-  };
 
   const validateForm = () => {
     const newErrors: {[key: string]: string} = {};
@@ -127,11 +113,12 @@ export default function LoginPage() {
                       disabled={isSubmitting}
                       error={errors.email}
                       required
+                      autoComplete="email"
                     />
 
                     <InputField
                       label="Password"
-                      type={showPassword ? "text" : "password"}
+                      type="password"
                       id="password"
                       value={formData.password}
                       onChange={(value) => setFormData({ ...formData, password: value as string })}
@@ -139,6 +126,7 @@ export default function LoginPage() {
                       disabled={isSubmitting}
                       error={errors.password}
                       required
+                      autoComplete="current-password"
                     />
 
                     <CheckboxField

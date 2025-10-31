@@ -113,7 +113,8 @@ function ExpensesContent() {
     sortOrder: filters.sortOrder,
   };
 
-  const { handleSort, getSortIcon } = createSortHandler(
+  // Sort handlers - currently not used but kept for future implementation
+  const { handleSort: _handleSort, getSortIcon: _getSortIcon } = createSortHandler(
     sortConfig,
     (config) => {
       setFilters((prev) => ({
@@ -169,7 +170,8 @@ function ExpensesContent() {
     setPagination((prev) => ({ ...prev, page: 1 }));
   };
 
-  const handleSelectExpense = (expenseId: string) => {
+  // Selection handlers - currently not used but kept for future implementation
+  const _handleSelectExpense = (expenseId: string) => {
     setSelectedExpenses((prev) =>
       prev.includes(expenseId)
         ? prev.filter((id) => id !== expenseId)
@@ -177,7 +179,7 @@ function ExpensesContent() {
     );
   };
 
-  const handleSelectAll = () => {
+  const _handleSelectAll = () => {
     setSelectedExpenses(
       selectedExpenses.length === expenses.length
         ? []
@@ -604,7 +606,7 @@ function ExpensesContent() {
                               {
                                 label: "Delete Selected",
                                 icon: "bi-trash",
-                                onClick: (selectedRows) => handleBulkDelete(),
+                                onClick: () => handleBulkDelete(),
                                 variant: "danger",
                                 requiresSelection: true,
                               },
@@ -759,7 +761,7 @@ function ExpensesContent() {
                     );
                     return (
                       selectedCategory?.subcategories?.map(
-                        (subcategory: Subcategory, index: number) => ({
+                        (subcategory: Subcategory) => ({
                           label: subcategory.name,
                           value: subcategory.name,
                         })
@@ -867,7 +869,7 @@ function ExpensesContent() {
                     parseFloat(newExpense.ayushAmount || "0") -
                     parseFloat(newExpense.amount || "0")
                 ) > 0.01 && (
-                  <span className="text-danger"> - Amounts don't match!</span>
+                  <span className="text-danger"> - Amounts don&apos;t match!</span>
                 )}
               </small>
             </FormGroup>

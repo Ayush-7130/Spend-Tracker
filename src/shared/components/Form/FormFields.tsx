@@ -36,7 +36,45 @@ export const InputField: React.FC<InputFieldProps & {
   variant = 'default',
   id,
 }) => {
+  const [showPassword, setShowPassword] = React.useState(false);
+  const inputRef = React.useRef<HTMLInputElement>(null);
+  const isPassword = type === 'password';
+  const inputType = isPassword ? (showPassword ? 'text' : 'password') : type;
+  
   const fieldClasses = `form-control ${fieldSizeClasses[size]} ${fieldVariantClasses[variant]} ${className}`.trim();
+  
+  // Handle autofill detection and sync with React state
+  React.useEffect(() => {
+    const input = inputRef.current;
+    if (!input) return;
+    
+    // Check for autofilled values after a short delay
+    const timer = setTimeout(() => {
+      if (input.value && input.value !== value) {
+        const newValue = type === 'number' ? 
+          (input.value ? parseFloat(input.value) : '') : 
+          input.value;
+        onChange(newValue);
+      }
+    }, 100);
+    
+    // Also listen for animation start which is triggered by autofill
+    const handleAnimationStart = (e: AnimationEvent) => {
+      if (e.animationName === 'onAutoFillStart') {
+        const newValue = type === 'number' ? 
+          (input.value ? parseFloat(input.value) : '') : 
+          input.value;
+        onChange(newValue);
+      }
+    };
+    
+    input.addEventListener('animationstart', handleAnimationStart as EventListener);
+    
+    return () => {
+      clearTimeout(timer);
+      input.removeEventListener('animationstart', handleAnimationStart as EventListener);
+    };
+  }, [type, value, onChange]);
   
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = type === 'number' ? 
@@ -53,21 +91,42 @@ export const InputField: React.FC<InputFieldProps & {
       helperText={helperText}
       id={id}
     >
-      <input
-        type={type}
-        className={fieldClasses}
-        value={value || ''}
-        onChange={handleChange}
-        disabled={disabled}
-        placeholder={placeholder}
-        min={min}
-        max={max}
-        step={step}
-        maxLength={maxLength}
-        pattern={pattern}
-        autoComplete={autoComplete}
-        required={required}
-      />
+      <div className={isPassword ? 'position-relative' : ''}>
+        <input
+          ref={inputRef}
+          type={inputType}
+          className={fieldClasses}
+          value={value || ''}
+          onChange={handleChange}
+          disabled={disabled}
+          placeholder={placeholder}
+          min={min}
+          max={max}
+          step={step}
+          maxLength={maxLength}
+          pattern={pattern}
+          autoComplete={autoComplete}
+          required={required}
+          style={isPassword ? { paddingRight: '2.5rem' } : {}}
+        />
+        {isPassword && (
+          <button
+            type="button"
+            className="btn btn-link position-absolute end-0 top-50 translate-middle-y"
+            onClick={() => setShowPassword(!showPassword)}
+            tabIndex={-1}
+            style={{
+              padding: '0.375rem 0.75rem',
+              zIndex: 10,
+              textDecoration: 'none',
+              color: 'var(--text-muted)'
+            }}
+            aria-label={showPassword ? 'Hide password' : 'Show password'}
+          >
+            <i className={`bi ${showPassword ? 'bi-eye-slash' : 'bi-eye'}`}></i>
+          </button>
+        )}
+      </div>
     </FieldWrapper>
   );
 };

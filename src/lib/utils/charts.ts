@@ -48,7 +48,8 @@ export const getLineChartOptions = (hideGrid: boolean = false): ChartOptions<'li
     tooltip: {
       callbacks: {
         label: function(context: TooltipItem<'line'>) {
-          return `${formatCurrency(context.parsed.y)}`;
+          const value = context.parsed.y ?? 0;
+          return `${formatCurrency(value)}`;
         }
       }
     }
@@ -87,7 +88,8 @@ export const getBarChartOptions = (stacked: boolean = false): ChartOptions<'bar'
       callbacks: {
         label: function(context: TooltipItem<'bar'>) {
           const label = context.dataset.label || '';
-          return `${label}: ${formatCurrency(context.parsed.y)}`;
+          const value = context.parsed.y ?? 0;
+          return `${label}: ${formatCurrency(value)}`;
         }
       }
     }
@@ -125,9 +127,10 @@ export const getPieChartOptions = (showPercentage: boolean = true): ChartOptions
     tooltip: {
       callbacks: {
         label: function(context: TooltipItem<'pie'>) {
-          const value = context.parsed;
-          const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0);
-          const percentage = ((value / total) * 100).toFixed(1);
+          const value = context.parsed ?? 0;
+          const dataArray = context.dataset.data as number[];
+          const total = dataArray.reduce((a: number, b: number) => a + (b ?? 0), 0);
+          const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : '0.0';
           
           if (showPercentage) {
             return `${context.label}: ${formatCurrency(value)} (${percentage}%)`;
@@ -156,9 +159,10 @@ export const getDoughnutChartOptions = (showPercentage: boolean = true): ChartOp
     tooltip: {
       callbacks: {
         label: function(context: TooltipItem<'doughnut'>) {
-          const value = context.parsed;
-          const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0);
-          const percentage = ((value / total) * 100).toFixed(1);
+          const value = context.parsed ?? 0;
+          const dataArray = context.dataset.data as number[];
+          const total = dataArray.reduce((a: number, b: number) => a + (b ?? 0), 0);
+          const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : '0.0';
           
           if (showPercentage) {
             return `${context.label}: ${formatCurrency(value)} (${percentage}%)`;

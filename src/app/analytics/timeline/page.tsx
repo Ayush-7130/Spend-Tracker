@@ -401,7 +401,7 @@ export default function TimelineAnalysis() {
                           key: "totalPaid",
                           header: "Total Paid",
                           accessor: "totalPaid",
-                          render: (value, row) => (
+                          render: (value) => (
                             <span className="fw-bold">
                               {formatCurrency(value)}
                             </span>

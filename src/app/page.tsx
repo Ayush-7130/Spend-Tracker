@@ -972,7 +972,7 @@ export default function Home() {
                       { label: 'Select a sub-category', value: '' },
                       ...(newExpense.category ? (() => {
                         const selectedCategory = categories.find(cat => cat._id === newExpense.category);
-                        return selectedCategory?.subcategories?.map((subcategory: Subcategory, index: number) => ({
+                        return selectedCategory?.subcategories?.map((subcategory: Subcategory) => ({
                           label: subcategory.name,
                           value: subcategory.name
                         })) || [];

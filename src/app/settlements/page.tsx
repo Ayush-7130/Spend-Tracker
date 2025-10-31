@@ -189,7 +189,8 @@ const SettlementsPage: React.FC = () => {
     setFilters((prev) => ({ ...prev, sortBy: column, sortOrder: newOrder }));
   };
 
-  const getSortIcon = (column: string) => {
+  // Sort icon helper - currently not used but kept for future implementation
+  const _getSortIcon = (column: string) => {
     if (filters.sortBy !== column) return "bi-arrow-down-up";
     return filters.sortOrder === "asc" ? "bi-arrow-up" : "bi-arrow-down";
   };
@@ -493,7 +494,7 @@ const SettlementsPage: React.FC = () => {
                           key: "fromUser",
                           header: "From",
                           accessor: "fromUser",
-                          render: (value, row) => (
+                          render: (value) => (
                             <div className="d-flex align-items-center">
                               <div
                                 className="avatar-xs bg-danger text-white rounded-circle d-flex align-items-center justify-content-center me-2"
@@ -516,7 +517,7 @@ const SettlementsPage: React.FC = () => {
                           key: "toUser",
                           header: "To",
                           accessor: "toUser",
-                          render: (value, row) => (
+                          render: (value) => (
                             <div className="d-flex align-items-center">
                               <div
                                 className="avatar-xs bg-success text-white rounded-circle d-flex align-items-center justify-content-center me-2"

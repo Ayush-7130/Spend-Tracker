@@ -9,12 +9,12 @@ export interface EmptyStateProps extends EmptyStateConfig {
 }
 
 export default function EmptyState({
-  icon = '📋',
+  icon: _icon = '📋',
   title = 'No data available',
   description = 'There is no data to display at this time.',
   actions = [],
   size = 'medium',
-  variant = 'default',
+  variant: _variant = 'default',
   className = '',
   centered = true,
   showBorder = false,
@@ -26,14 +26,16 @@ export default function EmptyState({
     large: 'py-16 px-8'
   };
 
-  const variantClasses = {
+  // Variant classes and icon sizes are defined but not currently used in the component
+  // Kept for future styling enhancements
+  const _variantClasses = {
     default: 'text-gray-500',
     error: 'text-red-500',
     search: 'text-blue-500',
     filter: 'text-orange-500'
   };
 
-  const iconSizes = {
+  const _iconSizes = {
     small: 'text-2xl mb-2',
     medium: 'text-4xl mb-4',
     large: 'text-6xl mb-6'

@@ -5,6 +5,7 @@ import MainLayout from '@/components/MainLayout';
 import { useOperationNotification } from '@/contexts/NotificationContext';
 import ConfirmationDialog from '@/components/ConfirmationDialog';
 import { useConfirmation } from '@/hooks/useConfirmation';
+import { LoadingSpinner, EmptyState, Badge, InputField, TextareaField, Modal } from '@/shared/components';
 
 interface Subcategory {
   name: string;
@@ -168,12 +169,14 @@ export default function CategoriesPage() {
       <MainLayout>
         <div className="container-fluid mt-4">
           <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '400px' }}>
-            <div className="text-center">
-              <div className="spinner-border text-primary" role="status">
-                <span className="visually-hidden">Loading...</span>
-              </div>
-              <p className="mt-3 text-muted">Loading categories...</p>
-            </div>
+            <LoadingSpinner 
+              config={{ 
+                size: 'medium',
+                variant: 'primary',
+                showText: true,
+                text: 'Loading categories...'
+              }}
+            />
           </div>
         </div>
       </MainLayout>
@@ -209,26 +212,22 @@ export default function CategoriesPage() {
           <div className="row">
             {categories.length === 0 && !loading ? (
               <div className="col-12">
-                <div className="text-center py-5">
-                  <i className="bi bi-tags fs-1 text-muted"></i>
-                  <h4 className="mt-3 text-muted">No Categories Yet</h4>
-                  <p className="text-muted mb-3">Create your first category to organize expenses</p>
-                  <button
-                    className="btn btn-primary"
-                    onClick={() => {
+                <EmptyState 
+                  icon="🏷️"
+                  title="No Categories Yet"
+                  description="Create your first category to organize and track your expenses."
+                  size="large"
+                  actions={[{
+                    label: 'Create Category',
+                    onClick: () => {
+                      setFormData({ name: '', description: '', subcategories: [] });
                       setEditingCategory(null);
-                      setFormData({
-                        name: '',
-                        description: '',
-                        subcategories: [{ name: '', description: '' }]
-                      });
                       setShowModal(true);
-                    }}
-                  >
-                    <i className="bi bi-plus-circle me-2"></i>
-                    Add your first category
-                  </button>
-                </div>
+                    },
+                    variant: 'primary',
+                    icon: 'plus'
+                  }]}
+                />
               </div>
             ) : (
               categories.map((category) => (
@@ -271,9 +270,9 @@ export default function CategoriesPage() {
                         <h6 className="mb-2">Subcategories:</h6>
                         <div className="d-flex flex-wrap gap-1">
                           {category.subcategories.map((sub, index) => (
-                            <span key={index} className="badge bg-secondary">
+                            <Badge key={index} variant="secondary">
                               {sub.name}
-                            </span>
+                            </Badge>
                           ))}
                         </div>
                       </div>
@@ -287,120 +286,107 @@ export default function CategoriesPage() {
         </div>
       </div>
 
-      {/* Modal */}
-      {showModal && (
-        <div className="modal fade show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(5px)' }}>
-          <div className="modal-dialog modal-lg">
-            <div className="modal-content">
-              <div className="modal-header">
-                <h5 className="modal-title">
-                  {editingCategory ? 'Edit Category' : 'Add Category'}
-                </h5>
-                <button
-                  type="button"
-                  className="btn-close"
-                  onClick={() => setShowModal(false)}
-                ></button>
-              </div>
-              <form onSubmit={handleSubmit}>
-                <div className="modal-body">
-                  <div className="mb-3">
-                    <label className="form-label">Name</label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      required
-                    />
-                  </div>
-                  
-                  <div className="mb-3">
-                    <label className="form-label">Description</label>
-                    <textarea
-                      className="form-control"
-                      rows={3}
-                      value={formData.description}
-                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                      required
-                    ></textarea>
-                  </div>
-                  
-                  <div className="mb-3">
-                    <div className="d-flex justify-content-between align-items-center mb-2">
-                      <label className="form-label mb-0">Subcategories</label>
-                      <button
-                        type="button"
-                        className="btn btn-sm btn-outline-primary"
-                        onClick={addSubcategory}
-                      >
-                        <i className="bi bi-plus"></i> Add
-                      </button>
-                    </div>
-                    
-                    {formData.subcategories.map((sub, index) => (
-                      <div key={index} className="row mb-2">
-                        <div className="col-5">
-                          <input
-                            type="text"
-                            className="form-control"
-                            placeholder="Name"
-                            value={sub.name}
-                            onChange={(e) => updateSubcategory(index, 'name', e.target.value)}
-                          />
-                        </div>
-                        <div className="col-5">
-                          <input
-                            type="text"
-                            className="form-control"
-                            placeholder="Description"
-                            value={sub.description}
-                            onChange={(e) => updateSubcategory(index, 'description', e.target.value)}
-                          />
-                        </div>
-                        <div className="col-2">
-                          <button
-                            type="button"
-                            className="btn btn-outline-danger"
-                            onClick={() => removeSubcategory(index)}
-                            disabled={formData.subcategories.length === 1}
-                          >
-                            <i className="bi bi-trash"></i>
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+      <Modal
+        show={showModal}
+        onClose={() => setShowModal(false)}
+        title={editingCategory ? 'Edit Category' : 'Add Category'}
+        size="lg"
+        footer={
+          <div className="d-flex justify-content-end gap-2">
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => setShowModal(false)}
+              disabled={operationLoading}
+            >
+              Cancel
+            </button>
+            <button 
+              type="submit" 
+              className="btn btn-primary" 
+              disabled={operationLoading}
+              form="category-form"
+            >
+              {operationLoading ? (
+                <>
+                  <LoadingSpinner config={{ size: 'small', showText: false }} className="me-2" />
+                  {editingCategory ? 'Updating...' : 'Creating...'}
+                </>
+              ) : (
+                editingCategory ? 'Update' : 'Create'
+              )}
+            </button>
+          </div>
+        }
+      >
+        <form id="category-form" onSubmit={handleSubmit}>
+          <InputField
+            label="Name"
+            type="text"
+            value={formData.name}
+            onChange={(value) => setFormData({ ...formData, name: value as string })}
+            required
+            placeholder="Enter category name"
+          />
+          
+          <TextareaField
+            label="Description"
+            value={formData.description}
+            onChange={(value) => setFormData({ ...formData, description: value as string })}
+            required
+            placeholder="Enter category description"
+            rows={3}
+          />
+          
+          <div className="mb-3">
+            <div className="d-flex justify-content-between align-items-center mb-2">
+              <label className="form-label mb-0">Subcategories</label>
+              <button
+                type="button"
+                className="btn btn-sm btn-outline-primary"
+                onClick={addSubcategory}
+              >
+                <i className="bi bi-plus"></i> Add
+              </button>
+            </div>
+            
+            {formData.subcategories.map((sub, index) => (
+              <div key={index} className="row mb-2">
+                <div className="col-5">
+                  <InputField
+                    label=""
+                    type="text"
+                    value={sub.name}
+                    onChange={(value) => updateSubcategory(index, 'name', value as string)}
+                    placeholder="Name"
+                    size="sm"
+                  />
                 </div>
-                <div className="modal-footer">
+                <div className="col-5">
+                  <InputField
+                    label=""
+                    type="text"
+                    value={sub.description}
+                    onChange={(value) => updateSubcategory(index, 'description', value as string)}
+                    placeholder="Description"
+                    size="sm"
+                  />
+                </div>
+                <div className="col-2">
                   <button
                     type="button"
-                    className="btn btn-secondary"
-                    onClick={() => setShowModal(false)}
-                    disabled={operationLoading}
+                    className="btn btn-outline-danger"
+                    onClick={() => removeSubcategory(index)}
+                    disabled={formData.subcategories.length === 1}
                   >
-                    Cancel
-                  </button>
-                  <button 
-                    type="submit" 
-                    className="btn btn-primary" 
-                    disabled={operationLoading}
-                  >
-                    {operationLoading ? (
-                      <>
-                        <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                        {editingCategory ? 'Updating...' : 'Creating...'}
-                      </>
-                    ) : (
-                      editingCategory ? 'Update' : 'Create'
-                    )}
+                    <i className="bi bi-trash"></i>
                   </button>
                 </div>
-              </form>
-            </div>
+              </div>
+            ))}
           </div>
-        </div>
-      )}
+        </form>
+      </Modal>
 
       <ConfirmationDialog
         show={confirmation.show}
@@ -422,11 +408,9 @@ export default function CategoriesPage() {
             backdropFilter: 'blur(1px)'
           }}
         >
-          <div className="bg-white rounded p-3 shadow">
+          <div className="processing-popup rounded p-3 shadow">
             <div className="d-flex align-items-center">
-              <div className="spinner-border spinner-border-sm me-2" role="status">
-                <span className="visually-hidden">Loading...</span>
-              </div>
+              <LoadingSpinner config={{ size: 'small', showText: false }} className="me-2" />
               <span>Processing...</span>
             </div>
           </div>

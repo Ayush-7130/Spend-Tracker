@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import clientPromise from '@/lib/mongodb';
+import { getUserFromRequest } from '@/lib/auth';
 
 interface Category {
   _id: string;
@@ -10,7 +11,15 @@ interface Category {
   updatedAt?: Date;
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  // Check authentication
+  const user = await getUserFromRequest(request);
+  if (!user) {
+    return NextResponse.json(
+      { success: false, error: 'Authentication required' },
+      { status: 401 }
+    );
+  }
   try {
     const client = await clientPromise;
     const db = client.db('spend-tracker');
@@ -31,6 +40,15 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  // Check authentication
+  const user = await getUserFromRequest(request);
+  if (!user) {
+    return NextResponse.json(
+      { success: false, error: 'Authentication required' },
+      { status: 401 }
+    );
+  }
+
   try {
     const body = await request.json();
     const { name, description, subcategories = [] } = body;

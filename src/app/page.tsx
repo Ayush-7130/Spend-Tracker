@@ -4,8 +4,10 @@ import { useState, useEffect } from 'react';
 import MainLayout from '@/components/MainLayout';
 import Link from 'next/link';
 import { useOperationNotification } from '@/contexts/NotificationContext';
+import { useCategories } from '@/contexts/CategoriesContext';
 import ConfirmationDialog from '@/components/ConfirmationDialog';
 import { useConfirmation } from '@/hooks/useConfirmation';
+import { StatsCard, LoadingSpinner, UserBadge, StatusBadge, Table, Modal, EmptyState, Badge, InputField, SelectField, TextareaField, DateField } from '@/shared/components';
 
 interface DashboardData {
   totalExpenses: number;
@@ -45,13 +47,6 @@ interface Subcategory {
   description: string;
 }
 
-interface Category {
-  _id: string;
-  name: string;
-  description: string;
-  subcategories?: Subcategory[];
-}
-
 interface SettlementData {
   balances: Array<{
     fromUser: string;
@@ -69,6 +64,7 @@ interface SettlementData {
 
 export default function Home() {
   const { notifyAdded } = useOperationNotification();
+  const { categories } = useCategories(); // Use categories context
   const confirmation = useConfirmation();
   
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
@@ -106,28 +102,14 @@ export default function Home() {
     description: ''
   });
 
-  const [categories, setCategories] = useState<Category[]>([]);
-
   useEffect(() => {
     fetchDashboardData(selectedUser);
-    fetchCategories();
     if (selectedUser === 'all') {
       fetchSettlementData();
     }
   }, [selectedUser]);
 
-  const fetchCategories = async () => {
-    try {
-      const response = await fetch('/api/categories');
-      if (response.ok) {
-        const result = await response.json();
-        setCategories(result.success ? result.data : []);
-      }
-    } catch (error) {
-      console.error('Failed to fetch categories:', error);
-      setCategories([]);
-    }
-  };
+  // Categories are now managed by CategoriesContext - no need to fetch here
 
   const fetchSettlementData = async () => {
     try {
@@ -403,12 +385,13 @@ export default function Home() {
       <MainLayout>
         <div className="container-fluid mt-4">
           <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '400px' }}>
-            <div className="text-center">
-              <div className="spinner-border text-primary" role="status">
-                <span className="visually-hidden">Loading...</span>
-              </div>
-              <p className="mt-3 text-muted">Loading dashboard data...</p>
-            </div>
+            <LoadingSpinner config={{ 
+              size: 'medium', 
+              text: 'Loading dashboard data...', 
+              showText: true,
+              variant: 'primary',
+              centered: true
+            }} />
           </div>
         </div>
       </MainLayout>
@@ -435,10 +418,18 @@ export default function Home() {
   if (!dashboardData) {
     return (
       <MainLayout>
-        <div className="alert alert-info" role="alert">
-          <i className="bi bi-info-circle me-2"></i>
-          No data available. Please add some expenses to get started.
-        </div>
+        <EmptyState 
+          icon="💰"
+          title="Welcome to Spend Tracker"
+          description="Start tracking your expenses by adding your first expense below."
+          size="large"
+          actions={[{
+            label: 'Add First Expense',
+            onClick: () => setShowAddExpenseDialog(true),
+            variant: 'primary',
+            icon: 'plus'
+          }]}
+        />
       </MainLayout>
     );
   }
@@ -464,10 +455,10 @@ export default function Home() {
                   <i className="bi bi-person me-1"></i>
                   {getUserDisplayName()}
                 </button>
-                <ul className="dropdown-menu" style={{ zIndex: 1050 }}>
+                <ul className="dropdown-menu py-2" style={{ zIndex: 1050 }}>
                   <li>
                     <button 
-                      className={`dropdown-item ${selectedUser === 'all' ? 'active' : ''}`}
+                      className={`dropdown-item py-1 ${selectedUser === 'all' ? 'active' : ''}`}
                       onClick={() => setSelectedUser('all')}
                     >
                       <i className="bi bi-people me-2"></i>
@@ -477,7 +468,7 @@ export default function Home() {
                   <li><hr className="dropdown-divider" /></li>
                   <li>
                     <button 
-                      className={`dropdown-item ${selectedUser === 'saket' ? 'active' : ''}`}
+                      className={`dropdown-item py-1 ${selectedUser === 'saket' ? 'active' : ''}`}
                       onClick={() => setSelectedUser('saket')}
                     >
                       <i className="bi bi-person me-2"></i>
@@ -486,7 +477,7 @@ export default function Home() {
                   </li>
                   <li>
                     <button 
-                      className={`dropdown-item ${selectedUser === 'ayush' ? 'active' : ''}`}
+                      className={`dropdown-item py-1 ${selectedUser === 'ayush' ? 'active' : ''}`}
                       onClick={() => setSelectedUser('ayush')}
                     >
                       <i className="bi bi-person me-2"></i>
@@ -501,55 +492,42 @@ export default function Home() {
           {/* Quick Stats Cards */}
           <div className="row mb-4">
             <div className="col-md-4 mb-3">
-              <div className="card bg-primary text-white">
-                <div className="card-body">
-                  <div className="d-flex justify-content-between">
-                    <div>
-                      <h6 className="card-title">{getStatsTitle('My Total Expenses')}</h6>
-                      <h4 className="mb-0">{formatCurrency(dashboardData.totalExpenses)}</h4>
-                      <small className="opacity-75">{dashboardData.totalExpenseCount} transactions</small>
-                    </div>
-                    <i className="bi bi-currency-rupee fs-2"></i>
-                  </div>
-                </div>
-              </div>
+              <StatsCard
+                title={getStatsTitle('My Total Expenses')}
+                value={formatCurrency(dashboardData.totalExpenses)}
+                subtitle={`${dashboardData.totalExpenseCount} transactions`}
+                icon="bi bi-currency-rupee"
+                variant="primary"
+                onClick={() => window.location.href = '/expenses'}
+              />
             </div>
             
             <div className="col-md-4 mb-3">
-              <div className="card bg-success text-white">
-                <div className="card-body">
-                  <div className="d-flex justify-content-between">
-                    <div>
-                      <h6 className="card-title">{getStatsTitle('My This Month')}</h6>
-                      <h4 className="mb-0">{formatCurrency(dashboardData.thisMonthTotal)}</h4>
-                      <small className="opacity-75">{dashboardData.thisMonthCount} expenses</small>
-                    </div>
-                    <i className={`${getMonthIcon()} fs-2`}></i>
-                  </div>
-                </div>
-              </div>
+              <StatsCard
+                title={getStatsTitle('My This Month')}
+                value={formatCurrency(dashboardData.thisMonthTotal)}
+                subtitle={`${dashboardData.thisMonthCount} expenses`}
+                icon={getMonthIcon()}
+                variant="success"
+              />
             </div>
             
             <div className="col-md-4 mb-3">
-              <div className="card bg-warning text-white">
-                <div className="card-body">
-                  <div className="d-flex justify-content-between">
-                    <div>
-                      <h6 className="card-title">Categories</h6>
-                      <h4 className="mb-0">{dashboardData.categoriesCount}</h4>
-                      <small className="opacity-75">configured</small>
-                    </div>
-                    <i className="bi bi-tags fs-2"></i>
-                  </div>
-                </div>
-              </div>
+              <StatsCard
+                title="Categories"
+                value={dashboardData.categoriesCount}
+                subtitle="configured"
+                icon="bi bi-tags"
+                variant="warning"
+                onClick={() => window.location.href = '/categories'}
+              />
             </div>
           </div>
 
           {/* Recent Expenses */}
           <div className="row mb-4">
             <div className="col-md-8">
-              <div className="card">
+              <div className="card h-100">
                 <div className="card-header d-flex justify-content-between align-items-center">
                   <h5 className="mb-0">
                     {selectedUser === 'all' ? 'Recent Expenses' : 'My Recent Expenses'}
@@ -560,68 +538,75 @@ export default function Home() {
                 </div>
                 <div className="card-body">
                   {dashboardData.recentExpenses.length === 0 ? (
-                    <div className="text-center py-4">
-                      <i className="bi bi-inbox fs-1 text-muted"></i>
-                      <p className="text-muted mt-2 mb-3">No expenses found</p>
-                      <button 
-                        className="btn btn-primary"
-                        onClick={() => setShowAddExpenseDialog(true)}
-                      >
-                        Add your first expense
-                      </button>
-                    </div>
+                    <EmptyState 
+                      icon="📋"
+                      title="No expenses yet"
+                      description="Add your first expense to get started tracking."
+                      size="small"
+                      actions={[{
+                        label: 'Add Expense',
+                        onClick: () => setShowAddExpenseDialog(true),
+                        variant: 'primary',
+                        icon: 'plus'
+                      }]}
+                      showBorder={false}
+                    />
                   ) : (
-                    <div className="table-responsive">
-                      <table className="table table-sm">
-                        <thead>
-                          <tr>
-                            <th>Date</th>
-                            <th>Description</th>
-                            <th>Category</th>
-                            <th>Amount</th>
-                            {selectedUser === 'all' ? (
-                              <th>Paid By</th>
+                    <Table
+                      config={{
+                        columns: [
+                          {
+                            key: 'date',
+                            header: 'Date',
+                            accessor: 'date',
+                            render: (value) => formatDate(value)
+                          },
+                          {
+                            key: 'description',
+                            header: 'Description',
+                            accessor: 'description'
+                          },
+                          {
+                            key: 'category',
+                            header: 'Category',
+                            render: (value, row) => (
+                              <Badge variant="secondary">
+                                {row.categoryName || row.category}
+                              </Badge>
+                            )
+                          },
+                          {
+                            key: 'amount',
+                            header: 'Amount',
+                            accessor: 'amount',
+                            render: (value) => formatCurrency(value)
+                          },
+                          {
+                            key: 'paidBy',
+                            header: selectedUser === 'all' ? 'Paid By' : 'Type',
+                            render: (value, row) => selectedUser === 'all' ? (
+                              <UserBadge user={row.paidBy as 'saket' | 'ayush'} />
                             ) : (
-                              <th>Type</th>
-                            )}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {dashboardData.recentExpenses.map((expense) => (
-                            <tr key={expense._id}>
-                              <td>{formatDate(expense.date)}</td>
-                              <td>{expense.description}</td>
-                              <td>
-                                <span className="badge bg-secondary">
-                                  {expense.categoryName || expense.category}
-                                </span>
-                              </td>
-                              <td>{formatCurrency(expense.amount)}</td>
-                              {selectedUser === 'all' ? (
-                                <td>
-                                  <span className={`badge ${expense.paidBy === 'saket' ? 'bg-primary' : 'bg-success'}`}>
-                                    {expense.paidBy === 'saket' ? 'Saket' : 'Ayush'}
-                                  </span>
-                                </td>
-                              ) : (
-                                <td>
-                                  <span className={`badge ${expense.isSplit ? 'bg-warning' : 'bg-info'}`}>
-                                    {expense.isSplit ? 'Split' : 'Personal'}
-                                  </span>
-                                </td>
-                              )}
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
+                              <StatusBadge 
+                                status={row.isSplit ? 'split' : 'personal'} 
+                                type="split" 
+                              />
+                            )
+                          }
+                        ],
+                        data: dashboardData.recentExpenses,
+                        keyExtractor: (expense) => expense._id,
+                        responsive: true,
+                        size: 'small'
+                      }}
+                    />
                   )}
                 </div>
               </div>
             </div>
             
             <div className="col-md-4">
-              <div className="card">
+              <div className="card h-100">
                 <div className="card-header">
                   <h5 className="mb-0">Quick Actions</h5>
                 </div>
@@ -672,8 +657,8 @@ export default function Home() {
           {selectedUser === 'all' && settlementData && (
             <div className="row mb-4">
               <div className="col-md-8">
-                <div className="card">
-                  <div className="card-header d-flex justify-content-between align-items-center py-2">
+                <div className="card h-100">
+                  <div className="card-header d-flex justify-content-between align-items-center">
                     <h6 className="mb-0">
                       <i className="bi bi-currency-exchange me-2"></i>
                       Settlement Status
@@ -682,68 +667,81 @@ export default function Home() {
                       View All
                     </Link>
                   </div>
-                  <div className="card-body py-2">
+                  <div className="card-body">
                     {settlementData.balances.length > 0 ? (
-                      <div className="table-responsive">
-                        <table className="table table-sm mb-0">
-                          <thead>
-                            <tr>
-                              <th className="py-1">From</th>
-                              <th className="py-1">To</th>
-                              <th className="py-1">Amount</th>
-                              <th className="py-1">Status</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {settlementData.balances
-                              .filter(balance => balance.status === 'owes')
-                              .slice(0, 3)
-                              .map((balance, index) => (
-                              <tr key={index}>
-                                <td className="py-1">
-                                  <div className="d-flex align-items-center">
-                                    <div className="avatar-xs bg-warning text-white rounded-circle me-2 d-flex align-items-center justify-content-center">
-                                      {balance.fromUser.charAt(0)}
-                                    </div>
-                                    <small>{balance.fromUser}</small>
-                                  </div>
-                                </td>
-                                <td className="py-1">
-                                  <div className="d-flex align-items-center">
-                                    <div className="avatar-xs bg-primary text-white rounded-circle me-2 d-flex align-items-center justify-content-center">
-                                      {balance.toUser.charAt(0)}
-                                    </div>
-                                    <small>{balance.toUser}</small>
-                                  </div>
-                                </td>
-                                <td className="py-1">
-                                  <small className="text-danger fw-bold">₹{balance.amount}</small>
-                                </td>
-                                <td className="py-1">
-                                  <span className="badge bg-danger" style={{fontSize: '10px'}}>Outstanding</span>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
+                      <Table
+                        config={{
+                          columns: [
+                            {
+                              key: 'fromUser',
+                              header: 'From',
+                              accessor: 'fromUser',
+                              render: (value) => (
+                                <UserBadge 
+                                  user={value.toLowerCase() as 'saket' | 'ayush'} 
+                                  variant="avatar" 
+                                />
+                              )
+                            },
+                            {
+                              key: 'toUser',
+                              header: 'To',
+                              accessor: 'toUser',
+                              render: (value) => (
+                                <UserBadge 
+                                  user={value.toLowerCase() as 'saket' | 'ayush'} 
+                                  variant="avatar" 
+                                />
+                              )
+                            },
+                            {
+                              key: 'amount',
+                              header: 'Amount',
+                              accessor: 'amount',
+                              render: (value) => (
+                                <small className="text-danger fw-bold">₹{value}</small>
+                              )
+                            },
+                            {
+                              key: 'status',
+                              header: 'Status',
+                              render: () => (
+                                <StatusBadge 
+                                  status="owes" 
+                                  type="settlement" 
+                                  variant="small"
+                                />
+                              )
+                            }
+                          ],
+                          data: settlementData.balances
+                            .filter(balance => balance.status === 'owes')
+                            .slice(0, 3),
+                          keyExtractor: (balance) => `${balance.fromUser}-${balance.toUser}`,
+                          responsive: true,
+                          size: 'small'
+                        }}
+                      />
                     ) : (
-                      <div className="text-center py-3">
-                        <i className="bi bi-check-circle-fill fs-4 text-success"></i>
-                        <p className="text-success mt-1 mb-2 small">All Settled Up!</p>
-                        <p className="text-muted small mb-0">No outstanding balances</p>
-                      </div>
+                      <EmptyState 
+                        icon="✅"
+                        title="All Settled Up!"
+                        description="No outstanding balances between users."
+                        size="small"
+                        variant="default"
+                        showBorder={false}
+                      />
                     )}
                   </div>
                 </div>
               </div>
               
               <div className="col-md-4">
-                <div className="card">
-                  <div className="card-header py-2">
+                <div className="card h-100">
+                  <div className="card-header">
                     <h6 className="mb-0">Settlement Summary</h6>
                   </div>
-                  <div className="card-body py-2">
+                  <div className="card-body">
                     <div className="d-flex justify-content-between mb-2">
                       <small>Outstanding:</small>
                       <small className="text-danger fw-bold">₹{settlementData.summary.totalOwed}</small>
@@ -776,8 +774,8 @@ export default function Home() {
           {selectedUser === 'all' && (
             <div className="row mb-4">
               <div className="col-12">
-                <div className="card">
-                  <div className="card-header d-flex justify-content-between align-items-center py-2">
+                <div className="card h-100">
+                  <div className="card-header d-flex justify-content-between align-items-center">
                     <h6 className="mb-0">
                       <i className="bi bi-clock-history me-2"></i>
                       Recent Settlements
@@ -786,63 +784,80 @@ export default function Home() {
                       View All Settlements
                     </Link>
                   </div>
-                  <div className="card-body py-2">
+                  <div className="card-body">
                     {recentSettlements.length === 0 ? (
-                      <div className="text-center py-4">
-                        <i className="bi bi-inbox fs-1 text-muted"></i>
-                        <p className="text-muted mt-2 mb-3">No settlements recorded</p>
-                        <button 
-                          className="btn btn-primary"
-                          onClick={() => setShowSettlementDialog(true)}
-                        >
-                          Record your first settlement
-                        </button>
-                      </div>
+                      <EmptyState 
+                        icon="💼"
+                        title="No settlements yet"
+                        description="Record your first settlement to track balance history."
+                        size="small"
+                        actions={[{
+                          label: 'Record Settlement',
+                          onClick: () => setShowSettlementDialog(true),
+                          variant: 'primary',
+                          icon: 'plus'
+                        }]}
+                        showBorder={false}
+                      />
                     ) : (
-                    <div className="table-responsive">
-                      <table className="table table-sm mb-0">
-                        <thead>
-                          <tr>
-                            <th className="py-1">Date</th>
-                            <th className="py-1">From</th>
-                            <th className="py-1">To</th>
-                            <th className="py-1">Amount</th>
-                            <th className="py-1">Description</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {recentSettlements.map((settlement) => (
-                            <tr key={settlement._id}>
-                              <td className="py-1">
-                                <small>{formatDate(settlement.date)}</small>
-                              </td>
-                              <td className="py-1">
+                      <Table
+                        config={{
+                          columns: [
+                            {
+                              key: 'date',
+                              header: 'Date',
+                              accessor: 'date',
+                              render: (value) => <small>{formatDate(value)}</small>
+                            },
+                            {
+                              key: 'fromUser',
+                              header: 'From',
+                              accessor: 'fromUser',
+                              render: (value) => (
                                 <div className="d-flex align-items-center">
                                   <div className="avatar-xs bg-success text-white rounded-circle me-2 d-flex align-items-center justify-content-center">
-                                    {settlement.fromUser.charAt(0)}
+                                    {value.charAt(0)}
                                   </div>
-                                  <small>{settlement.fromUser}</small>
+                                  <small>{value}</small>
                                 </div>
-                              </td>
-                              <td className="py-1">
+                              )
+                            },
+                            {
+                              key: 'toUser',
+                              header: 'To',
+                              accessor: 'toUser',
+                              render: (value) => (
                                 <div className="d-flex align-items-center">
                                   <div className="avatar-xs bg-primary text-white rounded-circle me-2 d-flex align-items-center justify-content-center">
-                                    {settlement.toUser.charAt(0)}
+                                    {value.charAt(0)}
                                   </div>
-                                  <small>{settlement.toUser}</small>
+                                  <small>{value}</small>
                                 </div>
-                              </td>
-                              <td className="py-1">
-                                <small className="text-success fw-bold">₹{settlement.amount}</small>
-                              </td>
-                              <td className="py-1">
-                                <small className="text-muted">{settlement.description || 'Settlement payment'}</small>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
+                              )
+                            },
+                            {
+                              key: 'amount',
+                              header: 'Amount',
+                              accessor: 'amount',
+                              render: (value) => (
+                                <small className="text-success fw-bold">₹{value}</small>
+                              )
+                            },
+                            {
+                              key: 'description',
+                              header: 'Description',
+                              accessor: 'description',
+                              render: (value) => (
+                                <small className="text-muted">{value || 'Settlement payment'}</small>
+                              )
+                            }
+                          ],
+                          data: recentSettlements,
+                          keyExtractor: (settlement) => settlement._id,
+                          responsive: true,
+                          size: 'small'
+                        }}
+                      />
                     )}
                   </div>
                 </div>
@@ -869,98 +884,101 @@ export default function Home() {
       `}</style>
 
       {/* Add Expense Dialog */}
-      {showAddExpenseDialog && (
-        <div 
-          className="modal show" 
-          style={{ display: 'block', backgroundColor: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(5px)' }}
-          onClick={(e) => {
-            if (e.target === e.currentTarget) {
-              setShowAddExpenseDialog(false);
-            }
-          }}
-        >
-          <div className="modal-dialog">
-            <div className="modal-content">
-              <div className="modal-header">
-                <h5 className="modal-title">Add New Expense</h5>
-                <button 
-                  type="button" 
-                  className="btn-close" 
-                  onClick={() => setShowAddExpenseDialog(false)}
-                ></button>
-              </div>
-              <form onSubmit={handleAddExpense}>
+      <Modal
+        show={showAddExpenseDialog}
+        onClose={() => setShowAddExpenseDialog(false)}
+        title="Add New Expense"
+        size="md"
+        footer={
+          <>
+            <button 
+              type="button" 
+              className="btn btn-secondary" 
+              onClick={() => setShowAddExpenseDialog(false)}
+              disabled={operationLoading}
+            >
+              Cancel
+            </button>
+            <button 
+              type="submit" 
+              className="btn btn-primary"
+              form="add-expense-form"
+              disabled={operationLoading}
+            >
+              {operationLoading ? (
+                <>
+                  <LoadingSpinner config={{ size: 'small', showText: false }} className="me-2" />
+                  Adding...
+                </>
+              ) : (
+                'Add Expense'
+              )}
+            </button>
+          </>
+        }
+      >
+        <form id="add-expense-form" onSubmit={handleAddExpense}>
                 <div className="modal-body">
-                  <div className="mb-3">
-                    <label htmlFor="expense-name" className="form-label">Expense Name</label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      id="expense-name"
-                      value={newExpense.name}
-                      onChange={(e) => setNewExpense({ ...newExpense, name: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div className="mb-3">
-                    <label htmlFor="expense-amount" className="form-label">Amount</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      className="form-control"
-                      id="expense-amount"
-                      value={newExpense.amount}
-                      onChange={(e) => {
-                        const amount = e.target.value;
-                        const splitAmount = parseFloat(amount) / 2;
-                        setNewExpense({ 
-                          ...newExpense, 
-                          amount,
-                          // Auto-update split amounts if split is enabled
-                          saketAmount: newExpense.isSplit ? splitAmount.toString() : newExpense.saketAmount,
-                          ayushAmount: newExpense.isSplit ? splitAmount.toString() : newExpense.ayushAmount
-                        });
-                      }}
-                      required
-                    />
-                  </div>
-                  <div className="mb-3">
-                    <label htmlFor="expense-category" className="form-label">Category</label>
-                    <select
-                      className="form-select"
-                      id="expense-category"
-                      value={newExpense.category}
-                      onChange={(e) => setNewExpense({ ...newExpense, category: e.target.value, subcategory: '' })}
-                      required
-                    >
-                      <option value="">Select a category</option>
-                      {Array.isArray(categories) && categories.map((category) => (
-                        <option key={category._id} value={category._id}>
-                          {category.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="mb-3">
-                    <label htmlFor="expense-subcategory" className="form-label">Sub-category (Optional)</label>
-                    <select
-                      className="form-select"
-                      id="expense-subcategory"
-                      value={newExpense.subcategory}
-                      onChange={(e) => setNewExpense({ ...newExpense, subcategory: e.target.value })}
-                      disabled={!newExpense.category}
-                    >
-                      <option value="">Select a sub-category</option>
-                      {newExpense.category && (() => {
+                  <InputField
+                    label="Expense Name"
+                    type="text"
+                    id="expense-name"
+                    value={newExpense.name}
+                    onChange={(value) => setNewExpense({ ...newExpense, name: value as string })}
+                    required
+                    placeholder="Enter expense name"
+                  />
+                  <InputField
+                    label="Amount"
+                    type="number"
+                    id="expense-amount"
+                    value={newExpense.amount}
+                    onChange={(value) => {
+                      const amount = value as string;
+                      const splitAmount = parseFloat(amount) / 2;
+                      setNewExpense({ 
+                        ...newExpense, 
+                        amount,
+                        // Auto-update split amounts if split is enabled
+                        saketAmount: newExpense.isSplit ? splitAmount.toString() : newExpense.saketAmount,
+                        ayushAmount: newExpense.isSplit ? splitAmount.toString() : newExpense.ayushAmount
+                      });
+                    }}
+                    required
+                    placeholder="0.00"
+                    step="0.01"
+                  />
+                  <SelectField
+                    label="Category"
+                    id="expense-category"
+                    value={newExpense.category}
+                    onChange={(value) => setNewExpense({ ...newExpense, category: value as string, subcategory: '' })}
+                    required
+                    options={[
+                      { label: 'Select a category', value: '' },
+                      ...(Array.isArray(categories) ? categories.map((category) => ({
+                        label: category.name,
+                        value: category._id
+                      })) : [])
+                    ]}
+                  />
+                  <SelectField
+                    label="Sub-category (Optional)"
+                    id="expense-subcategory"
+                    value={newExpense.subcategory}
+                    onChange={(value) => setNewExpense({ ...newExpense, subcategory: value as string })}
+                    disabled={!newExpense.category}
+                    options={[
+                      { label: 'Select a sub-category', value: '' },
+                      ...(newExpense.category ? (() => {
                         const selectedCategory = categories.find(cat => cat._id === newExpense.category);
-                        return selectedCategory?.subcategories?.map((subcategory: Subcategory, index: number) => (
-                          <option key={index} value={subcategory.name}>
-                            {subcategory.name}
-                          </option>
-                        )) || [];
-                      })()}
-                    </select>
-                  </div>
+                        return selectedCategory?.subcategories?.map((subcategory: Subcategory) => ({
+                          label: subcategory.name,
+                          value: subcategory.name
+                        })) || [];
+                      })() : [])
+                    ]}
+                  />
                   <div className="mb-3">
                     <label htmlFor="expense-paidBy" className="form-label">Paid By</label>
                     <select
@@ -1080,168 +1098,108 @@ export default function Home() {
                     ></textarea>
                   </div>
                 </div>
-                <div className="modal-footer">
-                  <button 
-                    type="button" 
-                    className="btn btn-secondary" 
-                    onClick={() => setShowAddExpenseDialog(false)}
-                    disabled={operationLoading}
-                  >
-                    Cancel
-                  </button>
-                  <button 
-                    type="submit" 
-                    className="btn btn-primary"
-                    disabled={operationLoading}
-                  >
-                    {operationLoading ? (
-                      <>
-                        <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                        Adding...
-                      </>
-                    ) : (
-                      'Add Expense'
-                    )}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      )}
+        </form>
+      </Modal>
 
       {/* Settlement Dialog */}
-      {showSettlementDialog && (
-        <div 
-          className="modal show" 
-          style={{ display: 'block', backgroundColor: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(5px)' }}
-          onClick={(e) => {
-            if (e.target === e.currentTarget) {
-              setShowSettlementDialog(false);
-            }
-          }}
-        >
-          <div className="modal-dialog">
-            <div className="modal-content">
-              <div className="modal-header">
-                <h5 className="modal-title">Record Settlement</h5>
-                <button 
-                  type="button" 
-                  className="btn-close" 
-                  onClick={() => setShowSettlementDialog(false)}
-                ></button>
-              </div>
-              <form onSubmit={handleRecordSettlement}>
-                <div className="modal-body">
-                  <div className="mb-3">
-                    <label htmlFor="settlement-from" className="form-label">From</label>
-                    <select
-                      className="form-select"
-                      id="settlement-from"
-                      value={newSettlement.from}
-                      onChange={(e) => {
-                        const newFrom = e.target.value;
-                        setNewSettlement({ 
-                          ...newSettlement, 
-                          from: newFrom,
-                          // Clear "to" if it's the same as the new "from"
-                          to: newSettlement.to === newFrom ? '' : newSettlement.to
-                        });
-                      }}
-                      required
-                    >
-                      <option value="">Select who is paying</option>
-                      {dashboardData?.users?.map((user) => (
-                        <option key={user.id} value={user.id}>
-                          {user.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="mb-3">
-                    <label htmlFor="settlement-to" className="form-label">To</label>
-                    <select
-                      className="form-select"
-                      id="settlement-to"
-                      value={newSettlement.to}
-                      onChange={(e) => setNewSettlement({ ...newSettlement, to: e.target.value })}
-                      required
-                    >
-                      <option value="">Select who is receiving</option>
-                      {dashboardData?.users?.map((user) => (
-                        <option 
-                          key={user.id} 
-                          value={user.id}
-                          disabled={user.id === newSettlement.from}
-                        >
-                          {user.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="mb-3">
-                    <label htmlFor="settlement-amount" className="form-label">Amount</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      className="form-control"
-                      id="settlement-amount"
-                      value={newSettlement.amount}
-                      onChange={(e) => setNewSettlement({ ...newSettlement, amount: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div className="mb-3">
-                    <label htmlFor="settlement-date" className="form-label">Date</label>
-                    <input
-                      type="date"
-                      className="form-control"
-                      id="settlement-date"
-                      value={newSettlement.date}
-                      onChange={(e) => setNewSettlement({ ...newSettlement, date: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div className="mb-3">
-                    <label htmlFor="settlement-description" className="form-label">Description (Optional)</label>
-                    <textarea
-                      className="form-control"
-                      id="settlement-description"
-                      rows={3}
-                      value={newSettlement.description}
-                      onChange={(e) => setNewSettlement({ ...newSettlement, description: e.target.value })}
-                    ></textarea>
-                  </div>
-                </div>
-                <div className="modal-footer">
-                  <button 
-                    type="button" 
-                    className="btn btn-secondary" 
-                    onClick={() => setShowSettlementDialog(false)}
-                    disabled={operationLoading}
-                  >
-                    Cancel
-                  </button>
-                  <button 
-                    type="submit" 
-                    className="btn btn-success"
-                    disabled={operationLoading}
-                  >
-                    {operationLoading ? (
-                      <>
-                        <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                        Recording...
-                      </>
-                    ) : (
-                      'Record Settlement'
-                    )}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      )}
+      <Modal
+        show={showSettlementDialog}
+        onClose={() => setShowSettlementDialog(false)}
+        title="Record Settlement"
+        size="md"
+        footer={
+          <>
+            <button 
+              type="button" 
+              className="btn btn-secondary" 
+              onClick={() => setShowSettlementDialog(false)}
+              disabled={operationLoading}
+            >
+              Cancel
+            </button>
+            <button 
+              type="submit" 
+              className="btn btn-success"
+              form="settlement-form"
+              disabled={operationLoading}
+            >
+              {operationLoading ? (
+                <>
+                  <LoadingSpinner config={{ size: 'small', showText: false }} className="me-2" />
+                  Recording...
+                </>
+              ) : (
+                'Record Settlement'
+              )}
+            </button>
+          </>
+        }
+      >
+        <form id="settlement-form" onSubmit={handleRecordSettlement}>
+                  <SelectField
+                    label="From"
+                    id="settlement-from"
+                    value={newSettlement.from}
+                    onChange={(value) => {
+                      const newFrom = value as string;
+                      setNewSettlement({ 
+                        ...newSettlement, 
+                        from: newFrom,
+                        // Clear "to" if it's the same as the new "from"
+                        to: newSettlement.to === newFrom ? '' : newSettlement.to
+                      });
+                    }}
+                    required
+                    options={[
+                      { label: 'Select who is paying', value: '' },
+                      ...(dashboardData?.users?.map((user) => ({
+                        label: user.name,
+                        value: user.id
+                      })) || [])
+                    ]}
+                  />
+                  <SelectField
+                    label="To"
+                    id="settlement-to"
+                    value={newSettlement.to}
+                    onChange={(value) => setNewSettlement({ ...newSettlement, to: value as string })}
+                    required
+                    options={[
+                      { label: 'Select who is receiving', value: '' },
+                      ...(dashboardData?.users?.map((user) => ({
+                        label: user.name,
+                        value: user.id,
+                        disabled: user.id === newSettlement.from
+                      })) || [])
+                    ]}
+                  />
+                  <InputField
+                    label="Amount"
+                    type="number"
+                    id="settlement-amount"
+                    value={newSettlement.amount}
+                    onChange={(value) => setNewSettlement({ ...newSettlement, amount: value as string })}
+                    required
+                    placeholder="0.00"
+                    step="0.01"
+                  />
+                  <DateField
+                    label="Date"
+                    id="settlement-date"
+                    value={newSettlement.date}
+                    onChange={(value) => setNewSettlement({ ...newSettlement, date: value as string })}
+                    required
+                  />
+                  <TextareaField
+                    label="Description (Optional)"
+                    id="settlement-description"
+                    value={newSettlement.description}
+                    onChange={(value) => setNewSettlement({ ...newSettlement, description: value as string })}
+                    rows={3}
+                    placeholder="Optional settlement notes"
+                  />
+        </form>
+      </Modal>
 
       <ConfirmationDialog
         show={confirmation.show}
@@ -1263,11 +1221,9 @@ export default function Home() {
             backdropFilter: 'blur(1px)'
           }}
         >
-          <div className="bg-white rounded p-3 shadow">
+          <div className="processing-popup rounded p-3 shadow">
             <div className="d-flex align-items-center">
-              <div className="spinner-border spinner-border-sm me-2" role="status">
-                <span className="visually-hidden">Loading...</span>
-              </div>
+              <LoadingSpinner config={{ size: 'small', showText: false }} className="me-2" />
               <span>Processing...</span>
             </div>
           </div>

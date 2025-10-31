@@ -146,6 +146,59 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
           transform: translateX(-5px);
           box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
         }
+
+        /* Mobile responsive styles */
+        @media (max-width: 576px) {
+          .notification-container {
+            top: 10px !important;
+            right: 10px !important;
+            left: 10px !important;
+            width: auto !important;
+            max-width: 280px !important;
+          }
+        }
+        
+        @media (max-width: 375px) {
+          .notification-container {
+            top: 5px !important;
+            right: 5px !important;
+            left: 5px !important;
+            max-width: 260px !important;
+          }
+          
+          .notification-item {
+            padding: 0.4rem !important;
+            margin-bottom: 0.4rem !important;
+          }
+          
+          .notification-item .fw-bold {
+            font-size: 0.85rem !important;
+            line-height: 1.2 !important;
+          }
+          
+          .notification-item .small {
+            font-size: 0.7rem !important;
+          }
+          
+          .notification-item .bi {
+            font-size: 0.9rem !important;
+          }
+        }
+        
+        /* Extra small devices */
+        @media (max-width: 320px) {
+          .notification-container {
+            max-width: 240px !important;
+          }
+          
+          .notification-item {
+            padding: 0.3rem !important;
+          }
+          
+          .notification-item .fw-bold {
+            font-size: 0.8rem !important;
+          }
+        }
       `}</style>
     </div>
   );
@@ -187,12 +240,12 @@ export const NotificationContainer: React.FC<NotificationContainerProps> = ({
 
   return (
     <div
-      className="position-fixed"
+      className="position-fixed notification-container"
       style={{
         top: '20px',
         right: '20px',
         zIndex: 9999,
-        maxWidth: '400px',
+        maxWidth: '320px',
         width: '100%'
       }}
     >

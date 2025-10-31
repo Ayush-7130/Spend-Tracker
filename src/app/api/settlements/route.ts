@@ -1,28 +1,35 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { MongoClient, ObjectId } from 'mongodb';
-
-const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017';
-const client = new MongoClient(uri);
+import { ObjectId } from 'mongodb';
+import { getUserFromRequest } from '@/lib/auth';
+import { NotificationService } from '@/lib/notifications';
+import clientPromise from '@/lib/mongodb';
 
 export async function GET() {
   try {
-    await client.connect();
+    const client = await clientPromise;
     const db = client.db('spend-tracker');
     
-    // Get all settlements
+    // Get all settlements with error handling
     const settlements = await db.collection('settlements').find({}).sort({ date: -1 }).toArray();
     
     return NextResponse.json(settlements);
   } catch (error) {
     console.error('Error fetching settlements:', error);
     return NextResponse.json({ error: 'Failed to fetch settlements' }, { status: 500 });
-  } finally {
-    await client.close();
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
+    // Get authenticated user
+    const user = await getUserFromRequest(request);
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
     const body = await request.json();
     const { expenseId, fromUser, toUser, amount, description, date } = body;
 
@@ -34,8 +41,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    await client.connect();
+    const client = await clientPromise;
     const db = client.db('spend-tracker');
+    
+    // Get user details from database
+    const currentUser = await db.collection('users').findOne({ _id: new ObjectId(user.userId) });
+    if (!currentUser) {
+      return NextResponse.json(
+        { error: 'User not found' },
+        { status: 404 }
+      );
+    }
     
     // Create new settlement record
     const settlement = {
@@ -45,10 +61,37 @@ export async function POST(request: NextRequest) {
       amount: parseFloat(amount),
       description: description || '',
       date: date ? new Date(date) : new Date(),
-      status: 'completed'
+      status: 'completed',
+      createdBy: user.userId,
+      createdAt: new Date()
     };
 
     const result = await db.collection('settlements').insertOne(settlement);
+    
+    // Send notification to the other user involved in the settlement
+    try {
+      const notificationService = NotificationService.getInstance();
+      const otherUserName = fromUser === currentUser.name ? toUser : fromUser;
+      const settlementDescription = description || `Settlement from ${fromUser} to ${toUser}`;
+      
+      // Find the other user's ID by their name
+      const otherUser = await db.collection('users').findOne({ name: otherUserName });
+      
+      if (otherUser && otherUser._id.toString() !== user.userId) {
+        await notificationService.sendNotification(
+          otherUser._id.toString(),
+          {
+            type: 'settlement_added',
+            actorName: currentUser.name,
+            entityName: settlementDescription,
+            amount: parseFloat(amount)
+          }
+        );
+      }
+    } catch (notificationError) {
+      console.error('Failed to send settlement notification:', notificationError);
+      // Continue without failing the settlement creation
+    }
     
     return NextResponse.json({
       success: true,
@@ -58,7 +101,5 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Error creating settlement:', error);
     return NextResponse.json({ error: 'Failed to create settlement' }, { status: 500 });
-  } finally {
-    await client.close();
   }
 }

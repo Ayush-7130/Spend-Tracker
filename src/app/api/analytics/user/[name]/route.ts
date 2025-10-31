@@ -1,10 +1,20 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import clientPromise from '@/lib/mongodb';
+import { getUserFromRequest } from '@/lib/auth';
 
 export async function GET(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ name: string }> }
 ) {
+  // Check authentication
+  const user = await getUserFromRequest(request);
+  if (!user) {
+    return NextResponse.json(
+      { success: false, error: 'Authentication required' },
+      { status: 401 }
+    );
+  }
+
   try {
     const { name } = await params;
     const userName = name;
@@ -19,10 +29,21 @@ export async function GET(
     const client = await clientPromise;
     const db = client.db('spend-tracker');
 
-    // Get user's category distribution
+    // Get user's category distribution (including both expenses paid by user and their share of split expenses)
     const categoryDistribution = await db.collection('expenses').aggregate([
       {
-        $match: { paidBy: userName }
+        $match: {
+          $or: [
+            { paidBy: userName },
+            { 
+              isSplit: true,
+              $or: [
+                { [`splitDetails.${userName}Amount`]: { $exists: true } },
+                { paidBy: { $ne: userName } } // Include split expenses not paid by this user
+              ]
+            }
+          ]
+        }
       },
       {
         $lookup: {
@@ -33,9 +54,31 @@ export async function GET(
         }
       },
       {
+        $addFields: {
+          userAmount: {
+            $cond: [
+              { $eq: ['$paidBy', userName] },
+              '$amount', // If user paid, count full amount
+              {
+                $cond: [
+                  { $eq: ['$isSplit', true] },
+                  { $ifNull: [`$splitDetails.${userName}Amount`, { $divide: ['$amount', 2] }] }, // If split, count user's share
+                  0 // Otherwise, don't count
+                ]
+              }
+            ]
+          }
+        }
+      },
+      {
+        $match: {
+          userAmount: { $gt: 0 }
+        }
+      },
+      {
         $group: {
           _id: '$category',
-          amount: { $sum: '$amount' },
+          amount: { $sum: '$userAmount' },
           count: { $sum: 1 },
           categoryName: { $first: { $arrayElemAt: ['$categoryDetails.name', 0] } }
         }
@@ -52,14 +95,23 @@ export async function GET(
       }
     ]).toArray();
 
-    // Get monthly spending trends (last 12 months)
+    // Get monthly spending trends (last 12 months) including split expenses
     const now = new Date();
     const oneYearAgo = new Date(now.getFullYear() - 1, now.getMonth(), 1);
     
     const monthlyTrends = await db.collection('expenses').aggregate([
       {
         $match: {
-          paidBy: userName,
+          $or: [
+            { paidBy: userName },
+            { 
+              isSplit: true,
+              $or: [
+                { [`splitDetails.${userName}Amount`]: { $exists: true } },
+                { paidBy: { $ne: userName } }
+              ]
+            }
+          ],
           date: {
             $gte: oneYearAgo,
             $lte: now
@@ -67,11 +119,33 @@ export async function GET(
         }
       },
       {
+        $addFields: {
+          userAmount: {
+            $cond: [
+              { $eq: ['$paidBy', userName] },
+              '$amount',
+              {
+                $cond: [
+                  { $eq: ['$isSplit', true] },
+                  { $ifNull: [`$splitDetails.${userName}Amount`, { $divide: ['$amount', 2] }] },
+                  0
+                ]
+              }
+            ]
+          }
+        }
+      },
+      {
+        $match: {
+          userAmount: { $gt: 0 }
+        }
+      },
+      {
         $group: {
           _id: {
             $dateToString: { format: '%Y-%m', date: '$date' }
           },
-          amount: { $sum: '$amount' }
+          amount: { $sum: '$userAmount' }
         }
       },
       {
@@ -79,7 +153,7 @@ export async function GET(
       }
     ]).toArray();
 
-    // Get category breakdown with percentages
+    // Get category breakdown with percentages (already includes split expenses from categoryDistribution)
     const totalAmount = categoryDistribution.reduce((sum, cat) => sum + cat.amount, 0);
     const categoryBreakdown = categoryDistribution.map(cat => ({
       category: cat.name,

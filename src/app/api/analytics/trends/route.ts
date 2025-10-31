@@ -1,7 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import clientPromise from '@/lib/mongodb';
+import { getUserFromRequest } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
+  // Check authentication
+  const user = await getUserFromRequest(request);
+  if (!user) {
+    return NextResponse.json(
+      { success: false, error: 'Authentication required' },
+      { status: 401 }
+    );
+  }
+
   try {
     const { searchParams } = new URL(request.url);
     const period = searchParams.get('period') || 'month';

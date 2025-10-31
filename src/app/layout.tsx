@@ -6,7 +6,7 @@ import { ClientWrapper } from '@/components/ClientWrapper';
 
 export const metadata: Metadata = {
   title: "Spend Tracker",
-  description: "Track your expenses and manage your budget",
+  description: "Track your expenses and manage your budget with ease",
 };
 
 export const viewport: Viewport = {

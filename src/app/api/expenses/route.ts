@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import clientPromise from '@/lib/mongodb';
+import { getUserFromRequest } from '@/lib/auth';
+import { notificationService } from '@/lib/notifications';
+import { dbManager } from '@/lib/database';
 
 export async function GET(request: NextRequest) {
   try {
@@ -86,6 +89,15 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    // Authenticate user
+    const user = await getUserFromRequest(request);
+    if (!user) {
+      return NextResponse.json(
+        { success: false, error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
     const body = await request.json();
     const {
       amount,
@@ -136,15 +148,31 @@ export async function POST(request: NextRequest) {
       paidBy,
       isSplit,
       splitDetails: isSplit ? splitDetails : null,
+      createdBy: user.userId, // Add ownership
       createdAt: new Date(),
       updatedAt: new Date()
     };
 
     const result = await db.collection('expenses').insertOne(expense);
+    const createdExpense = { ...expense, _id: result.insertedId.toString() };
+
+    // Log activity
+
+    // Send notification to other users
+    const currentUser = await dbManager.getUserById(user.userId);
+    if (currentUser) {
+      await notificationService.broadcastNotification(user.userId, {
+        type: 'expense_added',
+        actorName: currentUser.name,
+        entityName: description,
+        entityId: result.insertedId.toString(),
+        amount: parseFloat(amount)
+      });
+    }
 
     return NextResponse.json({
       success: true,
-      data: { ...expense, _id: result.insertedId }
+      data: createdExpense
     });
   } catch (error) {
     console.error('POST /api/expenses error:', error);

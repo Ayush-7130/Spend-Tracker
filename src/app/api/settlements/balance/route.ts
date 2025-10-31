@@ -1,23 +1,32 @@
 import { NextResponse } from 'next/server';
-import { MongoClient } from 'mongodb';
-
-const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017';
-const client = new MongoClient(uri);
+import clientPromise from '@/lib/mongodb';
 
 export async function GET() {
   try {
-    await client.connect();
+    const client = await clientPromise;
     const db = client.db('spend-tracker');
     
-    // Get all split expenses from expenses collection
-    const splitExpenses = await db.collection('expenses')
-      .find({ isSplit: true })
-      .toArray();
+    // Get all split expenses from expenses collection with error handling
+    let splitExpenses: any[] = [];
+    try {
+      splitExpenses = await db.collection('expenses')
+        .find({ isSplit: true })
+        .toArray();
+    } catch (expenseError) {
+      console.error('Error fetching split expenses:', expenseError);
+      splitExpenses = [];
+    }
 
-    // Get all settlements
-    const settlements = await db.collection('settlements')
-      .find({})
-      .toArray();
+    // Get all settlements with error handling
+    let settlements: any[] = [];
+    try {
+      settlements = await db.collection('settlements')
+        .find({})
+        .toArray();
+    } catch (settlementError) {
+      console.error('Error fetching settlements:', settlementError);
+      settlements = [];
+    }
 
     // Calculate balances for each user pair
     const balances: { [key: string]: number } = {};
@@ -99,12 +108,25 @@ export async function GET() {
       }
     }
     
-    // Calculate summary statistics
-    const totalOwed = userBalances
-      .filter(b => b.status === 'owes')
-      .reduce((sum, b) => sum + b.amount, 0);
+    // Calculate summary statistics with safe arithmetic
+    let totalOwed = 0;
+    let totalSettled = 0;
     
-    const totalSettled = settlements.reduce((sum, s) => sum + s.amount, 0);
+    try {
+      totalOwed = userBalances
+        .filter(b => b.status === 'owes')
+        .reduce((sum, b) => sum + (Number(b.amount) || 0), 0);
+    } catch (summaryError) {
+      console.error('Error calculating total owed:', summaryError);
+      totalOwed = 0;
+    }
+    
+    try {
+      totalSettled = settlements.reduce((sum, s) => sum + (Number(s.amount) || 0), 0);
+    } catch (settlementSumError) {
+      console.error('Error calculating total settled:', settlementSumError);
+      totalSettled = 0;
+    }
     
     return NextResponse.json({
       balances: userBalances,
@@ -118,7 +140,5 @@ export async function GET() {
   } catch (error) {
     console.error('Error calculating settlement balances:', error);
     return NextResponse.json({ error: 'Failed to calculate balances' }, { status: 500 });
-  } finally {
-    await client.close();
   }
 }

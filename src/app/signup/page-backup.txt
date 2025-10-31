@@ -1,0 +1,334 @@
+/* 
+SIGN-UP FUNCTIONALITY DISABLED
+To re-enable:
+1. Replace this entire file with the backup file content
+2. Re-enable the API endpoint in src/app/api/auth/signup/route.ts
+3. Restore sign-up links in Navigation.tsx and login page
+4. Update AuthGuard.tsx to include '/signup' in publicRoutes
+*/
+
+'use client';
+
+import React from 'react';
+import Link from 'next/link';
+import ThemeToggle from '@/components/ThemeToggle';
+
+export default function SignupPage() {
+  return (
+    <div className="min-vh-100 d-flex align-items-center justify-content-center bg-light">
+      <div className="container">
+        <div className="row justify-content-center">
+          <div className="col-md-6 col-lg-4">
+            <div className="card shadow-sm">
+              <div className="card-body p-4">
+                <div className="text-center mb-4">
+                  <h1 className="h3 mb-3">Sign Up Disabled</h1>
+                  <p className="text-muted">
+                    Sign-up functionality is currently disabled.
+                  </p>
+                </div>
+                
+                <div className="text-center">
+                  <Link href="/login" className="btn btn-primary">
+                    Go to Login
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div className="position-absolute top-0 end-0 m-3">
+        <ThemeToggle />
+      </div>
+    </div>
+  );
+}
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { useAuth } from '@/contexts/AuthContext';
+import { useNotification } from '@/contexts/NotificationContext';
+import ThemeToggle from '@/components/ThemeToggle';
+
+export default function SignupPage() {
+  const { signup, isAuthenticated, loading } = useAuth();
+  const { showSuccess, showError } = useNotification();
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    password: '',
+    confirmPassword: ''
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errors, setErrors] = useState<{[key: string]: string}>({});
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated && !loading) {
+      window.location.href = '/';
+    }
+  }, [isAuthenticated, loading]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    
+    // Clear error when user starts typing
+    if (errors[name]) {
+      setErrors(prev => ({ ...prev, [name]: '' }));
+    }
+  };
+
+  const validateForm = () => {
+    const newErrors: {[key: string]: string} = {};
+
+    if (!formData.name.trim()) {
+      newErrors.name = 'Name is required';
+    } else if (formData.name.trim().length < 2) {
+      newErrors.name = 'Name must be at least 2 characters long';
+    }
+
+    if (!formData.email.trim()) {
+      newErrors.email = 'Email is required';
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      newErrors.email = 'Please enter a valid email address';
+    }
+
+    if (!formData.password) {
+      newErrors.password = 'Password is required';
+    } else if (formData.password.length < 8) {
+      newErrors.password = 'Password must be at least 8 characters long';
+    } else if (!/(?=.*[a-z])/.test(formData.password)) {
+      newErrors.password = 'Password must contain at least one lowercase letter';
+    } else if (!/(?=.*[A-Z])/.test(formData.password)) {
+      newErrors.password = 'Password must contain at least one uppercase letter';
+    } else if (!/(?=.*\d)/.test(formData.password)) {
+      newErrors.password = 'Password must contain at least one number';
+    }
+
+    if (!formData.confirmPassword) {
+      newErrors.confirmPassword = 'Please confirm your password';
+    } else if (formData.password !== formData.confirmPassword) {
+      newErrors.confirmPassword = 'Passwords do not match';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!validateForm()) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    
+    try {
+      const result = await signup(
+        formData.name,
+        formData.email,
+        formData.password,
+        formData.confirmPassword
+      );
+      
+      if (result.success) {
+        showSuccess('Account created successfully! Welcome to Spend Tracker.');
+        // Redirect will happen via useEffect when isAuthenticated becomes true
+      } else {
+        showError(result.error || 'Signup failed');
+      }
+    } catch (error) {
+      showError('An unexpected error occurred');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="d-flex justify-content-center align-items-center min-vh-100">
+        <div className="spinner-border text-primary" role="status">
+          <span className="visually-hidden">Loading...</span>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="auth-page-bg">
+      {/* Theme Toggle */}
+      <div className="position-fixed top-0 end-0 p-3" style={{ zIndex: 1050 }}>
+        <ThemeToggle />
+      </div>
+
+      <div className="min-vh-100 d-flex align-items-center">
+        <div className="container">
+          <div className="row justify-content-center">
+            <div className="col-md-6 col-lg-5">
+              <div className="auth-card">
+                <div className="card-header bg-primary text-white text-center">
+                  <h4 className="mb-0">
+                    <i className="bi bi-wallet2 me-2"></i>
+                    Spend Tracker
+                  </h4>
+                  <p className="mb-0 small opacity-75">Create your account</p>
+                </div>
+                <div className="card-body p-4">
+                  <form onSubmit={handleSubmit}>
+                    <div className="mb-3">
+                      <label htmlFor="name" className="form-label">
+                        <i className="bi bi-person me-1"></i>
+                        Full Name
+                      </label>
+                      <input
+                        type="text"
+                        className={`form-control ${errors.name ? 'is-invalid' : ''}`}
+                        id="name"
+                        name="name"
+                        value={formData.name}
+                        onChange={handleChange}
+                        placeholder="Enter your full name"
+                        disabled={isSubmitting}
+                      />
+                      {errors.name && (
+                        <div className="invalid-feedback">
+                          {errors.name}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="mb-3">
+                      <label htmlFor="email" className="form-label">
+                        <i className="bi bi-envelope me-1"></i>
+                        Email Address
+                      </label>
+                      <input
+                        type="email"
+                        className={`form-control ${errors.email ? 'is-invalid' : ''}`}
+                        id="email"
+                        name="email"
+                        value={formData.email}
+                        onChange={handleChange}
+                        placeholder="Enter your email"
+                        disabled={isSubmitting}
+                      />
+                      {errors.email && (
+                        <div className="invalid-feedback">
+                          {errors.email}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="mb-3">
+                      <label htmlFor="password" className="form-label">
+                        <i className="bi bi-lock me-1"></i>
+                        Password
+                      </label>
+                      <div className="input-group">
+                        <input
+                          type={showPassword ? "text" : "password"}
+                          className={`form-control ${errors.password ? 'is-invalid' : ''}`}
+                          id="password"
+                          name="password"
+                          value={formData.password}
+                          onChange={handleChange}
+                          placeholder="Create a strong password"
+                          disabled={isSubmitting}
+                        />
+                        <button
+                          type="button"
+                          className="btn btn-outline-secondary password-toggle-icon"
+                          onClick={() => setShowPassword(!showPassword)}
+                          disabled={isSubmitting}
+                        >
+                          <i className={`bi ${showPassword ? 'bi-eye-slash' : 'bi-eye'}`}></i>
+                        </button>
+                        {errors.password && (
+                          <div className="invalid-feedback">
+                            {errors.password}
+                          </div>
+                        )}
+                      </div>
+                      <div className="form-text">
+                        Password must be at least 8 characters with uppercase, lowercase, and number.
+                      </div>
+                    </div>
+
+                    <div className="mb-3">
+                      <label htmlFor="confirmPassword" className="form-label">
+                        <i className="bi bi-lock-fill me-1"></i>
+                        Confirm Password
+                      </label>
+                      <div className="input-group">
+                        <input
+                          type={showConfirmPassword ? "text" : "password"}
+                          className={`form-control ${errors.confirmPassword ? 'is-invalid' : ''}`}
+                          id="confirmPassword"
+                          name="confirmPassword"
+                          value={formData.confirmPassword}
+                          onChange={handleChange}
+                          placeholder="Confirm your password"
+                          disabled={isSubmitting}
+                        />
+                        <button
+                          type="button"
+                          className="btn btn-outline-secondary password-toggle-icon"
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          disabled={isSubmitting}
+                        >
+                          <i className={`bi ${showConfirmPassword ? 'bi-eye-slash' : 'bi-eye'}`}></i>
+                        </button>
+                        {errors.confirmPassword && (
+                          <div className="invalid-feedback">
+                            {errors.confirmPassword}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <button
+                      type="submit"
+                      className="btn btn-primary w-100 mb-3"
+                      disabled={isSubmitting}
+                    >
+                      {isSubmitting ? (
+                        <>
+                          <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                          Creating Account...
+                        </>
+                      ) : (
+                        <>
+                          <i className="bi bi-person-plus me-1"></i>
+                          Create Account
+                        </>
+                      )}
+                    </button>
+                  </form>
+
+                  <div className="text-center">
+                    <p className="mb-0 text-muted">
+                      Already have an account?{' '}
+                      <Link href="/login" className="text-primary text-decoration-none">
+                        Sign in here
+                      </Link>
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

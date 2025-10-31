@@ -1,7 +1,16 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import clientPromise from '@/lib/mongodb';
+import { getUserFromRequest } from '@/lib/auth';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  // Check authentication
+  const user = await getUserFromRequest(request);
+  if (!user) {
+    return NextResponse.json(
+      { success: false, error: 'Authentication required' },
+      { status: 401 }
+    );
+  }
   try {
     const client = await clientPromise;
     const db = client.db('spend-tracker');
@@ -42,13 +51,13 @@ export async function GET() {
     // Calculate split totals and individual shares
     splitExpenses.forEach(expense => {
       totalSplit += expense.amount;
-      
+
       if (expense.paidBy === 'saket') {
         saketSplitPaid += expense.amount;
       } else {
         ayushSplitPaid += expense.amount;
       }
-      
+
       if (expense.splitDetails) {
         saketSplitOwes += expense.splitDetails.saketAmount || 0;
         ayushSplitOwes += expense.splitDetails.ayushAmount || 0;
@@ -62,7 +71,7 @@ export async function GET() {
     // Calculate settlement
     const saketNetBalance = saketSplitPaid - saketSplitOwes;
     const ayushNetBalance = ayushSplitPaid - ayushSplitOwes;
-    
+
     const settlement = {
       saketOwes: 0,
       ayushOwes: 0,

@@ -176,20 +176,40 @@ export const getDoughnutChartOptions = (showPercentage: boolean = true): ChartOp
  * @param data - Data points
  * @param color - Primary color
  * @param filled - Whether to fill area under line
+ * @param highlightToday - Whether to highlight today's point
+ * @param todayIndex - Index of today's data point
  */
 export const createLineDataset = (
   label: string,
   data: number[],
   color: string = CHART_COLORS.primary,
-  filled: boolean = true
-) => ({
-  label,
-  data,
-  borderColor: color,
-  backgroundColor: filled ? `${color}1A` : color, // 1A = 10% opacity
-  fill: filled,
-  tension: 0.4,
-});
+  filled: boolean = true,
+  highlightToday: boolean = false,
+  todayIndex: number = -1
+) => {
+  const pointColors = data.map((_, index) => 
+    highlightToday && index === todayIndex ? CHART_COLORS.danger : color
+  );
+  
+  const pointRadii = data.map((_, index) => 
+    highlightToday && index === todayIndex ? 6 : 3
+  );
+  
+  return {
+    label,
+    data,
+    borderColor: color,
+    backgroundColor: filled ? `${color}1A` : color, // 1A = 10% opacity
+    fill: filled,
+    tension: 0.4,
+    pointBackgroundColor: pointColors,
+    pointBorderColor: pointColors,
+    pointRadius: pointRadii,
+    pointHoverRadius: data.map((_, index) => 
+      highlightToday && index === todayIndex ? 8 : 5
+    ),
+  };
+};
 
 /**
  * Create bar chart dataset configuration

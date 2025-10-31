@@ -1,7 +1,16 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import clientPromise from '@/lib/mongodb';
+import { getUserFromRequest } from '@/lib/auth';
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
+  // Check authentication
+  const user = await getUserFromRequest(request);
+  if (!user) {
+    return NextResponse.json(
+      { success: false, error: 'Authentication required' },
+      { status: 401 }
+    );
+  }
   try {
     const { searchParams } = new URL(request.url);
     const period = searchParams.get('period') || 'month';
@@ -28,8 +37,9 @@ export async function GET(request: Request) {
 
     switch (period) {
       case 'week':
-        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
-        endDate = now;
+        // Start 6 days ago, end today (inclusive of current date)
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6);
+        endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
         break;
       case 'quarter':
         const quarterStart = Math.floor(now.getMonth() / 3) * 3;
@@ -44,6 +54,8 @@ export async function GET(request: Request) {
         if (customStart && customEnd) {
           startDate = new Date(customStart);
           endDate = new Date(customEnd);
+          // Set end date to end of day
+          endDate.setHours(23, 59, 59);
         } else {
           // Default to current month if custom dates not provided
           startDate = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -147,10 +159,10 @@ export async function GET(request: Request) {
       const categoryItem = item as CategoryDataItem;
       const periodKey = categoryItem._id.period;
       const category = categoryItem._id.category;
-      
+
       periodsSet.add(periodKey);
       categoriesSet.add(category);
-      
+
       if (!categoryAmounts[category]) {
         categoryAmounts[category] = {};
       }
@@ -176,7 +188,7 @@ export async function GET(request: Request) {
     }
 
     const categories = Array.from(categoriesSet);
-    const chartData = categories.map(category => 
+    const chartData = categories.map(category =>
       completePeriods.map(periodKey => categoryAmounts[category]?.[periodKey] || 0)
     );
 
@@ -184,15 +196,15 @@ export async function GET(request: Request) {
     const formatPeriodLabel = (periodKey: string) => {
       if (period === 'week' || period === 'month' || period === 'custom') {
         const date = new Date(periodKey);
-        return date.toLocaleDateString('en-IN', { 
-          day: '2-digit', 
-          month: 'short' 
+        return date.toLocaleDateString('en-IN', {
+          day: '2-digit',
+          month: 'short'
         });
       } else if (period === 'quarter' || period === 'year') {
         const date = new Date(periodKey + '-01');
-        return date.toLocaleDateString('en-IN', { 
-          month: 'short', 
-          year: '2-digit' 
+        return date.toLocaleDateString('en-IN', {
+          month: 'short',
+          year: '2-digit'
         });
       }
       return periodKey;
@@ -223,7 +235,7 @@ export async function GET(request: Request) {
 
     const saketData = periodTotals.find(p => p._id === 'saket') || { totalAmount: 0, splitAmount: 0 };
     const ayushData = periodTotals.find(p => p._id === 'ayush') || { totalAmount: 0, splitAmount: 0 };
-    
+
     const saketTotal = saketData.totalAmount - saketData.splitAmount;
     const ayushTotal = ayushData.totalAmount - ayushData.splitAmount;
     const splitTotal = saketData.splitAmount + ayushData.splitAmount;
@@ -231,7 +243,7 @@ export async function GET(request: Request) {
     // Calculate settlement using the same logic as settlements balance API
     // Get all split expenses (filter by date range)
     const splitExpenses = await db.collection('expenses')
-      .find({ 
+      .find({
         isSplit: true,
         date: { $gte: startDate.toISOString().split('T')[0], $lte: endDate.toISOString().split('T')[0] }
       })
@@ -246,14 +258,14 @@ export async function GET(request: Request) {
 
     // Calculate balances for each user pair
     const balances: { [key: string]: number } = {};
-    
+
     // Process split expenses based on existing expense structure
     for (const expense of splitExpenses) {
       if (expense.splitDetails) {
         // Use the existing splitDetails structure (saketAmount, ayushAmount)
         const { saketAmount = 0, ayushAmount = 0 } = expense.splitDetails;
         const paidBy = expense.paidBy;
-        
+
         // Calculate what each person should pay vs what the payer paid
         if (paidBy.toLowerCase() === 'saket') {
           // Saket paid, Ayush owes his portion
@@ -272,7 +284,7 @@ export async function GET(request: Request) {
         // Fallback: if no splitDetails, assume equal split between Saket and Ayush
         const amountPerPerson = expense.amount / 2;
         const paidBy = expense.paidBy;
-        
+
         if (paidBy.toLowerCase() === 'saket') {
           const key = `Ayush_to_Saket`;
           balances[key] = (balances[key] || 0) + amountPerPerson;
@@ -282,23 +294,23 @@ export async function GET(request: Request) {
         }
       }
     }
-    
+
     // Subtract settlements from balances
     for (const settlement of settlements) {
       const key = `${settlement.fromUser}_to_${settlement.toUser}`;
       balances[key] = (balances[key] || 0) - settlement.amount;
     }
-    
+
     // Calculate net balances (show only one row per user pair)
     const saketOwesAyush = (balances['Saket_to_Ayush'] || 0);
     const ayushOwesSaket = (balances['Ayush_to_Saket'] || 0);
-    
+
     // Calculate net difference
     const netBalance = ayushOwesSaket - saketOwesAyush;
-    
+
     let settlementRequired = 0;
     let settlementMessage = 'All settled up!';
-    
+
     // Show only one net balance row
     if (Math.abs(netBalance) > 0.01) {
       if (netBalance > 0) {
@@ -314,7 +326,7 @@ export async function GET(request: Request) {
 
     const dateRange = generateDateRange(startDate, endDate);
     const dailyAmountsMap = new Map(dailyTrends.map(d => [d._id, d.totalAmount]));
-    
+
     const completeDaily = {
       dates: dateRange,
       amounts: dateRange.map(date => Math.round((dailyAmountsMap.get(date) || 0) * 100) / 100)
@@ -325,7 +337,7 @@ export async function GET(request: Request) {
       categoryMonthly: {
         categories,
         periods: completePeriods.map(formatPeriodLabel),
-        data: chartData.map(categoryData => 
+        data: chartData.map(categoryData =>
           categoryData.map(amount => Math.round(amount * 100) / 100)
         )
       },

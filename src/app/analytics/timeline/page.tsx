@@ -27,6 +27,7 @@ import {
   buildPeriodApiUrl,
   PeriodType,
 } from "@/lib/utils";
+import { LoadingSpinner, Table } from "@/shared/components";
 
 ChartJS.register(
   CategoryScale,
@@ -108,7 +109,14 @@ export default function TimelineAnalysis() {
     ? {
         labels: data.dailyTrends.dates.map(formatTimelineDate),
         datasets: [
-          createLineDataset("Daily Spending", data.dailyTrends.amounts),
+          createLineDataset(
+            "Daily Spending",
+            data.dailyTrends.amounts,
+            undefined, // use default color
+            true, // filled
+            selectedPeriod === "week", // highlight today only for week view
+            selectedPeriod === "week" ? data.dailyTrends.dates.length - 1 : -1 // today is the last date in week view
+          ),
         ],
       }
     : null;
@@ -144,9 +152,14 @@ export default function TimelineAnalysis() {
           className="d-flex justify-content-center align-items-center"
           style={{ minHeight: "400px" }}
         >
-          <div className="spinner-border text-primary" role="status">
-            <span className="visually-hidden">Loading...</span>
-          </div>
+          <LoadingSpinner
+            config={{
+              size: "medium",
+              variant: "primary",
+              showText: true,
+              text: "Loading timeline data...",
+            }}
+          />
         </div>
       </MainLayout>
     );
@@ -179,7 +192,7 @@ export default function TimelineAnalysis() {
               <div className="mb-2 mb-md-0">
                 <h1 className="h3 mb-1">
                   <i className="bi bi-graph-up me-2"></i>
-                  Analytics - Timeline
+                  Analytics
                 </h1>
               </div>
               <div className="d-flex gap-2 flex-wrap">
@@ -340,83 +353,97 @@ export default function TimelineAnalysis() {
               </div>
               <div className="card-body">
                 <div className="row">
-                  <div className="table-responsive">
-                    <table className="table table-bordered">
-                      <thead className="table-light">
-                        <tr>
-                          <th>User</th>
-                          <th>Personal Expenses</th>
-                          <th>Split Expenses</th>
-                          <th>Total Paid</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr>
-                          <td>
-                            <i className="bi bi-person-circle me-2 text-primary"></i>
-                            <strong>Saket</strong>
-                          </td>
-                          <td>
-                            {formatCurrency(data.periodTotals.saketTotal)}
-                          </td>
-                          <td>
-                            {formatCurrency(data.periodTotals.splitTotal / 2)}
-                          </td>
-                          <td className="fw-bold">
-                            {formatCurrency(
-                              data.periodTotals.saketTotal +
-                                data.periodTotals.splitTotal / 2
-                            )}
-                          </td>
-                        </tr>
-                        <tr>
-                          <td>
-                            <i className="bi bi-person-circle me-2 text-success"></i>
-                            <strong>Ayush</strong>
-                          </td>
-                          <td>
-                            {formatCurrency(data.periodTotals.ayushTotal)}
-                          </td>
-                          <td>
-                            {formatCurrency(data.periodTotals.splitTotal / 2)}
-                          </td>
-                          <td className="fw-bold">
-                            {formatCurrency(
-                              data.periodTotals.ayushTotal +
-                                data.periodTotals.splitTotal / 2
-                            )}
-                          </td>
-                        </tr>
-                        <tr className="table-info">
-                          <td>
-                            <strong>Total</strong>
-                          </td>
-                          <td>
-                            <strong>
-                              {formatCurrency(
-                                data.periodTotals.saketTotal +
-                                  data.periodTotals.ayushTotal
-                              )}
-                            </strong>
-                          </td>
-                          <td>
-                            <strong>
-                              {formatCurrency(data.periodTotals.splitTotal)}
-                            </strong>
-                          </td>
-                          <td>
-                            <strong>
-                              {formatCurrency(
-                                data.periodTotals.saketTotal +
-                                  data.periodTotals.ayushTotal +
-                                  data.periodTotals.splitTotal
-                              )}
-                            </strong>
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
+                  <Table
+                    config={{
+                      columns: [
+                        {
+                          key: "user",
+                          header: "User",
+                          accessor: "user",
+                          render: (value, row) => (
+                            <div>
+                              <i
+                                className={`bi bi-person-circle me-2 ${
+                                  row.user === "Saket"
+                                    ? "text-primary"
+                                    : row.user === "Ayush"
+                                    ? "text-success"
+                                    : ""
+                                }`}
+                              ></i>
+                              <strong>{value}</strong>
+                            </div>
+                          ),
+                        },
+                        {
+                          key: "personalExpenses",
+                          header: "Personal Expenses",
+                          accessor: "personalExpenses",
+                          render: (value, row) =>
+                            row.user === "Total" ? (
+                              <strong>{formatCurrency(value)}</strong>
+                            ) : (
+                              formatCurrency(value)
+                            ),
+                        },
+                        {
+                          key: "splitExpenses",
+                          header: "Split Expenses",
+                          accessor: "splitExpenses",
+                          render: (value, row) =>
+                            row.user === "Total" ? (
+                              <strong>{formatCurrency(value)}</strong>
+                            ) : (
+                              formatCurrency(value)
+                            ),
+                        },
+                        {
+                          key: "totalPaid",
+                          header: "Total Paid",
+                          accessor: "totalPaid",
+                          render: (value, row) => (
+                            <span className="fw-bold">
+                              {formatCurrency(value)}
+                            </span>
+                          ),
+                        },
+                      ],
+                      data: [
+                        {
+                          user: "Saket",
+                          personalExpenses: data.periodTotals.saketTotal,
+                          splitExpenses: data.periodTotals.splitTotal / 2,
+                          totalPaid:
+                            data.periodTotals.saketTotal +
+                            data.periodTotals.splitTotal / 2,
+                        },
+                        {
+                          user: "Ayush",
+                          personalExpenses: data.periodTotals.ayushTotal,
+                          splitExpenses: data.periodTotals.splitTotal / 2,
+                          totalPaid:
+                            data.periodTotals.ayushTotal +
+                            data.periodTotals.splitTotal / 2,
+                        },
+                        {
+                          user: "Total",
+                          personalExpenses:
+                            data.periodTotals.saketTotal +
+                            data.periodTotals.ayushTotal,
+                          splitExpenses: data.periodTotals.splitTotal,
+                          totalPaid:
+                            data.periodTotals.saketTotal +
+                            data.periodTotals.ayushTotal +
+                            data.periodTotals.splitTotal,
+                        },
+                      ],
+                      keyExtractor: (row) => row.user,
+                      bordered: true,
+                      responsive: true,
+                      rowClassName: (row) =>
+                        row.user === "Total" ? "table-info" : "",
+                    }}
+                  />
                 </div>
               </div>
             </div>

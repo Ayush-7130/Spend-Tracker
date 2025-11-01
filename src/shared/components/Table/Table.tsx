@@ -283,13 +283,20 @@ export default function Table<T = any>({ config, className = '' }: TableProps<T>
       )}
 
       {/* Table */}
-      <div className={config.responsive ? 'table-responsive' : ''}>
+      <div 
+        className={config.responsive ? 'table-responsive' : ''}
+        style={{
+          overflowX: 'auto',
+          WebkitOverflowScrolling: 'touch'
+        }}
+      >
         <table 
           className={`table mb-0 ${config.hover !== false ? 'table-hover' : ''} ${config.striped ? 'table-striped' : ''} ${config.bordered ? 'table-bordered' : ''} ${config.size === 'small' ? 'table-sm' : config.size === 'large' ? 'table-lg' : ''}`}
           style={{ 
             backgroundColor: 'var(--table-bg)',
             color: 'var(--text-primary)',
-            borderColor: 'var(--table-border)'
+            borderColor: 'var(--table-border)',
+            minWidth: '100%'
           }}
         >
           <thead 
@@ -485,20 +492,20 @@ export default function Table<T = any>({ config, className = '' }: TableProps<T>
 
       {/* Pagination */}
       {config.paginated && config.pagination && (
-        <div className="d-flex justify-content-between align-items-center p-3">
-          <div style={{ color: 'var(--text-secondary)' }}>
+        <div className="table-pagination-wrapper p-3">
+          <div className="table-pagination-info" style={{ color: 'var(--text-secondary)' }}>
             Showing {((currentPage - 1) * config.pagination.limit) + 1} to{' '}
             {Math.min(currentPage * config.pagination.limit, config.pagination.total)} of{' '}
             {config.pagination.total} entries
           </div>
           
-          <nav>
+          <nav className="table-pagination-nav">
             <ul className="pagination pagination-sm mb-0">
               <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
                 <button
                   onClick={() => handlePageChange(currentPage - 1)}
                   disabled={currentPage === 1}
-                  className="page-link"
+                  className="page-link page-link-prev"
                   style={{
                     backgroundColor: currentPage === 1 ? 'var(--btn-secondary-bg)' : 'var(--card-bg)',
                     borderColor: 'var(--border-primary)',
@@ -506,7 +513,8 @@ export default function Table<T = any>({ config, className = '' }: TableProps<T>
                     transition: 'var(--transition-fast)'
                   }}
                 >
-                  <i className="bi bi-chevron-left me-1"></i>Previous
+                  <i className="bi bi-chevron-left me-1"></i>
+                  <span className="d-none d-sm-inline">Previous</span>
                 </button>
               </li>
             
@@ -535,7 +543,7 @@ export default function Table<T = any>({ config, className = '' }: TableProps<T>
                 <button
                   onClick={() => handlePageChange(currentPage + 1)}
                   disabled={currentPage >= Math.ceil(config.pagination.total / config.pagination.limit)}
-                  className="page-link"
+                  className="page-link page-link-next"
                   style={{
                     backgroundColor: currentPage >= Math.ceil(config.pagination.total / config.pagination.limit) ? 'var(--btn-secondary-bg)' : 'var(--card-bg)',
                     borderColor: 'var(--border-primary)',
@@ -543,14 +551,15 @@ export default function Table<T = any>({ config, className = '' }: TableProps<T>
                     transition: 'var(--transition-fast)'
                   }}
                 >
-                  Next<i className="bi bi-chevron-right ms-1"></i>
+                  <span className="d-none d-sm-inline">Next</span>
+                  <i className="bi bi-chevron-right ms-1"></i>
                 </button>
               </li>
             </ul>
           </nav>
           
           {config.pagination.showSizeSelector && (
-            <div>
+            <div className="table-pagination-size">
               <select
                 value={config.pagination.limit}
                 onChange={(e) => config.onPageSizeChange?.(Number(e.target.value))}
@@ -569,6 +578,102 @@ export default function Table<T = any>({ config, className = '' }: TableProps<T>
           )}
         </div>
       )}
+      
+      {/* Mobile Responsive Styles */}
+      <style jsx>{`
+        .table-pagination-wrapper {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          flex-wrap: wrap;
+          gap: 1rem;
+        }
+
+        .table-pagination-info {
+          flex: 1 1 auto;
+          min-width: 150px;
+          font-size: 0.875rem;
+        }
+
+        .table-pagination-nav {
+          flex: 1 1 auto;
+          display: flex;
+          justify-content: center;
+        }
+
+        .table-pagination-size {
+          flex: 0 0 auto;
+        }
+
+        @media (max-width: 768px) {
+          .table-pagination-wrapper {
+            flex-direction: column;
+            gap: 0.75rem;
+            align-items: stretch;
+          }
+
+          .table-pagination-info {
+            text-align: center;
+            order: 1;
+            font-size: 0.8rem;
+          }
+
+          .table-pagination-nav {
+            order: 2;
+            justify-content: center;
+          }
+
+          .table-pagination-nav .pagination {
+            gap: 0.25rem;
+            flex-wrap: wrap;
+            justify-content: center;
+          }
+
+          .table-pagination-nav .page-item {
+            margin: 0.125rem;
+          }
+
+          .table-pagination-nav .page-link {
+            padding: 0.375rem 0.5rem;
+            font-size: 0.875rem;
+            min-width: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          }
+
+          .table-pagination-nav .page-link-prev,
+          .table-pagination-nav .page-link-next {
+            padding: 0.375rem 0.75rem;
+          }
+
+          .table-pagination-size {
+            order: 3;
+            width: 100%;
+          }
+
+          .table-pagination-size .form-select {
+            width: 100%;
+          }
+        }
+
+        @media (max-width: 576px) {
+          .table-pagination-info {
+            font-size: 0.75rem;
+          }
+
+          .table-pagination-nav .page-link {
+            padding: 0.3rem 0.4rem;
+            font-size: 0.8rem;
+            min-width: 32px;
+          }
+
+          .table-pagination-nav .page-link-prev,
+          .table-pagination-nav .page-link-next {
+            padding: 0.3rem 0.5rem;
+          }
+        }
+      `}</style>
     </div>
   );
 }

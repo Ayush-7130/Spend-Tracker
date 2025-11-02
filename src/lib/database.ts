@@ -17,7 +17,7 @@ export interface Notification {
   _id: string;
   userId: string;
   type: 'expense_added' | 'expense_updated' | 'expense_deleted' | 
-        'settlement_added' | 'settlement_deleted' | 
+        'settlement_added' | 'settlement_updated' | 'settlement_deleted' | 
         'category_added' | 'category_updated' | 'category_deleted';
   message: string;
   entityId?: string;

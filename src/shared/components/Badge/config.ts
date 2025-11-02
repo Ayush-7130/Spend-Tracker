@@ -51,7 +51,8 @@ export const statusTypeConfig = {
   settlement: {
     owes: 'danger',
     settled: 'success',
-    pending: 'warning'
+    pending: 'warning',
+    borrow: 'danger'
   },
   category: {
     default: 'secondary'

@@ -27,7 +27,7 @@ interface Settlement {
   amount: number;
   description: string;
   date: string;
-  status: string;
+  status: "borrow" | "settled";
 }
 
 interface Balance {
@@ -60,10 +60,17 @@ const SettlementsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [operationLoading, setOperationLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 10,
+    total: 0,
+    pages: 0,
+  });
   const [filters, setFilters] = useState({
     search: "",
     fromUser: "",
     toUser: "",
+    status: "",
     startDate: "",
     endDate: "",
     sortBy: "date",
@@ -72,12 +79,14 @@ const SettlementsPage: React.FC = () => {
 
   // Record Settlement Dialog states
   const [showSettlementDialog, setShowSettlementDialog] = useState(false);
+  const [editingSettlement, setEditingSettlement] = useState<Settlement | null>(null);
   const [newSettlement, setNewSettlement] = useState({
     from: "",
     to: "",
     amount: "",
     date: new Date().toISOString().split("T")[0],
     description: "",
+    status: "settled" as "borrow" | "settled",
   });
   const [submitError, setSubmitError] = useState<string | null>(null);
 
@@ -120,6 +129,14 @@ const SettlementsPage: React.FC = () => {
       filtered = filtered.filter(
         (settlement) =>
           settlement.toUser.toLowerCase() === filters.toUser.toLowerCase()
+      );
+    }
+
+    // Status filter
+    if (filters.status) {
+      filtered = filtered.filter(
+        (settlement) =>
+          settlement.status?.toLowerCase() === filters.status.toLowerCase()
       );
     }
 
@@ -278,11 +295,17 @@ const SettlementsPage: React.FC = () => {
         amount: amount,
         date: newSettlement.date,
         description: newSettlement.description,
+        status: newSettlement.status,
         expenseId: "000000000000000000000000", // Placeholder for now
       };
 
-      const response = await fetch("/api/settlements", {
-        method: "POST",
+      const url = editingSettlement
+        ? `/api/settlements/${editingSettlement._id}`
+        : "/api/settlements";
+      const method = editingSettlement ? "PUT" : "POST";
+
+      const response = await fetch(url, {
+        method,
         headers: {
           "Content-Type": "application/json",
         },
@@ -291,26 +314,65 @@ const SettlementsPage: React.FC = () => {
 
       if (response.ok) {
         setShowSettlementDialog(false);
+        setEditingSettlement(null);
         setNewSettlement({
           from: "",
           to: "",
           amount: "",
           date: new Date().toISOString().split("T")[0],
           description: "",
+          status: "settled",
         });
         // Refresh data with optimized approach
         await refreshSettlements();
         setSubmitError(null); // Clear any previous errors
-        notifyAdded("Settlement");
+        if (editingSettlement) {
+          notifyAdded("Settlement updated");
+        } else {
+          notifyAdded("Settlement");
+        }
       } else {
         const errorData = await response.json();
-        setSubmitError(errorData.error || "Failed to record settlement");
+        setSubmitError(errorData.error || `Failed to ${editingSettlement ? "update" : "record"} settlement`);
       }
     } catch {
-      setSubmitError("Error recording settlement");
+      setSubmitError(`Error ${editingSettlement ? "updating" : "recording"} settlement`);
     } finally {
       setOperationLoading(false);
     }
+  };
+
+  const handleEditSettlement = (settlement: Settlement) => {
+    // Find user IDs from names
+    const getUserId = (name: string) => {
+      const user = users.find((u) => u.name.toLowerCase() === name.toLowerCase());
+      return user?.id || name.toLowerCase();
+    };
+
+    setEditingSettlement(settlement);
+    setNewSettlement({
+      from: getUserId(settlement.fromUser),
+      to: getUserId(settlement.toUser),
+      amount: settlement.amount.toString(),
+      date: new Date(settlement.date).toISOString().split("T")[0],
+      description: settlement.description || "",
+      status: settlement.status || "settled",
+    });
+    setShowSettlementDialog(true);
+  };
+
+  const handleCloseDialog = () => {
+    setShowSettlementDialog(false);
+    setEditingSettlement(null);
+    setNewSettlement({
+      from: "",
+      to: "",
+      amount: "",
+      date: new Date().toISOString().split("T")[0],
+      description: "",
+      status: "settled",
+    });
+    setSubmitError(null);
   };
 
   const handleDeleteSettlement = async (settlementId: string) => {
@@ -606,6 +668,17 @@ const SettlementsPage: React.FC = () => {
                   colSize: 2,
                 },
                 {
+                  key: "status",
+                  type: "select",
+                  label: "Status",
+                  options: [
+                    { label: "All Status", value: "" },
+                    { label: "Borrow", value: "borrow" },
+                    { label: "Settled", value: "settled" },
+                  ],
+                  colSize: 2,
+                },
+                {
                   key: "startDate",
                   type: "date",
                   label: "Start Date",
@@ -625,6 +698,7 @@ const SettlementsPage: React.FC = () => {
                   search: "",
                   fromUser: "",
                   toUser: "",
+                  status: "",
                   startDate: "",
                   endDate: "",
                   sortBy: "date",
@@ -732,8 +806,11 @@ const SettlementsPage: React.FC = () => {
                         {
                           key: "status",
                           header: "Status",
-                          render: () => (
-                            <StatusBadge status="settled" type="settlement" />
+                          render: (value, row) => (
+                            <StatusBadge 
+                              status={row.status || "settled"} 
+                              type="settlement" 
+                            />
                           ),
                         },
                       ],
@@ -742,6 +819,14 @@ const SettlementsPage: React.FC = () => {
                       hover: true,
                       responsive: true,
                       sortable: true,
+                      paginated: true,
+                      pagination: {
+                        page: pagination.page,
+                        limit: pagination.limit,
+                        total: filteredSettlements.length,
+                        showSizeSelector: true,
+                        sizeSelectorOptions: [10, 20, 50, 100],
+                      },
                       defaultSort: {
                         column: filters.sortBy,
                         direction: filters.sortOrder as "asc" | "desc",
@@ -749,7 +834,23 @@ const SettlementsPage: React.FC = () => {
                       onSort: (sort) => {
                         handleSort(sort.column);
                       },
+                      onPageChange: (page) => {
+                        setPagination((prev) => ({ ...prev, page }));
+                      },
+                      onPageSizeChange: (size) => {
+                        setPagination((prev) => ({
+                          ...prev,
+                          limit: size,
+                          page: 1,
+                        }));
+                      },
                       actions: [
+                        {
+                          label: "Edit",
+                          icon: "bi-pencil",
+                          onClick: (settlement) => handleEditSettlement(settlement),
+                          variant: "secondary",
+                        },
                         {
                           label: "Delete",
                           icon: "bi-trash",
@@ -838,15 +939,15 @@ const SettlementsPage: React.FC = () => {
         {/* Record Settlement Dialog */}
         <Modal
           show={showSettlementDialog}
-          onClose={() => setShowSettlementDialog(false)}
-          title="Record Settlement"
+          onClose={handleCloseDialog}
+          title={editingSettlement ? "Edit Settlement" : "Record Settlement"}
           loading={operationLoading}
           footer={
             <>
               <button
                 type="button"
                 className="btn btn-secondary"
-                onClick={() => setShowSettlementDialog(false)}
+                onClick={handleCloseDialog}
                 disabled={operationLoading}
               >
                 Cancel
@@ -863,10 +964,10 @@ const SettlementsPage: React.FC = () => {
                       config={{ size: "small", showText: false }}
                       className="me-2"
                     />
-                    Recording...
+                    {editingSettlement ? "Updating..." : "Recording..."}
                   </>
                 ) : (
-                  "Record Settlement"
+                  editingSettlement ? "Update Settlement" : "Record Settlement"
                 )}
               </button>
             </>
@@ -937,6 +1038,22 @@ const SettlementsPage: React.FC = () => {
               }
               required
               id="settlement-amount"
+            />
+            <SelectField
+              label="Status"
+              value={newSettlement.status}
+              onChange={(value) =>
+                setNewSettlement({
+                  ...newSettlement,
+                  status: value as "borrow" | "settled",
+                })
+              }
+              options={[
+                { label: "Borrow", value: "borrow" },
+                { label: "Settled", value: "settled" },
+              ]}
+              required
+              id="settlement-status"
             />
             <DateField
               label="Date"

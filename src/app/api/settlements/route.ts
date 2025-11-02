@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { expenseId, fromUser, toUser, amount, description, date } = body;
+    const { expenseId, fromUser, toUser, amount, description, date, status } = body;
 
     // Validate required fields
     if (!expenseId || !fromUser || !toUser || !amount) {
@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
       amount: parseFloat(amount),
       description: description || '',
       date: date ? new Date(date) : new Date(),
-      status: 'completed',
+      status: status || 'settled', // Default to 'settled' if not provided
       createdBy: user.userId,
       createdAt: new Date()
     };

@@ -704,17 +704,9 @@ function ExpensesContent() {
             step="0.01"
             value={newExpense.amount}
             onChange={(amount) => {
-              const splitAmount = parseFloat(amount) / 2;
               setNewExpense({
                 ...newExpense,
                 amount,
-                // Auto-update split amounts if split is enabled
-                saketAmount: newExpense.isSplit
-                  ? splitAmount.toString()
-                  : newExpense.saketAmount,
-                ayushAmount: newExpense.isSplit
-                  ? splitAmount.toString()
-                  : newExpense.ayushAmount,
               });
             }}
             required

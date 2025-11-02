@@ -7,6 +7,7 @@ export type NotificationType =
   | 'expense_updated' 
   | 'expense_deleted'
   | 'settlement_added'
+  | 'settlement_updated'
   | 'settlement_deleted'
   | 'category_added'
   | 'category_updated'
@@ -26,6 +27,7 @@ const messageGenerators: Record<NotificationType, (data: NotificationData) => st
   expense_updated: (data) => `${data.actorName} updated an expense: ${data.entityName}${data.amount ? ` (₹${data.amount})` : ''}`,
   expense_deleted: (data) => `${data.actorName} deleted an expense: ${data.entityName}`,
   settlement_added: (data) => `${data.actorName} added a settlement: ${data.entityName}${data.amount ? ` (₹${data.amount})` : ''}`,
+  settlement_updated: (data) => `${data.actorName} updated a settlement: ${data.entityName}${data.amount ? ` (₹${data.amount})` : ''}`,
   settlement_deleted: (data) => `${data.actorName} deleted a settlement: ${data.entityName}`,
   category_added: (data) => `${data.actorName} added a category: ${data.entityName}`,
   category_updated: (data) => `${data.actorName} updated a category: ${data.entityName}`,

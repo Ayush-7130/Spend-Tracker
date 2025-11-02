@@ -99,7 +99,8 @@ export default function Home() {
     to: '',
     amount: '',
     date: new Date().toISOString().split('T')[0],
-    description: ''
+    description: '',
+    status: 'settled' as 'borrow' | 'settled',
   });
 
   useEffect(() => {
@@ -319,6 +320,7 @@ export default function Home() {
         amount: amount,
         date: newSettlement.date,
         description: newSettlement.description,
+        status: newSettlement.status,
         expenseId: '000000000000000000000000' // Placeholder for now
       };
 
@@ -337,7 +339,8 @@ export default function Home() {
           to: '',
           amount: '',
           date: new Date().toISOString().split('T')[0],
-          description: ''
+          description: '',
+          status: 'settled',
         });
         // Refresh dashboard and settlement data
         await fetchDashboardData(selectedUser);
@@ -373,7 +376,8 @@ export default function Home() {
       to: getIdFromName(outstandingBalance.toUser),
       amount: outstandingBalance.amount.toString(),
       date: new Date().toISOString().split('T')[0],
-      description: `Settlement for outstanding balance`
+      description: `Settlement for outstanding balance`,
+      status: 'settled',
     });
     
     // Open the settlement dialog
@@ -1182,6 +1186,17 @@ export default function Home() {
                     required
                     placeholder="0.00"
                     step="0.01"
+                  />
+                  <SelectField
+                    label="Status"
+                    id="settlement-status"
+                    value={newSettlement.status}
+                    onChange={(value) => setNewSettlement({ ...newSettlement, status: value as 'borrow' | 'settled' })}
+                    required
+                    options={[
+                      { label: 'Borrow', value: 'borrow' },
+                      { label: 'Settled', value: 'settled' }
+                    ]}
                   />
                   <DateField
                     label="Date"

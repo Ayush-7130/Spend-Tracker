@@ -257,29 +257,69 @@ export default function TimelineAnalysis() {
                 </div>
                 {selectedPeriod === "custom" && (
                   <div className="col-md-6">
-                    <div className="row">
+                    <div className="row g-2">
                       <div className="col-6">
-                        <label htmlFor="startDate" className="form-label">
-                          Start Date
-                        </label>
                         <input
-                          type="date"
+                          type={customStartDate ? "date" : "text"}
                           id="startDate"
-                          className="form-control"
+                          className="form-control form-control-sm"
+                          placeholder="Start Date"
                           value={customStartDate}
                           onChange={(e) => setCustomStartDate(e.target.value)}
+                          onFocus={(e) => {
+                            e.target.type = 'date';
+                            setTimeout(() => {
+                              if (e.target.showPicker) e.target.showPicker();
+                            }, 0);
+                          }}
+                          onBlur={(e) => {
+                            if (!e.target.value) e.target.type = 'text';
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.currentTarget.type === 'text') {
+                              e.currentTarget.type = 'date';
+                              setTimeout(() => {
+                                if (e.currentTarget.showPicker) e.currentTarget.showPicker();
+                              }, 0);
+                            }
+                          }}
+                          style={{
+                            fontSize: '0.875rem',
+                            padding: '0.375rem 0.5rem',
+                            cursor: 'pointer'
+                          }}
                         />
                       </div>
                       <div className="col-6">
-                        <label htmlFor="endDate" className="form-label">
-                          End Date
-                        </label>
                         <input
-                          type="date"
+                          type={customEndDate ? "date" : "text"}
                           id="endDate"
-                          className="form-control"
+                          className="form-control form-control-sm"
+                          placeholder="End Date"
                           value={customEndDate}
                           onChange={(e) => setCustomEndDate(e.target.value)}
+                          onFocus={(e) => {
+                            e.target.type = 'date';
+                            setTimeout(() => {
+                              if (e.target.showPicker) e.target.showPicker();
+                            }, 0);
+                          }}
+                          onBlur={(e) => {
+                            if (!e.target.value) e.target.type = 'text';
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.currentTarget.type === 'text') {
+                              e.currentTarget.type = 'date';
+                              setTimeout(() => {
+                                if (e.currentTarget.showPicker) e.currentTarget.showPicker();
+                              }, 0);
+                            }
+                          }}
+                          style={{
+                            fontSize: '0.875rem',
+                            padding: '0.375rem 0.5rem',
+                            cursor: 'pointer'
+                          }}
                         />
                       </div>
                     </div>

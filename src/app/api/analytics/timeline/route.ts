@@ -210,35 +210,38 @@ export async function GET(request: NextRequest) {
       return periodKey;
     };
 
-    // Get period totals for users
-    const periodTotals = await db.collection('expenses').aggregate([
-      {
-        $match: {
-          date: {
-            $gte: startDate,
-            $lte: endDate
-          }
-        }
-      },
-      {
-        $group: {
-          _id: '$paidBy',
-          totalAmount: { $sum: '$amount' },
-          splitAmount: {
-            $sum: {
-              $cond: [{ $eq: ['$isSplit', true] }, '$amount', 0]
-            }
-          }
+    // Get period totals for users with proper split logic
+    const allExpenses = await db.collection('expenses').find({
+      date: {
+        $gte: startDate,
+        $lte: endDate
+      }
+    }).toArray();
+
+    // Calculate totals for each user
+    let saketPersonal = 0;
+    let ayushPersonal = 0;
+    let saketSplit = 0;
+    let ayushSplit = 0;
+
+    for (const expense of allExpenses) {
+      if (expense.isSplit && expense.splitDetails) {
+        // For split expenses, use individual split amounts
+        saketSplit += expense.splitDetails.saketAmount || 0;
+        ayushSplit += expense.splitDetails.ayushAmount || 0;
+      } else if (!expense.isSplit) {
+        // For non-split expenses, add to personal based on who paid
+        if (expense.paidBy.toLowerCase() === 'saket') {
+          saketPersonal += expense.amount;
+        } else if (expense.paidBy.toLowerCase() === 'ayush') {
+          ayushPersonal += expense.amount;
         }
       }
-    ]).toArray();
+    }
 
-    const saketData = periodTotals.find(p => p._id === 'saket') || { totalAmount: 0, splitAmount: 0 };
-    const ayushData = periodTotals.find(p => p._id === 'ayush') || { totalAmount: 0, splitAmount: 0 };
-
-    const saketTotal = saketData.totalAmount - saketData.splitAmount;
-    const ayushTotal = ayushData.totalAmount - ayushData.splitAmount;
-    const splitTotal = saketData.splitAmount + ayushData.splitAmount;
+    const saketTotal = saketPersonal;
+    const ayushTotal = ayushPersonal;
+    const splitTotal = saketSplit + ayushSplit;
 
     // Calculate settlement using the same logic as settlements balance API
     // Get all split expenses (filter by date range)
@@ -344,6 +347,8 @@ export async function GET(request: NextRequest) {
       periodTotals: {
         saketTotal: Math.round(saketTotal * 100) / 100,
         ayushTotal: Math.round(ayushTotal * 100) / 100,
+        saketSplit: Math.round(saketSplit * 100) / 100,
+        ayushSplit: Math.round(ayushSplit * 100) / 100,
         splitTotal: Math.round(splitTotal * 100) / 100,
         settlementRequired: settlementRequired,
         settlementMessage

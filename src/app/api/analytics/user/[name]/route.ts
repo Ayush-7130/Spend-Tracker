@@ -57,13 +57,15 @@ export async function GET(
         $addFields: {
           userAmount: {
             $cond: [
-              { $eq: ['$paidBy', userName] },
-              '$amount', // If user paid, count full amount
+              { $eq: ['$isSplit', true] },
+              // If split, use user's split amount
+              { $ifNull: [`$splitDetails.${userName}Amount`, 0] },
+              // If not split, check if user paid
               {
                 $cond: [
-                  { $eq: ['$isSplit', true] },
-                  { $ifNull: [`$splitDetails.${userName}Amount`, { $divide: ['$amount', 2] }] }, // If split, count user's share
-                  0 // Otherwise, don't count
+                  { $eq: ['$paidBy', userName] },
+                  '$amount', // User paid for non-split expense
+                  0 // User didn't pay for non-split expense
                 ]
               }
             ]
@@ -122,13 +124,15 @@ export async function GET(
         $addFields: {
           userAmount: {
             $cond: [
-              { $eq: ['$paidBy', userName] },
-              '$amount',
+              { $eq: ['$isSplit', true] },
+              // If split, use user's split amount
+              { $ifNull: [`$splitDetails.${userName}Amount`, 0] },
+              // If not split, check if user paid
               {
                 $cond: [
-                  { $eq: ['$isSplit', true] },
-                  { $ifNull: [`$splitDetails.${userName}Amount`, { $divide: ['$amount', 2] }] },
-                  0
+                  { $eq: ['$paidBy', userName] },
+                  '$amount', // User paid for non-split expense
+                  0 // User didn't pay for non-split expense
                 ]
               }
             ]

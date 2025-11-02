@@ -16,50 +16,104 @@ export async function GET(request: Request) {
     }
 
     // Get total expenses for the selected user(s)
-    const totalExpensesResult = await db.collection('expenses').aggregate([
-      {
-        $match: userMatch
-      },
-      {
-        $group: {
-          _id: null,
-          totalAmount: { $sum: '$amount' },
-          count: { $sum: 1 }
+    let totalExpenses = 0;
+    let totalExpenseCount = 0;
+
+    if (user === 'all') {
+      // For all users, sum all expenses
+      const totalExpensesResult = await db.collection('expenses').aggregate([
+        {
+          $group: {
+            _id: null,
+            totalAmount: { $sum: '$amount' },
+            count: { $sum: 1 }
+          }
+        }
+      ]).toArray();
+
+      totalExpenses = totalExpensesResult[0]?.totalAmount || 0;
+      totalExpenseCount = totalExpensesResult[0]?.count || 0;
+    } else {
+      // For individual users, calculate based on split logic
+      const allExpenses = await db.collection('expenses').find({}).toArray();
+      
+      for (const expense of allExpenses) {
+        if (expense.isSplit && expense.splitDetails) {
+          // For split expenses, add only the user's portion
+          const userLower = user.toLowerCase();
+          if (userLower === 'saket' && expense.splitDetails.saketAmount) {
+            totalExpenses += expense.splitDetails.saketAmount;
+            totalExpenseCount++;
+          } else if (userLower === 'ayush' && expense.splitDetails.ayushAmount) {
+            totalExpenses += expense.splitDetails.ayushAmount;
+            totalExpenseCount++;
+          }
+        } else if (!expense.isSplit && expense.paidBy.toLowerCase() === user.toLowerCase()) {
+          // For non-split expenses, add full amount if user paid
+          totalExpenses += expense.amount;
+          totalExpenseCount++;
         }
       }
-    ]).toArray();
-
-    const totalExpenses = totalExpensesResult[0]?.totalAmount || 0;
-    const totalExpenseCount = totalExpensesResult[0]?.count || 0;
+    }
 
     // Get this month's expenses for the selected user(s)
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
 
-    const thisMonthMatch = {
-      ...userMatch,
-      date: {
-        $gte: startOfMonth,
-        $lte: endOfMonth
-      }
-    };
+    let thisMonthTotal = 0;
+    let thisMonthCount = 0;
 
-    const thisMonthResult = await db.collection('expenses').aggregate([
-      {
-        $match: thisMonthMatch
-      },
-      {
-        $group: {
-          _id: null,
-          totalAmount: { $sum: '$amount' },
-          count: { $sum: 1 }
+    if (user === 'all') {
+      const thisMonthMatch = {
+        date: {
+          $gte: startOfMonth,
+          $lte: endOfMonth
+        }
+      };
+
+      const thisMonthResult = await db.collection('expenses').aggregate([
+        {
+          $match: thisMonthMatch
+        },
+        {
+          $group: {
+            _id: null,
+            totalAmount: { $sum: '$amount' },
+            count: { $sum: 1 }
+          }
+        }
+      ]).toArray();
+
+      thisMonthTotal = thisMonthResult[0]?.totalAmount || 0;
+      thisMonthCount = thisMonthResult[0]?.count || 0;
+    } else {
+      // For individual users, calculate this month based on split logic
+      const thisMonthExpenses = await db.collection('expenses').find({
+        date: {
+          $gte: startOfMonth,
+          $lte: endOfMonth
+        }
+      }).toArray();
+      
+      for (const expense of thisMonthExpenses) {
+        if (expense.isSplit && expense.splitDetails) {
+          // For split expenses, add only the user's portion
+          const userLower = user.toLowerCase();
+          if (userLower === 'saket' && expense.splitDetails.saketAmount) {
+            thisMonthTotal += expense.splitDetails.saketAmount;
+            thisMonthCount++;
+          } else if (userLower === 'ayush' && expense.splitDetails.ayushAmount) {
+            thisMonthTotal += expense.splitDetails.ayushAmount;
+            thisMonthCount++;
+          }
+        } else if (!expense.isSplit && expense.paidBy.toLowerCase() === user.toLowerCase()) {
+          // For non-split expenses, add full amount if user paid
+          thisMonthTotal += expense.amount;
+          thisMonthCount++;
         }
       }
-    ]).toArray();
-
-    const thisMonthTotal = thisMonthResult[0]?.totalAmount || 0;
-    const thisMonthCount = thisMonthResult[0]?.count || 0;
+    }
 
     // Get categories count
     const categoriesCount = await db.collection('categories').countDocuments();
@@ -163,36 +217,73 @@ export async function GET(request: Request) {
     }
 
     // Get recent expenses for the selected user(s) (last 5)
-    const recentExpenses = await db.collection('expenses').aggregate([
-      {
-        $match: userMatch
-      },
-      {
-        $lookup: {
-          from: 'categories',
-          localField: 'category',
-          foreignField: '_id',
-          as: 'categoryDetails'
+    let recentExpenses;
+    
+    if (user === 'all') {
+      // For all users, show all recent expenses
+      recentExpenses = await db.collection('expenses').aggregate([
+        {
+          $lookup: {
+            from: 'categories',
+            localField: 'category',
+            foreignField: '_id',
+            as: 'categoryDetails'
+          }
+        },
+        {
+          $sort: { date: -1 }
+        },
+        {
+          $limit: 5
+        },
+        {
+          $project: {
+            amount: 1,
+            description: 1,
+            date: 1,
+            category: 1,
+            paidBy: 1,
+            isSplit: 1,
+            categoryName: { $arrayElemAt: ['$categoryDetails.name', 0] }
+          }
         }
-      },
-      {
-        $sort: { date: -1 }
-      },
-      {
-        $limit: 5
-      },
-      {
-        $project: {
-          amount: 1,
-          description: 1,
-          date: 1,
-          category: 1,
-          paidBy: 1,
-          isSplit: 1,
-          categoryName: { $arrayElemAt: ['$categoryDetails.name', 0] }
+      ]).toArray();
+    } else {
+      // For individual users, show expenses they're involved in
+      const allRecentExpenses = await db.collection('expenses').aggregate([
+        {
+          $lookup: {
+            from: 'categories',
+            localField: 'category',
+            foreignField: '_id',
+            as: 'categoryDetails'
+          }
+        },
+        {
+          $sort: { date: -1 }
+        },
+        {
+          $project: {
+            amount: 1,
+            description: 1,
+            date: 1,
+            category: 1,
+            paidBy: 1,
+            isSplit: 1,
+            splitDetails: 1,
+            categoryName: { $arrayElemAt: ['$categoryDetails.name', 0] }
+          }
         }
-      }
-    ]).toArray();
+      ]).toArray();
+      
+      // Filter and limit to expenses paid by the user only
+      recentExpenses = allRecentExpenses
+        .filter(expense => {
+          // Include only if user paid for it
+          return expense.paidBy.toLowerCase() === user.toLowerCase();
+        })
+        .slice(0, 5);
+    }
 
     // Get users list (hardcoded for now, but could be from database)
     const users = [

@@ -53,6 +53,8 @@ interface TimelineData {
   periodTotals: {
     saketTotal: number;
     ayushTotal: number;
+    saketSplit: number;
+    ayushSplit: number;
     splitTotal: number;
     settlementRequired: number;
     settlementMessage: string;
@@ -452,18 +454,18 @@ export default function TimelineAnalysis() {
                         {
                           user: "Saket",
                           personalExpenses: data.periodTotals.saketTotal,
-                          splitExpenses: data.periodTotals.splitTotal / 2,
+                          splitExpenses: data.periodTotals.saketSplit,
                           totalPaid:
                             data.periodTotals.saketTotal +
-                            data.periodTotals.splitTotal / 2,
+                            data.periodTotals.saketSplit,
                         },
                         {
                           user: "Ayush",
                           personalExpenses: data.periodTotals.ayushTotal,
-                          splitExpenses: data.periodTotals.splitTotal / 2,
+                          splitExpenses: data.periodTotals.ayushSplit,
                           totalPaid:
                             data.periodTotals.ayushTotal +
-                            data.periodTotals.splitTotal / 2,
+                            data.periodTotals.ayushSplit,
                         },
                         {
                           user: "Total",

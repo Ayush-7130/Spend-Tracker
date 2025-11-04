@@ -166,7 +166,8 @@ export async function POST(request: NextRequest) {
         actorName: currentUser.name,
         entityName: description,
         entityId: result.insertedId.toString(),
-        amount: parseFloat(amount)
+        amount: parseFloat(amount),
+        isSplit: isSplit
       });
     }
 

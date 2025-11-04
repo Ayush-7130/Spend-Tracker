@@ -102,6 +102,7 @@ function ExpensesContent() {
     ayushAmount: "",
   });
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [manualSplitEdit, setManualSplitEdit] = useState(false);
 
   const users = [
     { id: "saket", name: "Saket" },
@@ -253,6 +254,8 @@ function ExpensesContent() {
       saketAmount: expense.splitDetails?.saketAmount?.toString() || "",
       ayushAmount: expense.splitDetails?.ayushAmount?.toString() || "",
     });
+    // If editing an expense with split, mark as manually edited
+    setManualSplitEdit(expense.isSplit);
     setShowAddExpenseDialog(true);
   };
 
@@ -260,6 +263,7 @@ function ExpensesContent() {
     setShowAddExpenseDialog(false);
     setEditingExpense(null);
     setSubmitError(null);
+    setManualSplitEdit(false);
   };
 
   const handleAddExpense = async (e: React.FormEvent) => {
@@ -335,6 +339,7 @@ function ExpensesContent() {
           saketAmount: "",
           ayushAmount: "",
         });
+        setManualSplitEdit(false);
         fetchExpenses();
         if (isEditing) {
           notifyUpdated("Expense");
@@ -378,6 +383,7 @@ function ExpensesContent() {
                   saketAmount: "",
                   ayushAmount: "",
                 });
+                setManualSplitEdit(false);
                 setShowAddExpenseDialog(true);
               }}
               className="btn btn-primary"
@@ -704,10 +710,19 @@ function ExpensesContent() {
             step="0.01"
             value={newExpense.amount}
             onChange={(amount) => {
-              setNewExpense({
+              const updates: any = {
                 ...newExpense,
                 amount,
-              });
+              };
+              
+              // Only auto-split if split is enabled and user hasn't manually edited
+              if (newExpense.isSplit && !manualSplitEdit && amount) {
+                const halfAmount = (parseFloat(amount) / 2).toFixed(2);
+                updates.saketAmount = halfAmount;
+                updates.ayushAmount = halfAmount;
+              }
+              
+              setNewExpense(updates);
             }}
             required
             id="expense-amount"
@@ -798,6 +813,8 @@ function ExpensesContent() {
                   ? (parseFloat(newExpense.amount) / 2).toString()
                   : "",
               });
+              // Reset manual edit flag when toggling split
+              setManualSplitEdit(false);
             }}
             id="expense-split"
           />
@@ -813,14 +830,16 @@ function ExpensesContent() {
                     value={newExpense.saketAmount}
                     onChange={(saketAmount) => {
                       const totalAmount = parseFloat(newExpense.amount || "0");
-                      const ayushAmount =
-                        totalAmount - parseFloat(saketAmount || "0");
+                      const saketValue = parseFloat(saketAmount || "0");
+                      const remainingAmount = totalAmount - saketValue;
+                      
                       setNewExpense({
                         ...newExpense,
                         saketAmount,
-                        ayushAmount:
-                          ayushAmount >= 0 ? ayushAmount.toFixed(2) : "0",
+                        ayushAmount: remainingAmount >= 0 ? remainingAmount.toFixed(2) : "0.00",
                       });
+                      // Mark that user has manually edited split amounts
+                      setManualSplitEdit(true);
                     }}
                     placeholder="0.00"
                     id="saket-amount"
@@ -834,14 +853,16 @@ function ExpensesContent() {
                     value={newExpense.ayushAmount}
                     onChange={(ayushAmount) => {
                       const totalAmount = parseFloat(newExpense.amount || "0");
-                      const saketAmount =
-                        totalAmount - parseFloat(ayushAmount || "0");
+                      const ayushValue = parseFloat(ayushAmount || "0");
+                      const remainingAmount = totalAmount - ayushValue;
+                      
                       setNewExpense({
                         ...newExpense,
                         ayushAmount,
-                        saketAmount:
-                          saketAmount >= 0 ? saketAmount.toFixed(2) : "0",
+                        saketAmount: remainingAmount >= 0 ? remainingAmount.toFixed(2) : "0.00",
                       });
+                      // Mark that user has manually edited split amounts
+                      setManualSplitEdit(true);
                     }}
                     placeholder="0.00"
                     id="ayush-amount"

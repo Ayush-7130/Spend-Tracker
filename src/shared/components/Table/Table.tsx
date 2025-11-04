@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { TableConfig, TableColumn, TableSort } from './config';
 import LoadingSpinner from '../LoadingSpinner/LoadingSpinner';
 import EmptyState from '../EmptyState/EmptyState';
@@ -17,6 +17,12 @@ export default function Table<T = any>({ config, className = '' }: TableProps<T>
   const [currentPage, setCurrentPage] = useState(config.pagination?.page || 1);
   const [expandedRows, setExpandedRows] = useState<Set<string | number>>(new Set());
 
+  // Sync currentPage with config.pagination.page for server-side pagination
+  useEffect(() => {
+    if (config.pagination?.page) {
+      setCurrentPage(config.pagination.page);
+    }
+  }, [config.pagination?.page]);
   // Helper function to get nested object values
   const getNestedValue = useCallback((obj: any, path: string | keyof T): any => {
     return String(path).split('.').reduce((o, p) => o?.[p], obj);
@@ -68,10 +74,34 @@ export default function Table<T = any>({ config, className = '' }: TableProps<T>
   const paginatedData = useMemo(() => {
     if (!config.paginated || !config.pagination) return processedData;
     
+    // If server-side pagination (total from server is greater than data length)
+    // Don't slice - the server already sent the right page
+    if (config.pagination.total && config.pagination.total > config.data.length) {
+      return processedData;
+    }
+    
+    // Client-side pagination - slice the data
     const start = (currentPage - 1) * config.pagination.limit;
     const end = start + config.pagination.limit;
     return processedData.slice(start, end);
-  }, [processedData, currentPage, config.paginated, config.pagination]);
+  }, [processedData, currentPage, config.paginated, config.pagination, config.data.length]);
+
+  // Calculate actual total based on processed data or server-provided total
+  // If config.pagination.total is provided and matches or exceeds data length, use it (server-side pagination)
+  // Otherwise use processedData.length (client-side pagination with filtering)
+  const actualTotal = useMemo(() => {
+    if (!config.pagination) return processedData.length;
+    
+    // If server provides total and it's greater than current data, it's server-side pagination
+    if (config.pagination.total && config.pagination.total >= config.data.length) {
+      return config.pagination.total;
+    }
+    
+    // Otherwise, use processed data length for client-side filtering
+    return processedData.length;
+  }, [config.pagination, config.data.length, processedData.length]);
+  
+  const actualPages = config.pagination ? Math.ceil(actualTotal / config.pagination.limit) : 1;
 
   // Handle sort
   const handleSort = useCallback((column: string) => {
@@ -495,8 +525,8 @@ export default function Table<T = any>({ config, className = '' }: TableProps<T>
         <div className="table-pagination-wrapper p-3">
           <div className="table-pagination-info" style={{ color: 'var(--text-secondary)' }}>
             Showing {((currentPage - 1) * config.pagination.limit) + 1} to{' '}
-            {Math.min(currentPage * config.pagination.limit, config.pagination.total)} of{' '}
-            {config.pagination.total} entries
+            {Math.min(currentPage * config.pagination.limit, actualTotal)} of{' '}
+            {actualTotal} entries
           </div>
           
           <nav className="table-pagination-nav">
@@ -519,8 +549,8 @@ export default function Table<T = any>({ config, className = '' }: TableProps<T>
               </li>
             
               {/* Page numbers */}
-              {config.pagination && Array.from({ length: Math.ceil(config.pagination.total / config.pagination.limit) }, (_, i) => i + 1)
-                .filter(page => config.pagination && (Math.abs(page - currentPage) <= 2 || page === 1 || page === Math.ceil(config.pagination.total / config.pagination.limit)))
+              {config.pagination && Array.from({ length: actualPages }, (_, i) => i + 1)
+                .filter(page => config.pagination && (Math.abs(page - currentPage) <= 2 || page === 1 || page === actualPages))
                 .map(page => (
                   <li key={page} className={`page-item ${currentPage === page ? 'active' : ''}`}>
                     <button
@@ -539,15 +569,15 @@ export default function Table<T = any>({ config, className = '' }: TableProps<T>
                   </li>
                 ))}
               
-              <li className={`page-item ${currentPage >= Math.ceil(config.pagination.total / config.pagination.limit) ? 'disabled' : ''}`}>
+              <li className={`page-item ${currentPage >= actualPages ? 'disabled' : ''}`}>
                 <button
                   onClick={() => handlePageChange(currentPage + 1)}
-                  disabled={currentPage >= Math.ceil(config.pagination.total / config.pagination.limit)}
+                  disabled={currentPage >= actualPages}
                   className="page-link page-link-next"
                   style={{
-                    backgroundColor: currentPage >= Math.ceil(config.pagination.total / config.pagination.limit) ? 'var(--btn-secondary-bg)' : 'var(--card-bg)',
+                    backgroundColor: currentPage >= actualPages ? 'var(--btn-secondary-bg)' : 'var(--card-bg)',
                     borderColor: 'var(--border-primary)',
-                    color: currentPage >= Math.ceil(config.pagination.total / config.pagination.limit) ? 'var(--text-tertiary)' : 'var(--btn-primary-bg)',
+                    color: currentPage >= actualPages ? 'var(--text-tertiary)' : 'var(--btn-primary-bg)',
                     transition: 'var(--transition-fast)'
                   }}
                 >
@@ -567,7 +597,9 @@ export default function Table<T = any>({ config, className = '' }: TableProps<T>
                 style={{
                   backgroundColor: 'var(--input-bg)',
                   borderColor: 'var(--input-border)',
-                  color: 'var(--input-text)'
+                  color: 'var(--input-text)',
+                  paddingRight: '2rem',
+                  backgroundPosition: 'right 0.5rem center'
                 }}
               >
                 {config.pagination.sizeSelectorOptions?.map(size => (
@@ -590,7 +622,7 @@ export default function Table<T = any>({ config, className = '' }: TableProps<T>
         }
 
         .table-pagination-info {
-          flex: 1 1 auto;
+          flex: 0 1 auto;
           min-width: 150px;
           font-size: 0.875rem;
         }
@@ -603,6 +635,12 @@ export default function Table<T = any>({ config, className = '' }: TableProps<T>
 
         .table-pagination-size {
           flex: 0 0 auto;
+          min-width: 150px;
+        }
+
+        .table-pagination-size .form-select {
+          width: auto;
+          min-width: 150px;
         }
 
         @media (max-width: 768px) {

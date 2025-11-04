@@ -19,12 +19,19 @@ export interface NotificationData {
   entityName: string;
   entityId?: string;
   amount?: number;
+  isSplit?: boolean;
 }
 
 // Message generators for different notification types
 const messageGenerators: Record<NotificationType, (data: NotificationData) => string> = {
-  expense_added: (data) => `${data.actorName} added an expense: ${data.entityName}${data.amount ? ` (₹${data.amount})` : ''}`,
-  expense_updated: (data) => `${data.actorName} updated an expense: ${data.entityName}${data.amount ? ` (₹${data.amount})` : ''}`,
+  expense_added: (data) => {
+    const expenseType = data.isSplit ? 'split' : 'personal';
+    return `${data.actorName} added a ${expenseType} expense: ${data.entityName}${data.amount ? ` (₹${data.amount})` : ''}`;
+  },
+  expense_updated: (data) => {
+    const expenseType = data.isSplit ? 'split' : 'personal';
+    return `${data.actorName} updated a ${expenseType} expense: ${data.entityName}${data.amount ? ` (₹${data.amount})` : ''}`;
+  },
   expense_deleted: (data) => `${data.actorName} deleted an expense: ${data.entityName}`,
   settlement_added: (data) => `${data.actorName} added a settlement: ${data.entityName}${data.amount ? ` (₹${data.amount})` : ''}`,
   settlement_updated: (data) => `${data.actorName} updated a settlement: ${data.entityName}${data.amount ? ` (₹${data.amount})` : ''}`,

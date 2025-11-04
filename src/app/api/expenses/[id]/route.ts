@@ -106,7 +106,8 @@ export async function PUT(
         actorName: currentUser.name,
         entityName: description,
         entityId: id,
-        amount: parseFloat(amount)
+        amount: parseFloat(amount),
+        isSplit: isSplit
       });
     }
 

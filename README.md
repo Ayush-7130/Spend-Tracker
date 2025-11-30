@@ -154,22 +154,13 @@ See [PERFORMANCE-IMPLEMENTATION-SUMMARY.md](PERFORMANCE-IMPLEMENTATION-SUMMARY.m
 
    Navigate to [http://localhost:3000](http://localhost:3000)
 
-### Default Users
-
-After initialization, you can log in with:
-
-- **Email**: `saket@example.com` | **Password**: `password123`
-- **Email**: `ayush@example.com` | **Password**: `password123`
-
-⚠️ **Change these passwords immediately in production!**
-
-4. **Start the development server**:
+7. **Start the development server**:
 
    ```bash
    npm run dev
    ```
 
-5. **Open your browser and navigate to**:
+8. **Open your browser and navigate to**:
    ```
    http://localhost:3000
    ```

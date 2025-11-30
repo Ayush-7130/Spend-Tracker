@@ -360,7 +360,6 @@ export async function GET(request: NextRequest) {
       data: timelineData
     });
   } catch (error) {
-    console.error('GET /api/analytics/timeline error:', error);
     return NextResponse.json(
       { success: false, error: 'Failed to fetch timeline data' },
       { status: 500 }

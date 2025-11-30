@@ -1,13 +1,20 @@
 import { NextResponse } from 'next/server';
 import clientPromise from '@/lib/mongodb';
+import { withCache, cacheKeys } from '@/lib/cache';
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const user = searchParams.get('user') || 'all'; // Default to all
     
-    const client = await clientPromise;
-    const db = client.db('spend-tracker');
+    // Use cache for dashboard data (TTL: 5 minutes)
+    const cacheKey = cacheKeys.dashboard(user);
+    
+    const dashboardData = await withCache(
+      cacheKey,
+      async () => {
+        const client = await clientPromise;
+        const db = client.db('spend-tracker');
 
     // Build match condition based on user selection
     let userMatch = {};
@@ -285,28 +292,37 @@ export async function GET(request: Request) {
         .slice(0, 5);
     }
 
-    // Get users list (hardcoded for now, but could be from database)
-    const users = [
-      { id: 'saket', name: 'Saket' },
-      { id: 'ayush', name: 'Ayush' }
-    ];
+        // Get users list (hardcoded for now, but could be from database)
+        const users = [
+          { id: 'saket', name: 'Saket' },
+          { id: 'ayush', name: 'Ayush' }
+        ];
 
-    return NextResponse.json({
+        return {
+          totalExpenses: Math.round(totalExpenses * 100) / 100,
+          totalExpenseCount,
+          thisMonthTotal: Math.round(thisMonthTotal * 100) / 100,
+          thisMonthCount,
+          categoriesCount,
+          settlementAmount: Math.round(settlementAmount * 100) / 100,
+          settlementMessage,
+          users,
+          recentExpenses
+        };
+      },
+      5 * 60 * 1000 // 5 minutes cache for dashboard
+    );
+
+    // Add cache headers
+    const response = NextResponse.json({
       success: true,
-      data: {
-        totalExpenses: Math.round(totalExpenses * 100) / 100,
-        totalExpenseCount,
-        thisMonthTotal: Math.round(thisMonthTotal * 100) / 100,
-        thisMonthCount,
-        categoriesCount,
-        settlementAmount: Math.round(settlementAmount * 100) / 100,
-        settlementMessage,
-        users,
-        recentExpenses
-      }
+      data: dashboardData
     });
+    
+    response.headers.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=60');
+    
+    return response;
   } catch (error) {
-    console.error('GET /api/dashboard error:', error);
     return NextResponse.json(
       { success: false, error: 'Failed to fetch dashboard data' },
       { status: 500 }

@@ -1,7 +1,9 @@
-'use client';
+"use client";
 
-import Navigation from './Navigation';
-import { useState, useEffect } from 'react';
+import Navigation from "./Navigation";
+import { useState, useEffect } from "react";
+import { useTokenRefresh } from "@/hooks/useTokenRefresh";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -9,6 +11,10 @@ interface MainLayoutProps {
 
 export default function MainLayout({ children }: MainLayoutProps) {
   const [isNotificationPanelOpen, setIsNotificationPanelOpen] = useState(false);
+  const { isAuthenticated } = useAuth();
+
+  // Automatically refresh tokens in the background only when authenticated
+  useTokenRefresh();
 
   // Listen for notification panel state changes
   useEffect(() => {
@@ -16,22 +22,28 @@ export default function MainLayout({ children }: MainLayoutProps) {
       setIsNotificationPanelOpen(event.detail.isOpen);
     };
 
-    window.addEventListener('notification-panel-toggle', handleNotificationToggle as EventListener);
-    
+    window.addEventListener(
+      "notification-panel-toggle",
+      handleNotificationToggle as EventListener
+    );
+
     return () => {
-      window.removeEventListener('notification-panel-toggle', handleNotificationToggle as EventListener);
+      window.removeEventListener(
+        "notification-panel-toggle",
+        handleNotificationToggle as EventListener
+      );
     };
   }, []);
 
   return (
     <>
       <Navigation />
-      <main 
+      <main
         className="container-fluid py-4"
         style={{
-          filter: isNotificationPanelOpen ? 'blur(2px)' : 'none',
-          transition: 'filter 0.2s ease-in-out',
-          pointerEvents: isNotificationPanelOpen ? 'none' : 'auto'
+          filter: isNotificationPanelOpen ? "blur(2px)" : "none",
+          transition: "filter 0.2s ease-in-out",
+          pointerEvents: isNotificationPanelOpen ? "none" : "auto",
         }}
       >
         {children}

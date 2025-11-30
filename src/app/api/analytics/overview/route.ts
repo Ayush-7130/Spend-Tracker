@@ -110,7 +110,7 @@ export async function GET(request: NextRequest) {
           $sort: { amount: -1 },
         },
         {
-          $limit: 3,
+          $limit: 5,
         },
         {
           $project: {
@@ -278,7 +278,6 @@ export async function GET(request: NextRequest) {
       data: overviewData,
     });
   } catch (error) {
-    console.error("GET /api/analytics/overview error:", error);
     return NextResponse.json(
       { success: false, error: "Failed to fetch overview data" },
       { status: 500 }

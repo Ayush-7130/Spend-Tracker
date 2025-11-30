@@ -1,0 +1,148 @@
+/**
+ * Profile API Route
+ * 
+ * Handles user profile retrieval and updates.
+ * 
+ * GET: Retrieve current user's profile
+ * PUT: Update user profile (name, email)
+ */
+
+import { NextRequest, NextResponse } from 'next/server';
+import { dbManager } from '@/lib/database';
+import { createApiRoute } from '@/lib/api-middleware';
+import { isValidEmail } from '@/lib/auth';
+
+// GET: Retrieve current user's profile
+const handleGetProfile = createApiRoute({
+  methods: ['GET'],
+  requireAuth: true,
+  handler: async (request, context) => {
+    try {
+      const user = context.user!;
+      
+      // Fetch user from database
+      const userDoc = await dbManager.getUserByEmail(user.email);
+      
+      if (!userDoc) {
+        return NextResponse.json(
+          { success: false, error: 'User not found' },
+          { status: 404 }
+        );
+      }
+      
+      return NextResponse.json({
+        success: true,
+        data: {
+          id: userDoc._id.toString(),
+          name: userDoc.name,
+          email: userDoc.email,
+          role: userDoc.role || 'user',
+          createdAt: userDoc.createdAt,
+          updatedAt: userDoc.updatedAt,
+        },
+      });
+    } catch (error: any) {
+      return NextResponse.json(
+        { success: false, error: 'Failed to retrieve profile' },
+        { status: 500 }
+      );
+    }
+  },
+});
+
+// PUT: Update user profile
+const handlePutProfile = createApiRoute({
+  methods: ['PUT'],
+  requireAuth: true,
+  handler: async (request, context) => {
+    try {
+      const user = context.user!;
+      const body = await request.json();
+      const { name, email } = body;
+      
+      // Validation
+      const errors: Record<string, string> = {};
+      
+      if (name !== undefined) {
+        if (!name || name.trim().length < 2) {
+          errors.name = 'Name must be at least 2 characters long';
+        }
+      }
+      
+      if (email !== undefined) {
+        if (!email || !isValidEmail(email)) {
+          errors.email = 'Invalid email format';
+        }
+      }
+      
+      if (Object.keys(errors).length > 0) {
+        return NextResponse.json(
+          { success: false, errors },
+          { status: 400 }
+        );
+      }
+      
+      // Check if email is already taken by another user
+      if (email !== undefined && email.trim() !== user.email) {
+        const existingUser = await dbManager.getUserByEmail(email.trim());
+        
+        if (existingUser) {
+          return NextResponse.json(
+            { success: false, error: 'Email already in use' },
+            { status: 400 }
+          );
+        }
+      }
+      
+      // Build update object
+      const db = await dbManager.getDatabase();
+      const updateData: any = {
+        updatedAt: new Date(),
+      };
+      
+      if (name !== undefined) {
+        updateData.name = name.trim();
+      }
+      
+      if (email !== undefined) {
+        updateData.email = email.trim();
+      }
+      
+      // Update user in database
+      const result = await db.collection('users').findOneAndUpdate(
+        { email: user.email },
+        { $set: updateData },
+        { returnDocument: 'after' }
+      );
+      
+      if (!result) {
+        return NextResponse.json(
+          { success: false, error: 'User not found' },
+          { status: 404 }
+        );
+      }
+      
+      return NextResponse.json({
+        success: true,
+        message: 'Profile updated successfully',
+        data: {
+          id: result._id.toString(),
+          name: result.name,
+          email: result.email,
+          role: result.role || 'user',
+          createdAt: result.createdAt,
+          updatedAt: result.updatedAt,
+        },
+      });
+    } catch (error: any) {
+      return NextResponse.json(
+        { success: false, error: 'Failed to update profile' },
+        { status: 500 }
+      );
+    }
+  },
+});
+
+// Export route handlers
+export const GET = handleGetProfile;
+export const PUT = handlePutProfile;

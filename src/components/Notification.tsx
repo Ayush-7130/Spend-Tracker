@@ -48,31 +48,31 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
         return {
           bgClass: 'alert-success',
           icon: 'bi-check-circle-fill',
-          borderColor: '#d1e7dd'
+          borderColor: 'var(--notification-success-border)'
         };
       case 'error':
         return {
           bgClass: 'alert-danger',
           icon: 'bi-x-circle-fill',
-          borderColor: '#f5c2c7'
+          borderColor: 'var(--notification-error-border)'
         };
       case 'warning':
         return {
           bgClass: 'alert-warning',
           icon: 'bi-exclamation-triangle-fill',
-          borderColor: '#ffecb5'
+          borderColor: 'var(--notification-warning-border)'
         };
       case 'info':
         return {
           bgClass: 'alert-info',
           icon: 'bi-info-circle-fill',
-          borderColor: '#b6effb'
+          borderColor: 'var(--notification-info-border)'
         };
       default:
         return {
           bgClass: 'alert-secondary',
           icon: 'bi-bell-fill',
-          borderColor: '#e2e3e5'
+          borderColor: 'var(--border-secondary)'
         };
     }
   };

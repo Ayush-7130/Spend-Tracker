@@ -13,7 +13,6 @@ export async function GET() {
         .find({ isSplit: true })
         .toArray();
     } catch (expenseError) {
-      console.error('Error fetching split expenses:', expenseError);
       splitExpenses = [];
     }
 
@@ -24,7 +23,6 @@ export async function GET() {
         .find({})
         .toArray();
     } catch (settlementError) {
-      console.error('Error fetching settlements:', settlementError);
       settlements = [];
     }
 
@@ -117,14 +115,12 @@ export async function GET() {
         .filter(b => b.status === 'owes')
         .reduce((sum, b) => sum + (Number(b.amount) || 0), 0);
     } catch (summaryError) {
-      console.error('Error calculating total owed:', summaryError);
       totalOwed = 0;
     }
     
     try {
       totalSettled = settlements.reduce((sum, s) => sum + (Number(s.amount) || 0), 0);
     } catch (settlementSumError) {
-      console.error('Error calculating total settled:', settlementSumError);
       totalSettled = 0;
     }
     
@@ -138,7 +134,6 @@ export async function GET() {
       }
     });
   } catch (error) {
-    console.error('Error calculating settlement balances:', error);
     return NextResponse.json({ error: 'Failed to calculate balances' }, { status: 500 });
   }
 }

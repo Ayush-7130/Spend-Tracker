@@ -1,0 +1,11 @@
+# .gitkeep
+# This file ensures the public/ directory is tracked by Git even when empty.
+# The public/ directory is used by Next.js for static assets like images, fonts,
+# and other files that should be served directly from the root URL path.
+#
+# Place your static assets here:
+# - Favicon files (favicon.ico, apple-touch-icon.png, etc.)
+# - robots.txt
+# - sitemap.xml
+# - Images and other media files
+# - Any files that need to be accessible at yourdomain.com/filename

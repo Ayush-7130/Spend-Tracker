@@ -1,7 +1,9 @@
-'use client';
+"use client";
 
-import React from 'react';
-import { EmptyStateConfig } from './config';
+import React from "react";
+import { EmptyStateConfig } from "./config";
+import { useTheme } from "../../../contexts/ThemeContext";
+import { lightTheme, darkTheme } from "../../../styles/colors";
 
 export interface EmptyStateProps extends EmptyStateConfig {
   className?: string;
@@ -9,67 +11,106 @@ export interface EmptyStateProps extends EmptyStateConfig {
 }
 
 export default function EmptyState({
-  icon: _icon = '📋',
-  title = 'No data available',
-  description = 'There is no data to display at this time.',
+  icon: _icon = "📋",
+  title = "No data available",
+  description = "There is no data to display at this time.",
   actions = [],
-  size = 'medium',
-  variant: _variant = 'default',
-  className = '',
+  size = "medium",
+  variant = "default",
+  className = "",
   centered = true,
   showBorder = false,
   style,
 }: EmptyStateProps) {
-  const sizeClasses = {
-    small: 'py-6 px-4',
-    medium: 'py-12 px-6',
-    large: 'py-16 px-8'
+  const { theme } = useTheme();
+  const colors = theme === "light" ? lightTheme : darkTheme;
+
+  // Size configurations - padding only
+  const sizePadding = {
+    small: {
+      paddingTop: "1.5rem",
+      paddingBottom: "1.5rem",
+      paddingLeft: "1rem",
+      paddingRight: "1rem",
+    },
+    medium: {
+      paddingTop: "3rem",
+      paddingBottom: "3rem",
+      paddingLeft: "1.5rem",
+      paddingRight: "1.5rem",
+    },
+    large: {
+      paddingTop: "4rem",
+      paddingBottom: "4rem",
+      paddingLeft: "2rem",
+      paddingRight: "2rem",
+    },
   };
 
-  // Variant classes and icon sizes are defined but not currently used in the component
-  // Kept for future styling enhancements
-  const _variantClasses = {
-    default: 'text-gray-500',
-    error: 'text-red-500',
-    search: 'text-blue-500',
-    filter: 'text-orange-500'
+  // Variant color configurations using theme colors
+  const variantColors = {
+    default: colors.text.secondary,
+    error: colors.status.error,
+    search: colors.status.info,
+    filter: colors.status.warning,
   };
 
-  const _iconSizes = {
-    small: 'text-2xl mb-2',
-    medium: 'text-4xl mb-4',
-    large: 'text-6xl mb-6'
-  };
-
+  // Title size configurations
   const titleSizes = {
-    small: 'text-lg font-medium',
-    medium: 'text-xl font-semibold',
-    large: 'text-2xl font-bold'
+    small: { fontSize: "1.125rem", fontWeight: 500 },
+    medium: { fontSize: "1.25rem", fontWeight: 600 },
+    large: { fontSize: "1.5rem", fontWeight: 700 },
   };
 
+  // Description size configurations
   const descSizes = {
-    small: 'text-sm',
-    medium: 'text-base',
-    large: 'text-lg'
+    small: { fontSize: "0.875rem" },
+    medium: { fontSize: "1rem" },
+    large: { fontSize: "1.125rem" },
   };
+
+  // Get text color based on variant
+  const variantTextColor = variantColors[variant];
+
+  // Border and background styles when showBorder is true
+  const borderStyles = showBorder
+    ? {
+        border: `1px solid ${colors.border.primary}`,
+        borderRadius: "var(--radius-lg)",
+        backgroundColor: colors.background.tertiary,
+      }
+    : {};
 
   return (
     <div
-      className={`
-        ${sizeClasses[size]}
-        ${centered ? 'text-center' : ''}
-        ${showBorder ? 'border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800/50' : ''}
-        ${className}
-      `}
-      style={style}
+      className={className}
+      style={{
+        ...sizePadding[size],
+        textAlign: centered ? "center" : "left",
+        ...borderStyles,
+        ...style,
+      }}
     >
       {/* Title */}
-      <h3 className={`${titleSizes[size]} empty-state-title mb-2`}>
+      <h3
+        className="empty-state-title mb-2"
+        style={{
+          ...titleSizes[size],
+          marginBottom: "0.5rem",
+        }}
+      >
         {title}
       </h3>
 
       {/* Description */}
-      <p className={`${descSizes[size]} empty-state-description mb-6`}>
+      <p
+        className="empty-state-description mb-6"
+        style={{
+          ...descSizes[size],
+          color: variantTextColor,
+          marginBottom: "1.5rem",
+        }}
+      >
         {description}
       </p>
 
@@ -81,11 +122,11 @@ export default function EmptyState({
               <button
                 key={index}
                 onClick={action.onClick}
-                className={`empty-state-action-btn ${action.variant === 'outline' ? 'empty-state-btn-outline' : action.variant === 'secondary' ? 'empty-state-btn-secondary' : 'empty-state-btn-primary'}`}
+                className={`empty-state-action-btn ${action.variant === "outline" ? "empty-state-btn-outline" : action.variant === "secondary" ? "empty-state-btn-secondary" : "empty-state-btn-primary"}`}
               >
                 {action.icon && (
                   <span className="empty-state-btn-icon" aria-hidden="true">
-                    {action.icon === 'plus' ? '➕' : action.icon}
+                    {action.icon === "plus" ? "➕" : action.icon}
                   </span>
                 )}
                 {action.label}

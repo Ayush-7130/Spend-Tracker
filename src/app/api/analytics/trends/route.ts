@@ -111,7 +111,6 @@ export async function GET(request: NextRequest) {
       }
     });
   } catch (error) {
-    console.error('GET /api/analytics/trends error:', error);
     return NextResponse.json(
       { success: false, error: 'Failed to fetch trends analytics' },
       { status: 500 }

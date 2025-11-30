@@ -1,21 +1,23 @@
-import React from 'react';
-import { 
-  InputFieldProps, 
-  SelectFieldProps, 
+import React from "react";
+import {
+  InputFieldProps,
+  SelectFieldProps,
   TextareaFieldProps,
   DateFieldProps,
   CheckboxFieldProps,
   RadioFieldProps,
   fieldSizeClasses,
-  fieldVariantClasses 
-} from './config';
-import { FieldWrapper } from './FormWrappers';
+  fieldVariantClasses,
+} from "./config";
+import { FieldWrapper } from "./FormWrappers";
 
 // Input Field Component
-export const InputField: React.FC<InputFieldProps & {
-  size?: keyof typeof fieldSizeClasses;
-  variant?: keyof typeof fieldVariantClasses;
-}> = ({
+export const InputField: React.FC<
+  InputFieldProps & {
+    size?: keyof typeof fieldSizeClasses;
+    variant?: keyof typeof fieldVariantClasses;
+  }
+> = ({
   label,
   type,
   value,
@@ -24,7 +26,7 @@ export const InputField: React.FC<InputFieldProps & {
   disabled = false,
   error,
   helperText,
-  className = '',
+  className = "",
   placeholder,
   min,
   max,
@@ -32,57 +34,73 @@ export const InputField: React.FC<InputFieldProps & {
   maxLength,
   pattern,
   autoComplete,
-  size = 'md',
-  variant = 'default',
+  size = "md",
+  variant = "default",
   id,
 }) => {
   const [showPassword, setShowPassword] = React.useState(false);
   const inputRef = React.useRef<HTMLInputElement>(null);
-  const isPassword = type === 'password';
-  const inputType = isPassword ? (showPassword ? 'text' : 'password') : type;
-  
-  const fieldClasses = `form-control ${fieldSizeClasses[size]} ${fieldVariantClasses[variant]} ${className}`.trim();
-  
+  const isPassword = type === "password";
+  const inputType = isPassword ? (showPassword ? "text" : "password") : type;
+
+  const fieldClasses =
+    `form-control ${fieldSizeClasses[size]} ${fieldVariantClasses[variant]} ${className}`.trim();
+
   // Handle autofill detection and sync with React state
   React.useEffect(() => {
     const input = inputRef.current;
     if (!input) return;
-    
+
     // Check for autofilled values after a short delay
     const timer = setTimeout(() => {
       if (input.value && input.value !== value) {
-        const newValue = type === 'number' ? 
-          (input.value ? parseFloat(input.value) : '') : 
-          input.value;
+        const newValue =
+          type === "number"
+            ? input.value
+              ? parseFloat(input.value)
+              : ""
+            : input.value;
         onChange(newValue);
       }
     }, 100);
-    
+
     // Also listen for animation start which is triggered by autofill
     const handleAnimationStart = (e: AnimationEvent) => {
-      if (e.animationName === 'onAutoFillStart') {
-        const newValue = type === 'number' ? 
-          (input.value ? parseFloat(input.value) : '') : 
-          input.value;
+      if (e.animationName === "onAutoFillStart") {
+        const newValue =
+          type === "number"
+            ? input.value
+              ? parseFloat(input.value)
+              : ""
+            : input.value;
         onChange(newValue);
       }
     };
-    
-    input.addEventListener('animationstart', handleAnimationStart as EventListener);
-    
+
+    input.addEventListener(
+      "animationstart",
+      handleAnimationStart as EventListener
+    );
+
     return () => {
       clearTimeout(timer);
-      input.removeEventListener('animationstart', handleAnimationStart as EventListener);
+      input.removeEventListener(
+        "animationstart",
+        handleAnimationStart as EventListener
+      );
     };
   }, [type, value, onChange]);
-  
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newValue = type === 'number' ? 
-      (e.target.value ? parseFloat(e.target.value) : '') : 
-      e.target.value;
+    const newValue =
+      type === "number"
+        ? e.target.value
+          ? parseFloat(e.target.value)
+          : ""
+        : e.target.value;
     onChange(newValue);
   };
-  
+
   return (
     <FieldWrapper
       label={label}
@@ -91,12 +109,12 @@ export const InputField: React.FC<InputFieldProps & {
       helperText={helperText}
       id={id}
     >
-      <div className={isPassword ? 'position-relative' : ''}>
+      <div className={isPassword ? "position-relative" : ""}>
         <input
           ref={inputRef}
           type={inputType}
           className={fieldClasses}
-          value={value || ''}
+          value={value || ""}
           onChange={handleChange}
           disabled={disabled}
           placeholder={placeholder}
@@ -107,7 +125,7 @@ export const InputField: React.FC<InputFieldProps & {
           pattern={pattern}
           autoComplete={autoComplete}
           required={required}
-          style={isPassword ? { paddingRight: '2.5rem' } : {}}
+          style={isPassword ? { paddingRight: "2.5rem" } : {}}
         />
         {isPassword && (
           <button
@@ -116,14 +134,14 @@ export const InputField: React.FC<InputFieldProps & {
             onClick={() => setShowPassword(!showPassword)}
             tabIndex={-1}
             style={{
-              padding: '0.375rem 0.75rem',
+              padding: "0.375rem 0.75rem",
               zIndex: 10,
-              textDecoration: 'none',
-              color: 'var(--text-muted)'
+              textDecoration: "none",
+              color: "var(--text-muted)",
             }}
-            aria-label={showPassword ? 'Hide password' : 'Show password'}
+            aria-label={showPassword ? "Hide password" : "Show password"}
           >
-            <i className={`bi ${showPassword ? 'bi-eye-slash' : 'bi-eye'}`}></i>
+            <i className={`bi ${showPassword ? "bi-eye-slash" : "bi-eye"}`}></i>
           </button>
         )}
       </div>
@@ -132,9 +150,11 @@ export const InputField: React.FC<InputFieldProps & {
 };
 
 // Select Field Component
-export const SelectField: React.FC<SelectFieldProps & {
-  size?: keyof typeof fieldSizeClasses;
-}> = ({
+export const SelectField: React.FC<
+  SelectFieldProps & {
+    size?: keyof typeof fieldSizeClasses;
+  }
+> = ({
   label,
   value,
   onChange,
@@ -143,23 +163,27 @@ export const SelectField: React.FC<SelectFieldProps & {
   disabled = false,
   error,
   helperText,
-  className = '',
+  className = "",
   placeholder,
   multiple = false,
-  size = 'md',
+  size = "md",
   id,
 }) => {
-  const fieldClasses = `form-select ${fieldSizeClasses[size]} ${className}`.trim();
-  
+  const fieldClasses =
+    `form-select ${fieldSizeClasses[size]} ${className}`.trim();
+
   const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     if (multiple) {
-      const selectedOptions = Array.from(e.target.selectedOptions, option => option.value);
+      const selectedOptions = Array.from(
+        e.target.selectedOptions,
+        (option) => option.value
+      );
       onChange(selectedOptions);
     } else {
       onChange(e.target.value);
     }
   };
-  
+
   return (
     <FieldWrapper
       label={label}
@@ -170,7 +194,7 @@ export const SelectField: React.FC<SelectFieldProps & {
     >
       <select
         className={fieldClasses}
-        value={value || (multiple ? [] : '')}
+        value={value || (multiple ? [] : "")}
         onChange={handleChange}
         disabled={disabled}
         multiple={multiple}
@@ -182,11 +206,7 @@ export const SelectField: React.FC<SelectFieldProps & {
           </option>
         )}
         {options.map((option, index) => (
-          <option
-            key={index}
-            value={option.value}
-            disabled={option.disabled}
-          >
+          <option key={index} value={option.value} disabled={option.disabled}>
             {option.label}
           </option>
         ))}
@@ -196,9 +216,11 @@ export const SelectField: React.FC<SelectFieldProps & {
 };
 
 // Textarea Field Component
-export const TextareaField: React.FC<TextareaFieldProps & {
-  size?: keyof typeof fieldSizeClasses;
-}> = ({
+export const TextareaField: React.FC<
+  TextareaFieldProps & {
+    size?: keyof typeof fieldSizeClasses;
+  }
+> = ({
   label,
   value,
   onChange,
@@ -206,22 +228,23 @@ export const TextareaField: React.FC<TextareaFieldProps & {
   disabled = false,
   error,
   helperText,
-  className = '',
+  className = "",
   rows = 3,
   cols,
   placeholder,
   maxLength,
-  resize = 'vertical',
-  size = 'md',
+  resize = "vertical",
+  size = "md",
   id,
 }) => {
-  const fieldClasses = `form-control ${fieldSizeClasses[size]} ${className}`.trim();
-  const resizeStyle = resize !== 'both' ? { resize } : {};
-  
+  const fieldClasses =
+    `form-control ${fieldSizeClasses[size]} ${className}`.trim();
+  const resizeStyle = resize !== "both" ? { resize } : {};
+
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     onChange(e.target.value);
   };
-  
+
   return (
     <FieldWrapper
       label={label}
@@ -233,7 +256,7 @@ export const TextareaField: React.FC<TextareaFieldProps & {
       <textarea
         className={fieldClasses}
         style={resizeStyle}
-        value={value || ''}
+        value={value || ""}
         onChange={handleChange}
         disabled={disabled}
         rows={rows}
@@ -247,9 +270,11 @@ export const TextareaField: React.FC<TextareaFieldProps & {
 };
 
 // Date Field Component
-export const DateField: React.FC<DateFieldProps & {
-  size?: keyof typeof fieldSizeClasses;
-}> = ({
+export const DateField: React.FC<
+  DateFieldProps & {
+    size?: keyof typeof fieldSizeClasses;
+  }
+> = ({
   label,
   value,
   onChange,
@@ -257,19 +282,20 @@ export const DateField: React.FC<DateFieldProps & {
   disabled = false,
   error,
   helperText,
-  className = '',
+  className = "",
   min,
   max,
   step,
-  size = 'md',
+  size = "md",
   id,
 }) => {
-  const fieldClasses = `form-control ${fieldSizeClasses[size]} ${className}`.trim();
-  
+  const fieldClasses =
+    `form-control ${fieldSizeClasses[size]} ${className}`.trim();
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     onChange(e.target.value);
   };
-  
+
   return (
     <FieldWrapper
       label={label}
@@ -281,7 +307,7 @@ export const DateField: React.FC<DateFieldProps & {
       <input
         type="date"
         className={fieldClasses}
-        value={value || ''}
+        value={value || ""}
         onChange={handleChange}
         disabled={disabled}
         min={min}
@@ -302,22 +328,24 @@ export const CheckboxField: React.FC<CheckboxFieldProps> = ({
   disabled = false,
   error,
   helperText,
-  className = '',
-  variant = 'default',
+  className = "",
+  variant = "default",
   id,
 }) => {
   const fieldId = id || `checkbox-${Math.random().toString(36).substr(2, 9)}`;
-  const isSwitch = variant === 'switch';
-  
+  const isSwitch = variant === "switch";
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     onChange(e.target.checked);
   };
-  
+
   return (
-    <div className={`${isSwitch ? 'form-check form-switch' : 'form-check'} ${className}`}>
+    <div
+      className={`${isSwitch ? "form-check form-switch" : "form-check"} ${className}`}
+    >
       <input
         type="checkbox"
-        className={`form-check-input ${error ? 'is-invalid' : ''}`}
+        className={`form-check-input ${error ? "is-invalid" : ""}`}
         id={fieldId}
         checked={checked}
         onChange={handleChange}
@@ -326,19 +354,17 @@ export const CheckboxField: React.FC<CheckboxFieldProps> = ({
       />
       <label className="form-check-label" htmlFor={fieldId}>
         {label}
-        {required && <span className="text-danger ms-1">*</span>}
+        {required && (
+          <span className="ms-1" style={{ color: "var(--status-error)" }}>
+            *
+          </span>
+        )}
       </label>
-      
-      {error && (
-        <div className="invalid-feedback d-block">
-          {error}
-        </div>
-      )}
-      
+
+      {error && <div className="invalid-feedback d-block">{error}</div>}
+
       {helperText && !error && (
-        <div className="form-text text-muted">
-          {helperText}
-        </div>
+        <div className="form-text text-muted">{helperText}</div>
       )}
     </div>
   );
@@ -354,16 +380,16 @@ export const RadioField: React.FC<RadioFieldProps> = ({
   disabled = false,
   error,
   helperText,
-  className = '',
+  className = "",
   inline = false,
   id,
 }) => {
   const groupName = id || `radio-${Math.random().toString(36).substr(2, 9)}`;
-  
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     onChange(e.target.value);
   };
-  
+
   return (
     <FieldWrapper
       label={label}
@@ -372,12 +398,12 @@ export const RadioField: React.FC<RadioFieldProps> = ({
       helperText={helperText}
       className={className}
     >
-      <div className={`radio-group ${inline ? 'd-flex flex-wrap gap-3' : ''}`}>
+      <div className={`radio-group ${inline ? "d-flex flex-wrap gap-3" : ""}`}>
         {options.map((option, index) => (
           <div key={index} className="form-check">
             <input
               type="radio"
-              className={`form-check-input ${error ? 'is-invalid' : ''}`}
+              className={`form-check-input ${error ? "is-invalid" : ""}`}
               id={`${groupName}-${index}`}
               name={groupName}
               value={option.value}
@@ -386,7 +412,10 @@ export const RadioField: React.FC<RadioFieldProps> = ({
               disabled={disabled || option.disabled}
               required={required}
             />
-            <label className="form-check-label" htmlFor={`${groupName}-${index}`}>
+            <label
+              className="form-check-label"
+              htmlFor={`${groupName}-${index}`}
+            >
               {option.label}
             </label>
           </div>

@@ -19,7 +19,6 @@ export const fetchData = async <T>(
     
     return result;
   } catch (error) {
-    console.error(`Error fetching data from ${url}:`, error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to fetch data'
@@ -53,7 +52,6 @@ export const deleteItem = async (
     
     return { success: true };
   } catch (error) {
-    console.error(`Error deleting ${itemName}:`, error);
     return {
       success: false,
       error: error instanceof Error ? error.message : `Failed to delete ${itemName}`
@@ -85,7 +83,6 @@ export const bulkDelete = async (
     await Promise.all(promises);
     return { success: true };
   } catch (error) {
-    console.error(`Error bulk deleting ${itemName}:`, error);
     return {
       success: false,
       error: error instanceof Error ? error.message : `Failed to delete ${itemName}`
@@ -118,7 +115,6 @@ export const submitForm = async <T>(
     
     return result;
   } catch (error) {
-    console.error(`Error submitting form to ${url}:`, error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to submit form'

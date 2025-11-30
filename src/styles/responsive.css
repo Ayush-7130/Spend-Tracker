@@ -1,0 +1,908 @@
+/**
+ * Responsive CSS Fixes
+ * 
+ * Mobile-first responsive design improvements for all components.
+ * Breakpoints: mobile (<640px), tablet (640px-1024px), desktop (>1024px)
+ */
+
+/* ==========================================================================
+   RESPONSIVE BREAKPOINTS
+   ========================================================================== */
+
+:root {
+  --mobile-breakpoint: 640px;
+  --tablet-breakpoint: 1024px;
+}
+
+/* ==========================================================================
+   NAVIGATION RESPONSIVE FIXES
+   ========================================================================== */
+
+/* Mobile hamburger improvements */
+@media (max-width: 991px) {
+  .navbar-collapse {
+    position: absolute !important;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--navbar-bg);
+    border-top: 1px solid var(--border-primary);
+    box-shadow: var(--shadow-lg);
+    z-index: 1000;
+    max-height: calc(100vh - 60px);
+    overflow-y: auto;
+    padding: 0.5rem 1rem;
+  }
+
+  .navbar-nav {
+    padding: 0.5rem 0;
+  }
+
+  .navbar-nav .nav-link {
+    padding: 0.5rem 1rem !important;
+    font-size: 1rem;
+  }
+
+  .navbar-nav .nav-link.active {
+    background: var(--navbar-hover-bg);
+    border-left: 4px solid var(--navbar-accent);
+  }
+
+  /* Mobile user menu in hamburger */
+  .mobile-user-section {
+    padding: 0.75rem 1rem;
+    border-top: 1px solid var(--border-primary);
+    border-bottom: 1px solid var(--border-primary);
+  }
+
+  /* Notification bell in mobile */
+  .mobile-notification-section {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border-primary);
+  }
+}
+
+/* ==========================================================================
+   MAIN LAYOUT RESPONSIVE FIXES
+   ========================================================================== */
+
+/* Container padding adjustments */
+@media (max-width: 640px) {
+  .container-fluid {
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+  }
+
+  main.container-fluid {
+    padding-top: 1rem !important;
+    padding-bottom: 1rem !important;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 1024px) {
+  main.container-fluid {
+    padding-top: 1.5rem !important;
+    padding-bottom: 1.5rem !important;
+  }
+}
+
+/* ==========================================================================
+   STATS CARD RESPONSIVE FIXES
+   ========================================================================== */
+
+@media (max-width: 640px) {
+  /* Stack stats cards vertically on mobile */
+  .stats-card-container {
+    margin-bottom: 1rem;
+  }
+
+  .stats-card-container .row {
+    row-gap: 1rem;
+  }
+
+  /* Reduce padding on mobile */
+  .stats-card .card-body {
+    padding: 1rem !important;
+  }
+
+  .stats-card h4 {
+    font-size: 1.25rem !important;
+  }
+
+  .stats-card .fs-2 {
+    font-size: 1.5rem !important;
+  }
+
+  /* Full width stats cards */
+  .stats-card-col {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 1024px) {
+  /* Two columns on tablet */
+  .stats-card-col {
+    flex: 0 0 50%;
+    max-width: 50%;
+  }
+
+  .stats-card-container .row {
+    row-gap: 1rem;
+  }
+}
+
+/* ==========================================================================
+   FILTER PANEL RESPONSIVE FIXES
+   ========================================================================== */
+
+@media (max-width: 640px) {
+  .filter-panel .card-body {
+    padding: 1rem;
+  }
+
+  .filter-panel .row {
+    row-gap: 0.75rem;
+  }
+
+  /* Full width filters on mobile */
+  .filter-panel .col-md-3,
+  .filter-panel .col-md-2,
+  .filter-panel .col-md-4,
+  .filter-panel .col-md-1 {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+
+  /* Make clear button full width */
+  .filter-panel .btn {
+    width: 100%;
+  }
+
+  /* Reduce input padding */
+  .filter-panel .form-control,
+  .filter-panel .form-select {
+    font-size: 0.875rem;
+    padding: 0.5rem 0.75rem;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 1024px) {
+  /* Two columns on tablet */
+  .filter-panel .col-md-3,
+  .filter-panel .col-md-4 {
+    flex: 0 0 50%;
+    max-width: 50%;
+  }
+
+  .filter-panel .col-md-2 {
+    flex: 0 0 50%;
+    max-width: 50%;
+  }
+
+  .filter-panel .col-md-1 {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+}
+
+/* Collapsible filter panel on mobile */
+@media (max-width: 640px) {
+  .filter-panel-collapsible {
+    position: relative;
+  }
+
+  .filter-panel-toggle {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius-md);
+    padding: 0.75rem 1rem;
+    margin-bottom: 0.5rem;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+  }
+
+  .filter-panel-toggle:hover {
+    background: var(--bg-hover);
+  }
+
+  .filter-panel-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease-in-out;
+  }
+
+  .filter-panel-content.expanded {
+    max-height: 1000px;
+  }
+}
+
+/* ==========================================================================
+   TABLE RESPONSIVE FIXES
+   ========================================================================== */
+
+/* Hide mobile cards on desktop, show on mobile */
+.table-mobile-cards {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  /* Horizontal scroll for tables on small screens */
+  .table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .table-responsive .table {
+    min-width: 600px;
+  }
+
+  /* Reduce table text size */
+  .table {
+    font-size: 0.875rem;
+  }
+
+  .table th,
+  .table td {
+    padding: 0.5rem;
+  }
+
+  /* Hide less important columns on mobile */
+  .table .hide-mobile {
+    display: none;
+  }
+
+  /* Action buttons as icon-only on mobile */
+  .table .btn-group-sm .btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+  }
+
+  .table .btn-text-mobile {
+    display: none;
+  }
+
+  /* Mobile card view for tables */
+  .table-mobile-cards {
+    display: block !important;
+    padding: 1rem;
+  }
+  
+  .table-responsive {
+    display: none !important;
+  }
+  
+  .table-mobile-card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    box-shadow: var(--card-shadow);
+  }
+  
+  .table-mobile-card-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--border-secondary);
+  }
+  
+  .table-mobile-card-row:last-child {
+    border-bottom: none;
+  }
+  
+  .table-mobile-card-label {
+    font-weight: 600;
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    flex: 0 0 40%;
+  }
+  
+  .table-mobile-card-value {
+    color: var(--text-primary);
+    font-size: 0.875rem;
+    flex: 0 0 60%;
+    text-align: right;
+  }
+  
+  .table-mobile-card-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-secondary);
+    justify-content: flex-end;
+  }
+}
+
+/* ==========================================================================
+   MODAL RESPONSIVE FIXES
+   ========================================================================== */
+
+@media (max-width: 640px) {
+  /* Responsive modal that behaves as a dialog, not full screen */
+  .modal-dialog {
+    margin: 1rem;
+    max-width: calc(100% - 2rem);
+    height: auto;
+    max-height: calc(100vh - 2rem);
+    display: flex;
+    align-items: center;
+  }
+
+  /* Centered modal for better UX */
+  .modal-dialog-centered {
+    min-height: calc(100vh - 2rem);
+  }
+
+  .modal-content {
+    height: auto;
+    max-height: calc(100vh - 2rem);
+    border: 1px solid var(--border-primary);
+    border-radius: 0.5rem;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+  }
+
+  .modal-header {
+    padding: 1rem;
+    border-bottom: 1px solid var(--border-primary);
+    flex-shrink: 0;
+  }
+
+  .modal-body {
+    padding: 1rem;
+    max-height: calc(100vh - 180px);
+    overflow-y: auto;
+    overflow-x: hidden;
+    flex-shrink: 1;
+  }
+
+  .modal-footer {
+    padding: 1rem;
+    border-top: 1px solid var(--border-primary);
+    flex-shrink: 0;
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  /* Close button positioning */
+  .modal-header .btn-close {
+    padding: 0.75rem;
+    margin: -0.5rem -0.5rem -0.5rem auto;
+  }
+
+  /* Stack buttons vertically for better touch targets */
+  .modal-footer .btn {
+    flex: 1;
+    min-height: 44px;
+  }
+
+  /* Ensure modal title doesn't overflow */
+  .modal-title {
+    font-size: 1.125rem;
+    line-height: 1.4;
+  }
+
+  /* Form elements in modal */
+  .modal-body .form-control,
+  .modal-body .form-select,
+  .modal-body textarea {
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+}
+
+/* Extra small screens */
+@media (max-width: 480px) {
+  .modal-dialog {
+    margin: 0.75rem;
+    max-width: calc(100% - 1.5rem);
+  }
+
+  .modal-header,
+  .modal-body,
+  .modal-footer {
+    padding: 0.875rem;
+  }
+
+  .modal-title {
+    font-size: 1rem;
+  }
+}
+
+/* Tablet size optimization */
+@media (min-width: 641px) and (max-width: 1024px) {
+  .modal-dialog {
+    margin: 1.75rem auto;
+    max-width: 90%;
+  }
+
+  .modal-content {
+    border-radius: 0.75rem;
+  }
+
+  .modal-body {
+    padding: 1.5rem;
+  }
+}
+
+/* ==========================================================================
+   FORM RESPONSIVE FIXES
+   ========================================================================== */
+
+@media (max-width: 640px) {
+  /* Form groups full width */
+  .form-group,
+  .mb-3 {
+    margin-bottom: 1rem !important;
+  }
+
+  /* Input sizing */
+  .form-control,
+  .form-select {
+    font-size: 1rem;
+    min-height: 44px; /* Touch target size */
+  }
+
+  /* Label sizing */
+  .form-label {
+    font-size: 0.875rem;
+    margin-bottom: 0.375rem;
+  }
+
+  /* Button sizing */
+  .btn {
+    min-height: 44px;
+    font-size: 1rem;
+    padding: 0.625rem 1rem;
+  }
+
+  /* Checkbox and radio sizing */
+  .form-check-input {
+    width: 1.125rem;
+    height: 1.125rem;
+    margin-top: 0.125rem;
+    flex-shrink: 0;
+  }
+
+  .form-check {
+    display: flex;
+    align-items: center;
+    min-height: auto;
+  }
+
+  .form-check-label {
+    padding-left: 0.5rem;
+    line-height: 1.4;
+  }
+
+  /* Table checkbox sizing - smaller for better fit */
+  .table input[type="checkbox"] {
+    width: 1rem !important;
+    height: 1rem !important;
+    margin: 0 auto !important;
+    flex-shrink: 0;
+    display: block;
+  }
+  
+  .table th input[type="checkbox"],
+  .table td input[type="checkbox"] {
+    transform: scale(1);
+    cursor: pointer;
+  }
+
+  /* Override accessibility touch target for checkboxes in mobile */
+  @media (hover: none) and (pointer: coarse) {
+    .form-check-input {
+      width: 1.125rem;
+      height: 1.125rem;
+      margin: 0.25rem;
+    }
+  }
+
+  /* Input group responsiveness */
+  .input-group {
+    flex-wrap: nowrap;
+  }
+
+  .input-group .btn {
+    white-space: nowrap;
+  }
+}
+
+/* ==========================================================================
+   BADGE RESPONSIVE FIXES
+   ========================================================================== */
+
+@media (max-width: 640px) {
+  .badge {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+  }
+
+  /* Truncate long badge text */
+  .badge-truncate {
+    max-width: 100px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: inline-block;
+  }
+}
+
+/* ==========================================================================
+   EMPTY STATE RESPONSIVE FIXES
+   ========================================================================== */
+
+@media (max-width: 640px) {
+  .empty-state {
+    padding: 2rem 1rem;
+  }
+
+  .empty-state i {
+    font-size: 3rem !important;
+  }
+
+  .empty-state h5 {
+    font-size: 1.125rem;
+  }
+
+  .empty-state p {
+    font-size: 0.875rem;
+  }
+}
+
+/* ==========================================================================
+   NOTIFICATION BELL RESPONSIVE FIXES
+   ========================================================================== */
+
+@media (max-width: 768px) {
+  /* Notification panel improvements for mobile */
+  .notification-dropdown {
+    position: fixed !important;
+    top: 60px !important;
+    right: 0 !important;
+    left: 0 !important;
+    transform: none !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    border-radius: 0 !important;
+    border-left: none !important;
+    border-right: none !important;
+    max-height: calc(100vh - 60px);
+  }
+
+  .notification-dropdown .list-group-item {
+    padding: 0.75rem 1rem;
+  }
+
+  .notification-dropdown .small {
+    font-size: 0.75rem;
+  }
+}
+
+/* ==========================================================================
+   CARD RESPONSIVE FIXES
+   ========================================================================== */
+
+@media (max-width: 640px) {
+  .card {
+    margin-bottom: 1rem;
+  }
+
+  .card-body {
+    padding: 1rem;
+  }
+
+  .card-header {
+    padding: 0.75rem 1rem;
+  }
+
+  .card-footer {
+    padding: 0.75rem 1rem;
+  }
+
+  .card-title {
+    font-size: 1.125rem;
+    margin-bottom: 0.5rem;
+  }
+}
+
+/* ==========================================================================
+   BUTTON GROUP RESPONSIVE FIXES
+   ========================================================================== */
+
+@media (max-width: 640px) {
+  /* Stack button groups vertically on mobile */
+  .btn-group-mobile-stack {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .btn-group-mobile-stack .btn {
+    border-radius: var(--radius-md) !important;
+    margin-bottom: 0.5rem;
+  }
+
+  .btn-group-mobile-stack .btn:last-child {
+    margin-bottom: 0;
+  }
+
+  /* Smaller button groups */
+  .btn-group-sm .btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+  }
+}
+
+/* ==========================================================================
+   PAGINATION RESPONSIVE FIXES
+   ========================================================================== */
+
+@media (max-width: 640px) {
+  .pagination {
+    font-size: 0.875rem;
+  }
+
+  .pagination .page-link {
+    padding: 0.375rem 0.5rem;
+  }
+
+  /* Hide page numbers, show only prev/next */
+  .pagination-hide-numbers .page-item:not(.page-item-prev):not(.page-item-next) {
+    display: none;
+  }
+
+  .pagination .page-item.active {
+    display: flex !important;
+  }
+}
+
+/* ==========================================================================
+   CHART RESPONSIVE FIXES
+   ========================================================================== */
+
+@media (max-width: 640px) {
+  .chart-container {
+    height: 250px !important;
+    margin-bottom: 1rem;
+  }
+
+  /* Legend position for mobile */
+  canvas {
+    max-height: 250px;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 1024px) {
+  .chart-container {
+    height: 300px !important;
+  }
+}
+
+/* ==========================================================================
+   PAGE HEADER RESPONSIVE FIXES
+   ========================================================================== */
+
+@media (max-width: 640px) {
+  .page-header {
+    margin-bottom: 1rem;
+  }
+
+  .page-header h1,
+  .page-header h2 {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .page-header .breadcrumb {
+    font-size: 0.875rem;
+    margin-bottom: 0.5rem;
+  }
+
+  /* Stack action buttons */
+  .page-header-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+  }
+
+  .page-header-actions .btn {
+    width: 100%;
+  }
+}
+
+/* ==========================================================================
+   GRID LAYOUT RESPONSIVE FIXES
+   ========================================================================== */
+
+@media (max-width: 640px) {
+  /* Force single column on mobile */
+  .row.mobile-single-column > [class*='col-'] {
+    flex: 0 0 100%;
+    max-width: 100%;
+    margin-bottom: 1rem;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 1024px) {
+  /* Two columns on tablet */
+  .row.tablet-two-columns > .col-md-3,
+  .row.tablet-two-columns > .col-md-4 {
+    flex: 0 0 50%;
+    max-width: 50%;
+  }
+}
+
+/* ==========================================================================
+   UTILITY RESPONSIVE CLASSES
+   ========================================================================== */
+
+/* Show/hide based on device */
+.show-mobile {
+  display: none !important;
+}
+
+.show-tablet {
+  display: none !important;
+}
+
+.show-desktop {
+  display: block !important;
+}
+
+@media (max-width: 640px) {
+  .hide-mobile {
+    display: none !important;
+  }
+
+  .show-mobile {
+    display: block !important;
+  }
+
+  .show-desktop {
+    display: none !important;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 1024px) {
+  .hide-tablet {
+    display: none !important;
+  }
+
+  .show-tablet {
+    display: block !important;
+  }
+}
+
+@media (min-width: 1025px) {
+  .hide-desktop {
+    display: none !important;
+  }
+}
+
+/* Text alignment responsive */
+@media (max-width: 640px) {
+  .text-mobile-center {
+    text-align: center !important;
+  }
+
+  .text-mobile-left {
+    text-align: left !important;
+  }
+}
+
+/* Spacing responsive utilities */
+@media (max-width: 640px) {
+  .p-mobile-2 {
+    padding: 0.5rem !important;
+  }
+
+  .py-mobile-2 {
+    padding-top: 0.5rem !important;
+    padding-bottom: 0.5rem !important;
+  }
+
+  .px-mobile-2 {
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+  }
+
+  .m-mobile-2 {
+    margin: 0.5rem !important;
+  }
+
+  .my-mobile-2 {
+    margin-top: 0.5rem !important;
+    margin-bottom: 0.5rem !important;
+  }
+
+  .mx-mobile-2 {
+    margin-left: 0.5rem !important;
+    margin-right: 0.5rem !important;
+  }
+}
+
+/* ==========================================================================
+   TOUCH TARGET IMPROVEMENTS
+   ========================================================================== */
+
+/* Ensure minimum touch target size of 44x44px on mobile */
+@media (max-width: 640px) {
+  .btn,
+  .form-control,
+  .form-select,
+  .nav-link,
+  .page-link,
+  .dropdown-item {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Larger click areas for icons */
+  .clickable-icon {
+    padding: 0.625rem;
+    min-width: 44px;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+/* ==========================================================================
+   ACCESSIBILITY IMPROVEMENTS
+   ========================================================================== */
+
+/* Focus visible improvements */
+*:focus-visible {
+  outline: 2px solid var(--btn-primary-bg);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* Skip to main content link */
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 0;
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-text);
+  padding: 8px 16px;
+  text-decoration: none;
+  z-index: 100000;
+}
+
+.skip-link:focus {
+  top: 0;
+}
+
+/* ==========================================================================
+   PRINT STYLES
+   ========================================================================== */
+
+@media print {
+  .navbar,
+  .btn,
+  .page-header-actions,
+  .filter-panel,
+  .notification-bell {
+    display: none !important;
+  }
+
+  .card {
+    border: 1px solid #ddd !important;
+    box-shadow: none !important;
+    page-break-inside: avoid;
+  }
+
+  .table {
+    font-size: 10pt;
+  }
+}

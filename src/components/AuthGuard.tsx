@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { useAuth } from '@/contexts/AuthContext';
-import { usePathname } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import { LoadingSpinner } from '@/shared/components';
+import { useAuth } from "@/contexts/AuthContext";
+import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
+import { LoadingSpinner } from "@/shared/components";
 
 interface AuthGuardProps {
   children: React.ReactNode;
@@ -15,26 +15,46 @@ export default function AuthGuard({ children }: AuthGuardProps) {
   const [isMounted, setIsMounted] = useState(false);
 
   // Public routes that don't require authentication
-  const publicRoutes = ['/login']; // '/signup' removed - disabled
-  const isPublicRoute = publicRoutes.includes(pathname);
+  const publicRoutes = [
+    "/login",
+    "/signup",
+    "/auth/forgot-password",
+    "/auth/reset-password",
+    "/auth/verify-email",
+  ];
+  const isPublicRoute = publicRoutes.some((route) =>
+    pathname.startsWith(route)
+  );
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
 
   useEffect(() => {
-    if (!isMounted) return;
-    
-    // Redirect unauthenticated users to login (except on public routes)
-    if (!loading && !isAuthenticated && !isPublicRoute) {
-      window.location.href = '/login';
+    if (!isMounted || !pathname) return;
+
+    // Don't do anything while still loading
+    if (loading) {
+      return;
     }
-    
-    // Redirect authenticated users away from login/signup pages
-    if (!loading && isAuthenticated && isPublicRoute) {
-      window.location.href = '/';
+
+    // Public routes - no redirect needed for unauthenticated users
+    if (isPublicRoute && !isAuthenticated) {
+      return;
     }
-  }, [isAuthenticated, loading, isPublicRoute, isMounted]);
+
+    // Redirect authenticated users away from public auth pages
+    if (isPublicRoute && isAuthenticated) {
+      window.location.href = "/expenses";
+      return;
+    }
+
+    // Redirect unauthenticated users from protected routes to login
+    if (!isPublicRoute && !isAuthenticated) {
+      window.location.href = "/login";
+      return;
+    }
+  }, [isAuthenticated, loading, isPublicRoute, isMounted, pathname]);
 
   // Prevent hydration mismatch by not rendering anything during SSR
   if (!isMounted) {
@@ -45,13 +65,13 @@ export default function AuthGuard({ children }: AuthGuardProps) {
   if (loading) {
     return (
       <div className="d-flex justify-content-center align-items-center min-vh-100">
-        <LoadingSpinner 
+        <LoadingSpinner
           config={{
-            size: 'large',
-            variant: 'primary',
+            size: "large",
+            variant: "primary",
             showText: true,
-            text: 'Loading Spend Tracker...',
-            overlay: true
+            text: "Loading Spend Tracker...",
+            overlay: true,
           }}
         />
       </div>
@@ -71,13 +91,13 @@ export default function AuthGuard({ children }: AuthGuardProps) {
   // This will rarely show as the useEffect handles redirection
   return (
     <div className="d-flex justify-content-center align-items-center min-vh-100">
-      <LoadingSpinner 
+      <LoadingSpinner
         config={{
-          size: 'large',
-          variant: 'primary',
+          size: "large",
+          variant: "primary",
           showText: true,
-          text: 'Redirecting to login...',
-          overlay: true
+          text: "Redirecting to login...",
+          overlay: true,
         }}
       />
     </div>

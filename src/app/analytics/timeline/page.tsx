@@ -28,6 +28,7 @@ import {
   PeriodType,
 } from "@/lib/utils";
 import { LoadingSpinner, Table } from "@/shared/components";
+import { useTheme } from "@/contexts/ThemeContext";
 
 ChartJS.register(
   CategoryScale,
@@ -62,6 +63,7 @@ interface TimelineData {
 }
 
 export default function TimelineAnalysis() {
+  const { theme } = useTheme();
   const [data, setData] = useState<TimelineData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -89,7 +91,6 @@ export default function TimelineAnalysis() {
         setError(result.error || "Failed to fetch timeline data");
       }
     } catch (err) {
-      console.error("Error fetching timeline data:", err);
       setError("Failed to load timeline data");
     } finally {
       setLoading(false);
@@ -130,14 +131,15 @@ export default function TimelineAnalysis() {
           label: category,
           data: data.categoryMonthly.data[index] || [],
           backgroundColor: getChartColors(
-            data.categoryMonthly.categories.length
+            data.categoryMonthly.categories.length,
+            theme
           )[index],
         })),
       }
     : null;
 
-  const lineChartOptions = getLineChartOptions();
-  const stackedBarOptions = getBarChartOptions(true);
+  const lineChartOptions = getLineChartOptions(false, theme);
+  const stackedBarOptions = getBarChartOptions(true, theme);
 
   const handlePeriodChange = (period: PeriodType) => {
     setSelectedPeriod(period);
@@ -269,26 +271,27 @@ export default function TimelineAnalysis() {
                           value={customStartDate}
                           onChange={(e) => setCustomStartDate(e.target.value)}
                           onFocus={(e) => {
-                            e.target.type = 'date';
+                            e.target.type = "date";
                             setTimeout(() => {
                               if (e.target.showPicker) e.target.showPicker();
                             }, 0);
                           }}
                           onBlur={(e) => {
-                            if (!e.target.value) e.target.type = 'text';
+                            if (!e.target.value) e.target.type = "text";
                           }}
                           onKeyDown={(e) => {
-                            if (e.currentTarget.type === 'text') {
-                              e.currentTarget.type = 'date';
+                            if (e.currentTarget.type === "text") {
+                              e.currentTarget.type = "date";
                               setTimeout(() => {
-                                if (e.currentTarget.showPicker) e.currentTarget.showPicker();
+                                if (e.currentTarget.showPicker)
+                                  e.currentTarget.showPicker();
                               }, 0);
                             }
                           }}
                           style={{
-                            fontSize: '0.875rem',
-                            padding: '0.375rem 0.5rem',
-                            cursor: 'pointer'
+                            fontSize: "0.875rem",
+                            padding: "0.375rem 0.5rem",
+                            cursor: "pointer",
                           }}
                         />
                       </div>
@@ -301,26 +304,27 @@ export default function TimelineAnalysis() {
                           value={customEndDate}
                           onChange={(e) => setCustomEndDate(e.target.value)}
                           onFocus={(e) => {
-                            e.target.type = 'date';
+                            e.target.type = "date";
                             setTimeout(() => {
                               if (e.target.showPicker) e.target.showPicker();
                             }, 0);
                           }}
                           onBlur={(e) => {
-                            if (!e.target.value) e.target.type = 'text';
+                            if (!e.target.value) e.target.type = "text";
                           }}
                           onKeyDown={(e) => {
-                            if (e.currentTarget.type === 'text') {
-                              e.currentTarget.type = 'date';
+                            if (e.currentTarget.type === "text") {
+                              e.currentTarget.type = "date";
                               setTimeout(() => {
-                                if (e.currentTarget.showPicker) e.currentTarget.showPicker();
+                                if (e.currentTarget.showPicker)
+                                  e.currentTarget.showPicker();
                               }, 0);
                             }
                           }}
                           style={{
-                            fontSize: '0.875rem',
-                            padding: '0.375rem 0.5rem',
-                            cursor: 'pointer'
+                            fontSize: "0.875rem",
+                            padding: "0.375rem 0.5rem",
+                            cursor: "pointer",
                           }}
                         />
                       </div>
@@ -342,7 +346,9 @@ export default function TimelineAnalysis() {
                     {trendTitle}
                   </h5>
                   {periodText && (
-                    <small className="text-muted">{periodText}</small>
+                    <small style={{ color: "var(--text-secondary)" }}>
+                      {periodText}
+                    </small>
                   )}
                 </div>
                 <div className="card-body">
@@ -367,7 +373,9 @@ export default function TimelineAnalysis() {
                     {categoryTitle}
                   </h5>
                   {periodText && (
-                    <small className="text-muted">{periodText}</small>
+                    <small style={{ color: "var(--text-secondary)" }}>
+                      {periodText}
+                    </small>
                   )}
                 </div>
                 <div className="card-body">
@@ -405,13 +413,15 @@ export default function TimelineAnalysis() {
                           render: (value, row) => (
                             <div>
                               <i
-                                className={`bi bi-person-circle me-2 ${
-                                  row.user === "Saket"
-                                    ? "text-primary"
-                                    : row.user === "Ayush"
-                                    ? "text-success"
-                                    : ""
-                                }`}
+                                className="bi bi-person-circle me-2"
+                                style={{
+                                  color:
+                                    row.user === "Saket"
+                                      ? "var(--btn-primary-bg)"
+                                      : row.user === "Ayush"
+                                        ? "var(--status-success)"
+                                        : "",
+                                }}
                               ></i>
                               <strong>{value}</strong>
                             </div>

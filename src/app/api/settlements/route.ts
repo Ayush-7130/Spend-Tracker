@@ -14,7 +14,6 @@ export async function GET() {
     
     return NextResponse.json(settlements);
   } catch (error) {
-    console.error('Error fetching settlements:', error);
     return NextResponse.json({ error: 'Failed to fetch settlements' }, { status: 500 });
   }
 }
@@ -89,7 +88,6 @@ export async function POST(request: NextRequest) {
         );
       }
     } catch (notificationError) {
-      console.error('Failed to send settlement notification:', notificationError);
       // Continue without failing the settlement creation
     }
     
@@ -99,7 +97,6 @@ export async function POST(request: NextRequest) {
       settlement: { ...settlement, _id: result.insertedId }
     });
   } catch (error) {
-    console.error('Error creating settlement:', error);
     return NextResponse.json({ error: 'Failed to create settlement' }, { status: 500 });
   }
 }

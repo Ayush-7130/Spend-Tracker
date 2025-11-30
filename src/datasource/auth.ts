@@ -1,11 +1,11 @@
-import { api, withRetry, ApiResponse } from './base';
+import { api, withRetry, ApiResponse } from "./base";
 
 // User interface
 export interface User {
   _id: string;
   name: string;
   email: string;
-  role: 'user' | 'admin';
+  role: "user" | "admin";
   createdAt: string;
   updatedAt: string;
 }
@@ -15,11 +15,14 @@ export interface LoginRequest {
   email: string;
   password: string;
   rememberMe?: boolean;
+  mfaToken?: string; // Optional MFA token
 }
 
 export interface LoginResponse {
-  user: User;
-  token: string;
+  user?: User;
+  token?: string;
+  requiresMfa?: boolean; // Flag for MFA requirement
+  message?: string;
 }
 
 export interface SignupRequest {
@@ -36,36 +39,47 @@ export interface SignupResponse {
 // Authentication Datasource
 export class AuthDataSource {
   /**
-   * Login user
+   * Login user with enhanced security (MFA support)
    */
   static async login(credentials: LoginRequest): Promise<LoginResponse> {
-    const response = await withRetry(() => api.post<ApiResponse<LoginResponse>>('/auth/login', credentials));
+    const response = await withRetry(() =>
+      api.post<ApiResponse<LoginResponse>>("/auth/login", credentials)
+    );
     if (response.success && response.data) {
       return response.data;
     }
-    throw new Error(response.error || 'Login failed');
+    throw new Error(response.error || "Login failed");
   }
 
   /**
    * Sign up new user
    */
   static async signup(userData: SignupRequest): Promise<SignupResponse> {
-    const response = await withRetry(() => api.post<ApiResponse<SignupResponse>>('/auth/signup', userData));
+    const response = await withRetry(() =>
+      api.post<ApiResponse<SignupResponse>>("/auth/signup", userData)
+    );
     if (response.success && response.data) {
       return response.data;
     }
-    throw new Error(response.error || 'Signup failed');
+    throw new Error(response.error || "Signup failed");
   }
 
   /**
    * Logout user
    */
   static async logout(): Promise<{ success: boolean; message: string }> {
-    const response = await withRetry(() => api.post<ApiResponse<{ success: boolean; message: string }>>('/auth/logout'));
+    const response = await withRetry(() =>
+      api.post<ApiResponse<{ success: boolean; message: string }>>(
+        "/auth/logout"
+      )
+    );
     if (response.success) {
-      return { success: true, message: response.message || 'Logged out successfully' };
+      return {
+        success: true,
+        message: response.message || "Logged out successfully",
+      };
     }
-    throw new Error(response.error || 'Logout failed');
+    throw new Error(response.error || "Logout failed");
   }
 
   /**
@@ -73,11 +87,11 @@ export class AuthDataSource {
    */
   static async getCurrentUser(): Promise<User> {
     // Don't use retry for auth checks as 401 errors are expected when not authenticated
-    const response = await api.get<ApiResponse<{ user: User }>>('/auth/me');
+    const response = await api.get<ApiResponse<{ user: User }>>("/auth/me");
     if (response.success && response.data) {
       return response.data.user;
     }
-    throw new Error(response.error || 'Failed to get user');
+    throw new Error(response.error || "Failed to get user");
   }
 }
 
@@ -104,40 +118,63 @@ export class NotificationsDataSource {
   /**
    * Get user notifications
    */
-  static async getNotifications(page: number = 1, limit: number = 20): Promise<NotificationsResponse> {
-    const response = await withRetry(() => api.get<ApiResponse<NotificationsResponse>>('/notifications', { page, limit }));
+  static async getNotifications(
+    page: number = 1,
+    limit: number = 20
+  ): Promise<NotificationsResponse> {
+    const response = await withRetry(() =>
+      api.get<ApiResponse<NotificationsResponse>>("/notifications", {
+        page,
+        limit,
+      })
+    );
     if (response.success && response.data) {
       return response.data;
     }
-    throw new Error(response.error || 'Failed to get notifications');
+    throw new Error(response.error || "Failed to get notifications");
   }
 
   /**
    * Mark notification as read
    */
-  static async markAsRead(notificationId: string): Promise<{ success: boolean; message: string }> {
-    const response = await withRetry(() => api.patch<ApiResponse<{ success: boolean; message: string }>>('/notifications', { 
-      notificationId, 
-      markAsRead: true,
-      setTTL: true
-    }));
+  static async markAsRead(
+    notificationId: string
+  ): Promise<{ success: boolean; message: string }> {
+    const response = await withRetry(() =>
+      api.patch<ApiResponse<{ success: boolean; message: string }>>(
+        "/notifications",
+        {
+          notificationId,
+          markAsRead: true,
+          setTTL: true,
+        }
+      )
+    );
     if (response.success) {
-      return { success: true, message: response.message || 'Marked as read' };
+      return { success: true, message: response.message || "Marked as read" };
     }
-    throw new Error(response.error || 'Failed to mark as read');
+    throw new Error(response.error || "Failed to mark as read");
   }
 
   /**
    * Mark all notifications as read
    */
   static async markAllAsRead(): Promise<{ success: boolean; message: string }> {
-    const response = await withRetry(() => api.patch<ApiResponse<{ success: boolean; message: string }>>('/notifications', { 
-      markAllAsRead: true,
-      setTTL: true
-    }));
+    const response = await withRetry(() =>
+      api.patch<ApiResponse<{ success: boolean; message: string }>>(
+        "/notifications",
+        {
+          markAllAsRead: true,
+          setTTL: true,
+        }
+      )
+    );
     if (response.success) {
-      return { success: true, message: response.message || 'All marked as read' };
+      return {
+        success: true,
+        message: response.message || "All marked as read",
+      };
     }
-    throw new Error(response.error || 'Failed to mark all as read');
+    throw new Error(response.error || "Failed to mark all as read");
   }
 }

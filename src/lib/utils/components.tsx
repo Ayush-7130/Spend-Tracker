@@ -18,7 +18,16 @@ export const ErrorAlert = ({
     <i className="bi bi-exclamation-triangle me-2"></i>
     {error}
     {onRetry && (
-      <button className="btn btn-outline-danger btn-sm ms-3" onClick={onRetry}>
+      <button
+        className="btn btn-sm ms-3"
+        onClick={onRetry}
+        style={{
+          backgroundColor: "transparent",
+          color: "var(--status-error)",
+          border: "1px solid var(--status-error)",
+          padding: "0.25rem 0.75rem",
+        }}
+      >
         Retry
       </button>
     )}
@@ -59,7 +68,11 @@ export const PageHeader = ({
         {icon && <i className={`${icon} me-2`}></i>}
         {title}
       </h1>
-      {description && <p className="text-muted mb-0">{description}</p>}
+      {description && (
+        <p className="mb-0" style={{ color: "var(--text-secondary)" }}>
+          {description}
+        </p>
+      )}
     </div>
     {actions && actions.length > 0 && (
       <div className="d-flex gap-2">

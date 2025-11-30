@@ -11,13 +11,14 @@ import {
   FilterPanel,
   StatusBadge,
   LoadingSpinner,
-  Table,
   EmptyState,
   SelectField,
   InputField,
   DateField,
   TextareaField,
+  ExportButton,
 } from "@/shared/components";
+import { TableCard } from "@/shared/components/Card/TableCard";
 
 interface Settlement {
   _id: string;
@@ -79,7 +80,9 @@ const SettlementsPage: React.FC = () => {
 
   // Record Settlement Dialog states
   const [showSettlementDialog, setShowSettlementDialog] = useState(false);
-  const [editingSettlement, setEditingSettlement] = useState<Settlement | null>(null);
+  const [editingSettlement, setEditingSettlement] = useState<Settlement | null>(
+    null
+  );
   const [newSettlement, setNewSettlement] = useState({
     from: "",
     to: "",
@@ -231,7 +234,6 @@ const SettlementsPage: React.FC = () => {
       setBalances(balancesData);
     } catch (error) {
       setError(error instanceof Error ? error.message : "An error occurred");
-      console.error("Error fetching settlements data:", error);
     } finally {
       setLoading(false);
     }
@@ -256,7 +258,6 @@ const SettlementsPage: React.FC = () => {
       setSettlements(settlementsData);
       setBalances(balancesData);
     } catch (error) {
-      console.error("Error refreshing settlements:", error);
       // Fall back to full refresh if partial update fails
       await fetchData();
     }
@@ -312,31 +313,44 @@ const SettlementsPage: React.FC = () => {
         body: JSON.stringify(settlementData),
       });
 
-      if (response.ok) {
-        setShowSettlementDialog(false);
-        setEditingSettlement(null);
-        setNewSettlement({
-          from: "",
-          to: "",
-          amount: "",
-          date: new Date().toISOString().split("T")[0],
-          description: "",
-          status: "settled",
-        });
-        // Refresh data with optimized approach
-        await refreshSettlements();
-        setSubmitError(null); // Clear any previous errors
-        if (editingSettlement) {
-          notifyAdded("Settlement updated");
-        } else {
-          notifyAdded("Settlement");
-        }
-      } else {
+      // Check if response is successful
+      if (!response.ok) {
         const errorData = await response.json();
-        setSubmitError(errorData.error || `Failed to ${editingSettlement ? "update" : "record"} settlement`);
+        throw new Error(
+          errorData.error ||
+            `Failed to ${editingSettlement ? "update" : "record"} settlement`
+        );
       }
-    } catch {
-      setSubmitError(`Error ${editingSettlement ? "updating" : "recording"} settlement`);
+
+      // Close dialog and reset form
+      setShowSettlementDialog(false);
+      setEditingSettlement(null);
+      setNewSettlement({
+        from: "",
+        to: "",
+        amount: "",
+        date: new Date().toISOString().split("T")[0],
+        description: "",
+        status: "settled",
+      });
+      setSubmitError(null);
+
+      // Refresh data with optimized approach
+      await refreshSettlements();
+
+      // Show success notification
+      if (editingSettlement) {
+        notifyAdded("Settlement updated");
+      } else {
+        notifyAdded("Settlement");
+      }
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : `Error ${editingSettlement ? "updating" : "recording"} settlement`;
+      setSubmitError(errorMessage);
+      notifyError(editingSettlement ? "Update" : "Create", errorMessage);
     } finally {
       setOperationLoading(false);
     }
@@ -345,7 +359,9 @@ const SettlementsPage: React.FC = () => {
   const handleEditSettlement = (settlement: Settlement) => {
     // Find user IDs from names
     const getUserId = (name: string) => {
-      const user = users.find((u) => u.name.toLowerCase() === name.toLowerCase());
+      const user = users.find(
+        (u) => u.name.toLowerCase() === name.toLowerCase()
+      );
       return user?.id || name.toLowerCase();
     };
 
@@ -402,7 +418,6 @@ const SettlementsPage: React.FC = () => {
         notifyError("Delete", errorData.error || "Failed to delete settlement");
       }
     } catch (error) {
-      console.error("Error deleting settlement:", error);
       notifyError("Delete", "Failed to delete settlement");
     } finally {
       setOperationLoading(false);
@@ -447,7 +462,14 @@ const SettlementsPage: React.FC = () => {
                   Settlements
                 </h1>
               </div>
-              <div>
+              <div className="d-flex gap-2">
+                <ExportButton
+                  endpoint="/api/settlements/export"
+                  params={filters}
+                  label="Export"
+                  variant="outline-secondary"
+                  icon="bi-download"
+                />
                 <button
                   onClick={() => setShowSettlementDialog(true)}
                   className="btn btn-primary"
@@ -480,12 +502,20 @@ const SettlementsPage: React.FC = () => {
                   <div className="card border-danger">
                     <div className="card-body py-2 px-3 text-center">
                       <div className="d-flex align-items-center justify-content-center">
-                        <i className="bi bi-exclamation-triangle text-danger fs-5 me-2"></i>
+                        <i
+                          className="bi bi-exclamation-triangle fs-5 me-2"
+                          style={{ color: "var(--status-error)" }}
+                        ></i>
                         <div>
-                          <h5 className="mb-0 text-danger">
+                          <h5
+                            className="mb-0"
+                            style={{ color: "var(--status-error)" }}
+                          >
                             ₹{balances.summary.totalOwed}
                           </h5>
-                          <small className="text-muted">Outstanding</small>
+                          <small style={{ color: "var(--text-secondary)" }}>
+                            Outstanding
+                          </small>
                         </div>
                       </div>
                     </div>
@@ -495,12 +525,20 @@ const SettlementsPage: React.FC = () => {
                   <div className="card border-success">
                     <div className="card-body py-2 px-3 text-center">
                       <div className="d-flex align-items-center justify-content-center">
-                        <i className="bi bi-check-circle text-success fs-5 me-2"></i>
+                        <i
+                          className="bi bi-check-circle fs-5 me-2"
+                          style={{ color: "var(--status-success)" }}
+                        ></i>
                         <div>
-                          <h5 className="mb-0 text-success">
+                          <h5
+                            className="mb-0"
+                            style={{ color: "var(--status-success)" }}
+                          >
                             ₹{balances.summary.totalSettled}
                           </h5>
-                          <small className="text-muted">Settled</small>
+                          <small style={{ color: "var(--text-secondary)" }}>
+                            Settled
+                          </small>
                         </div>
                       </div>
                     </div>
@@ -515,7 +553,9 @@ const SettlementsPage: React.FC = () => {
                           <h5 className="mb-0 text-primary">
                             {balances.summary.totalTransactions}
                           </h5>
-                          <small className="text-muted">Transactions</small>
+                          <small style={{ color: "var(--text-secondary)" }}>
+                            Transactions
+                          </small>
                         </div>
                       </div>
                     </div>
@@ -525,12 +565,20 @@ const SettlementsPage: React.FC = () => {
                   <div className="card border-warning">
                     <div className="card-body py-2 px-3 text-center">
                       <div className="d-flex align-items-center justify-content-center">
-                        <i className="bi bi-hourglass-split text-warning fs-5 me-2"></i>
+                        <i
+                          className="bi bi-hourglass-split fs-5 me-2"
+                          style={{ color: "var(--status-warning)" }}
+                        ></i>
                         <div>
-                          <h5 className="mb-0 text-warning">
+                          <h5
+                            className="mb-0"
+                            style={{ color: "var(--status-warning)" }}
+                          >
                             {balances.summary.activeBalances}
                           </h5>
-                          <small className="text-muted">Active</small>
+                          <small style={{ color: "var(--text-secondary)" }}>
+                            Active
+                          </small>
                         </div>
                       </div>
                     </div>
@@ -549,75 +597,81 @@ const SettlementsPage: React.FC = () => {
                   </h5>
                 </div>
                 <div className="card-body p-0">
-                  <Table
-                    config={{
-                      columns: [
-                        {
-                          key: "fromUser",
-                          header: "From",
-                          accessor: "fromUser",
-                          render: (value) => (
-                            <div className="d-flex align-items-center">
-                              <div
-                                className="avatar-xs bg-danger text-white rounded-circle d-flex align-items-center justify-content-center me-2"
-                                style={{
-                                  width: "24px",
-                                  height: "24px",
-                                  fontSize: "10px",
-                                }}
-                              >
-                                {value.charAt(0).toUpperCase()}
-                              </div>
-                              <span>
-                                {value.charAt(0).toUpperCase() +
-                                  value.slice(1).toLowerCase()}
-                              </span>
+                  <TableCard<Balance>
+                    data={balances.balances.filter(
+                      (balance) => balance.status === "owes"
+                    )}
+                    columns={[
+                      {
+                        key: "fromUser",
+                        label: "From",
+                        render: (balance: Balance) => (
+                          <div className="d-flex align-items-center">
+                            <div
+                              className="avatar-xs bg-danger text-white rounded-circle d-flex align-items-center justify-content-center me-2"
+                              style={{
+                                width: "24px",
+                                height: "24px",
+                                fontSize: "10px",
+                              }}
+                            >
+                              {balance.fromUser.charAt(0).toUpperCase()}
                             </div>
-                          ),
-                        },
-                        {
-                          key: "toUser",
-                          header: "To",
-                          accessor: "toUser",
-                          render: (value) => (
-                            <div className="d-flex align-items-center">
-                              <div
-                                className="avatar-xs bg-success text-white rounded-circle d-flex align-items-center justify-content-center me-2"
-                                style={{
-                                  width: "24px",
-                                  height: "24px",
-                                  fontSize: "10px",
-                                }}
-                              >
-                                {value.charAt(0).toUpperCase()}
-                              </div>
-                              <span>
-                                {value.charAt(0).toUpperCase() +
-                                  value.slice(1).toLowerCase()}
-                              </span>
-                            </div>
-                          ),
-                        },
-                        {
-                          key: "amount",
-                          header: "Amount",
-                          accessor: "amount",
-                          render: (value) => (
-                            <span className="fw-bold text-danger">
-                              ₹{value}
+                            <span>
+                              {balance.fromUser.charAt(0).toUpperCase() +
+                                balance.fromUser.slice(1).toLowerCase()}
                             </span>
-                          ),
-                        },
-                      ],
-                      data: balances.balances.filter(
-                        (balance) => balance.status === "owes"
-                      ),
-                      keyExtractor: (balance) =>
-                        `${balance.fromUser}-${balance.toUser}`,
-                      hover: true,
-                      responsive: true,
-                      size: "small",
-                    }}
+                          </div>
+                        ),
+                      },
+                      {
+                        key: "toUser",
+                        label: "To",
+                        render: (balance: Balance) => (
+                          <div className="d-flex align-items-center">
+                            <div
+                              className="avatar-xs bg-success text-white rounded-circle d-flex align-items-center justify-content-center me-2"
+                              style={{
+                                width: "24px",
+                                height: "24px",
+                                fontSize: "10px",
+                              }}
+                            >
+                              {balance.toUser.charAt(0).toUpperCase()}
+                            </div>
+                            <span>
+                              {balance.toUser.charAt(0).toUpperCase() +
+                                balance.toUser.slice(1).toLowerCase()}
+                            </span>
+                          </div>
+                        ),
+                      },
+                      {
+                        key: "amount",
+                        label: "Amount",
+                        render: (balance: Balance) => (
+                          <span
+                            className="fw-bold"
+                            style={{ color: "var(--status-error)" }}
+                          >
+                            ₹{balance.amount}
+                          </span>
+                        ),
+                      },
+                    ]}
+                    mobileCardRender={(balance: Balance) => ({
+                      title: `${balance.fromUser
+                        .charAt(0)
+                        .toUpperCase()}${balance.fromUser
+                        .slice(1)
+                        .toLowerCase()} owes ${balance.toUser
+                        .charAt(0)
+                        .toUpperCase()}${balance.toUser
+                        .slice(1)
+                        .toLowerCase()}`,
+                      amount: `₹${balance.amount}`,
+                    })}
+                    emptyMessage="All settled up!"
                   />
                 </div>
               </div>
@@ -626,9 +680,17 @@ const SettlementsPage: React.FC = () => {
             {balances && balances.balances.length === 0 && (
               <div className="card mb-3">
                 <div className="card-body text-center py-5">
-                  <i className="bi bi-check-circle-fill text-success display-1"></i>
-                  <h4 className="mt-3 text-success">All Settled Up!</h4>
-                  <p className="text-muted">
+                  <i
+                    className="bi bi-check-circle-fill display-1"
+                    style={{ color: "var(--status-success)" }}
+                  ></i>
+                  <h4
+                    className="mt-3"
+                    style={{ color: "var(--status-success)" }}
+                  >
+                    All Settled Up!
+                  </h4>
+                  <p style={{ color: "var(--text-secondary)" }}>
                     No outstanding balances between users
                   </p>
                 </div>
@@ -643,7 +705,7 @@ const SettlementsPage: React.FC = () => {
                   type: "text",
                   label: "Search",
                   placeholder: "Search settlements...",
-                  colSize: 3,
+                  colSize: 2.5,
                 },
                 {
                   key: "fromUser",
@@ -654,7 +716,7 @@ const SettlementsPage: React.FC = () => {
                     { label: "Saket", value: "Saket" },
                     { label: "Ayush", value: "Ayush" },
                   ],
-                  colSize: 2,
+                  colSize: 1.5,
                 },
                 {
                   key: "toUser",
@@ -665,7 +727,7 @@ const SettlementsPage: React.FC = () => {
                     { label: "Saket", value: "Saket" },
                     { label: "Ayush", value: "Ayush" },
                   ],
-                  colSize: 2,
+                  colSize: 1.5,
                 },
                 {
                   key: "status",
@@ -676,7 +738,7 @@ const SettlementsPage: React.FC = () => {
                     { label: "Borrow", value: "borrow" },
                     { label: "Settled", value: "settled" },
                   ],
-                  colSize: 2,
+                  colSize: 1.5,
                 },
                 {
                   key: "startDate",
@@ -719,163 +781,182 @@ const SettlementsPage: React.FC = () => {
                 className="card-body"
                 style={{ overflowX: "auto", overflowY: "visible" }}
               >
-                {filteredSettlements.length > 0 ? (
-                  <Table
-                    config={{
-                      columns: [
-                        {
-                          key: "date",
-                          header: "Date",
-                          accessor: "date",
-                          sortable: true,
-                          render: (value) => (
-                            <span className="text-muted">
-                              {formatDate(value)}
-                            </span>
-                          ),
-                        },
-                        {
-                          key: "fromUser",
-                          header: "From",
-                          accessor: "fromUser",
-                          sortable: true,
-                          render: (value) => (
-                            <div className="d-flex align-items-center">
-                              <div
-                                className="avatar-xs bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2"
-                                style={{
-                                  width: "24px",
-                                  height: "24px",
-                                  fontSize: "10px",
-                                }}
-                              >
-                                {value.charAt(0).toUpperCase()}
-                              </div>
-                              <span>
-                                {value.charAt(0).toUpperCase() +
-                                  value.slice(1).toLowerCase()}
-                              </span>
-                            </div>
-                          ),
-                        },
-                        {
-                          key: "toUser",
-                          header: "To",
-                          accessor: "toUser",
-                          sortable: true,
-                          render: (value) => (
-                            <div className="d-flex align-items-center">
-                              <div
-                                className="avatar-xs bg-success text-white rounded-circle d-flex align-items-center justify-content-center me-2"
-                                style={{
-                                  width: "24px",
-                                  height: "24px",
-                                  fontSize: "10px",
-                                }}
-                              >
-                                {value.charAt(0).toUpperCase()}
-                              </div>
-                              <span>
-                                {value.charAt(0).toUpperCase() +
-                                  value.slice(1).toLowerCase()}
-                              </span>
-                            </div>
-                          ),
-                        },
-                        {
-                          key: "amount",
-                          header: "Amount",
-                          accessor: "amount",
-                          sortable: true,
-                          render: (value) => (
-                            <span className="fw-bold text-success">
-                              ₹{value}
-                            </span>
-                          ),
-                        },
-                        {
-                          key: "description",
-                          header: "Description",
-                          accessor: "description",
-                          render: (value) => (
-                            <span className="text-muted">
-                              {value || "Settlement payment"}
-                            </span>
-                          ),
-                        },
-                        {
-                          key: "status",
-                          header: "Status",
-                          render: (value, row) => (
-                            <StatusBadge 
-                              status={row.status || "settled"} 
-                              type="settlement" 
-                            />
-                          ),
-                        },
-                      ],
-                      data: filteredSettlements,
-                      keyExtractor: (settlement) => settlement._id,
-                      hover: true,
-                      responsive: true,
-                      sortable: true,
-                      paginated: true,
-                      pagination: {
-                        page: pagination.page,
-                        limit: pagination.limit,
-                        total: filteredSettlements.length,
-                        showSizeSelector: true,
-                        sizeSelectorOptions: [10, 20, 50, 100],
-                      },
-                      defaultSort: {
-                        column: filters.sortBy,
-                        direction: filters.sortOrder as "asc" | "desc",
-                      },
-                      onSort: (sort) => {
-                        handleSort(sort.column);
-                      },
-                      onPageChange: (page) => {
-                        setPagination((prev) => ({ ...prev, page }));
-                      },
-                      onPageSizeChange: (size) => {
-                        setPagination((prev) => ({
-                          ...prev,
-                          limit: size,
-                          page: 1,
-                        }));
-                      },
-                      actions: [
-                        {
-                          label: "Edit",
-                          icon: "bi-pencil",
-                          onClick: (settlement) => handleEditSettlement(settlement),
-                          variant: "secondary",
-                        },
-                        {
-                          label: "Delete",
-                          icon: "bi-trash",
-                          onClick: (settlement) =>
-                            handleDeleteSettlement(settlement._id),
-                          variant: "danger",
-                        },
-                      ],
-                    }}
-                  />
-                ) : (
-                  <EmptyState
-                    icon="💼"
-                    title="No Settlements Yet"
-                    description="Settlement history will appear here once you start recording balance settlements."
-                    size="large"
-                    actions={[
-                      {
-                        label: "Record Settlement",
-                        onClick: () => setShowSettlementDialog(true),
-                        variant: "primary",
-                        icon: "plus",
-                      },
-                    ]}
-                  />
+                <TableCard<Settlement>
+                  data={filteredSettlements}
+                  columns={[
+                    {
+                      key: "date",
+                      label: "Date",
+                      render: (settlement: Settlement) => (
+                        <span style={{ color: "var(--text-secondary)" }}>
+                          {formatDate(settlement.date)}
+                        </span>
+                      ),
+                    },
+                    {
+                      key: "fromUser",
+                      label: "From",
+                      render: (settlement: Settlement) => (
+                        <div className="d-flex align-items-center">
+                          <div
+                            className="avatar-xs bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2"
+                            style={{
+                              width: "24px",
+                              height: "24px",
+                              fontSize: "10px",
+                            }}
+                          >
+                            {settlement.fromUser.charAt(0).toUpperCase()}
+                          </div>
+                          <span>
+                            {settlement.fromUser.charAt(0).toUpperCase() +
+                              settlement.fromUser.slice(1).toLowerCase()}
+                          </span>
+                        </div>
+                      ),
+                    },
+                    {
+                      key: "toUser",
+                      label: "To",
+                      render: (settlement: Settlement) => (
+                        <div className="d-flex align-items-center">
+                          <div
+                            className="avatar-xs bg-success text-white rounded-circle d-flex align-items-center justify-content-center me-2"
+                            style={{
+                              width: "24px",
+                              height: "24px",
+                              fontSize: "10px",
+                            }}
+                          >
+                            {settlement.toUser.charAt(0).toUpperCase()}
+                          </div>
+                          <span>
+                            {settlement.toUser.charAt(0).toUpperCase() +
+                              settlement.toUser.slice(1).toLowerCase()}
+                          </span>
+                        </div>
+                      ),
+                    },
+                    {
+                      key: "amount",
+                      label: "Amount",
+                      render: (settlement: Settlement) => (
+                        <span
+                          className="fw-bold"
+                          style={{ color: "var(--status-success)" }}
+                        >
+                          ₹{settlement.amount}
+                        </span>
+                      ),
+                    },
+                    {
+                      key: "description",
+                      label: "Description",
+                      render: (settlement: Settlement) => (
+                        <span style={{ color: "var(--text-secondary)" }}>
+                          {settlement.description || "Settlement payment"}
+                        </span>
+                      ),
+                    },
+                    {
+                      key: "status",
+                      label: "Status",
+                      render: (settlement: Settlement) => (
+                        <StatusBadge
+                          status={settlement.status || "settled"}
+                          type="settlement"
+                        />
+                      ),
+                    },
+                  ]}
+                  actions={[
+                    {
+                      label: "",
+                      icon: "bi-pencil",
+                      onClick: (settlement: Settlement) =>
+                        handleEditSettlement(settlement),
+                      variant: "secondary",
+                    },
+                    {
+                      label: "",
+                      icon: "bi-trash",
+                      onClick: (settlement: Settlement) =>
+                        handleDeleteSettlement(settlement._id),
+                      variant: "danger",
+                    },
+                  ]}
+                  mobileCardRender={(settlement: Settlement) => ({
+                    title: `${settlement.fromUser
+                      .charAt(0)
+                      .toUpperCase()}${settlement.fromUser
+                      .slice(1)
+                      .toLowerCase()} → ${settlement.toUser
+                      .charAt(0)
+                      .toUpperCase()}${settlement.toUser
+                      .slice(1)
+                      .toLowerCase()}`,
+                    subtitle: formatDate(settlement.date),
+                    amount: `₹${settlement.amount}`,
+                    meta: settlement.description || "Settlement payment",
+                    badge: (
+                      <StatusBadge
+                        status={settlement.status || "settled"}
+                        type="settlement"
+                      />
+                    ),
+                  })}
+                  emptyMessage="No settlements found"
+                  emptyAction={{
+                    label: "Record Settlement",
+                    onClick: () => setShowSettlementDialog(true),
+                  }}
+                  loading={loading}
+                />
+
+                {/* Pagination Controls */}
+                {filteredSettlements.length > 0 && pagination.pages > 1 && (
+                  <div className="pagination-controls d-flex justify-content-between align-items-center mt-3">
+                    <div
+                      className="pagination-info"
+                      style={{ color: "var(--text-secondary)" }}
+                    >
+                      Showing {(pagination.page - 1) * pagination.limit + 1} to{" "}
+                      {Math.min(
+                        pagination.page * pagination.limit,
+                        filteredSettlements.length
+                      )}{" "}
+                      of {filteredSettlements.length} settlements
+                    </div>
+                    <div className="pagination-buttons d-flex gap-2">
+                      <button
+                        className="btn btn-sm btn-outline-secondary"
+                        onClick={() =>
+                          setPagination((prev) => ({
+                            ...prev,
+                            page: prev.page - 1,
+                          }))
+                        }
+                        disabled={pagination.page === 1}
+                      >
+                        Previous
+                      </button>
+                      <span className="btn btn-sm btn-outline-secondary disabled">
+                        Page {pagination.page} of {pagination.pages}
+                      </span>
+                      <button
+                        className="btn btn-sm btn-outline-secondary"
+                        onClick={() =>
+                          setPagination((prev) => ({
+                            ...prev,
+                            page: prev.page + 1,
+                          }))
+                        }
+                        disabled={pagination.page === pagination.pages}
+                      >
+                        Next
+                      </button>
+                    </div>
+                  </div>
                 )}
               </div>
             </div>
@@ -966,8 +1047,10 @@ const SettlementsPage: React.FC = () => {
                     />
                     {editingSettlement ? "Updating..." : "Recording..."}
                   </>
+                ) : editingSettlement ? (
+                  "Update Settlement"
                 ) : (
-                  editingSettlement ? "Update Settlement" : "Record Settlement"
+                  "Record Settlement"
                 )}
               </button>
             </>

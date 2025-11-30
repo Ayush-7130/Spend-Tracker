@@ -92,7 +92,6 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("GET /api/analytics/categories error:", error);
     return NextResponse.json(
       { success: false, error: "Failed to fetch category analytics" },
       { status: 500 }

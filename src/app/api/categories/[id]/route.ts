@@ -61,7 +61,6 @@ export async function PUT(
       message: 'Category updated successfully'
     });
   } catch (error) {
-    console.error('PUT /api/categories/[id] error:', error);
     return NextResponse.json(
       { success: false, error: 'Failed to update category' },
       { status: 500 }
@@ -113,7 +112,6 @@ export async function DELETE(
       message: 'Category deleted successfully'
     });
   } catch (error) {
-    console.error('DELETE /api/categories/[id] error:', error);
     return NextResponse.json(
       { success: false, error: 'Failed to delete category' },
       { status: 500 }

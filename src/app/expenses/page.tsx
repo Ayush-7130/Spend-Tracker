@@ -1,19 +1,19 @@
 "use client";
 
-import { useState, useEffect, useCallback, Suspense } from "react";
+import { useState, useEffect, useCallback, Suspense, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import MainLayout from "@/components/MainLayout";
 import { useOperationNotification } from "@/contexts/NotificationContext";
 import { useCategories } from "@/contexts/CategoriesContext";
 import ConfirmationDialog from "@/components/ConfirmationDialog";
 import { useConfirmation } from "@/hooks/useConfirmation";
+import { debounce } from "@/lib/utils/performance";
 import {
   Modal,
   FilterPanel,
   UserBadge,
   StatusBadge,
   LoadingSpinner,
-  Table,
   InputField,
   SelectField,
   DateField,
@@ -22,7 +22,9 @@ import {
   TextareaField,
   EmptyState,
   Badge,
+  ExportButton,
 } from "@/shared/components";
+import { TableCard } from "@/shared/components/Card/TableCard";
 import {
   formatCurrency,
   formatDate,
@@ -115,16 +117,14 @@ function ExpensesContent() {
   };
 
   // Sort handlers - currently not used but kept for future implementation
-  const { handleSort: _handleSort, getSortIcon: _getSortIcon } = createSortHandler(
-    sortConfig,
-    (config) => {
+  const { handleSort: _handleSort, getSortIcon: _getSortIcon } =
+    createSortHandler(sortConfig, (config) => {
       setFilters((prev) => ({
         ...prev,
         sortBy: config.sortBy,
         sortOrder: config.sortOrder,
       }));
-    }
-  );
+    });
 
   // Categories are now managed by CategoriesContext - no need to fetch here
 
@@ -162,9 +162,20 @@ function ExpensesContent() {
     setLoading(false);
   }, [pagination.page, pagination.limit, filters]);
 
+  // Debounced fetch for search to avoid excessive API calls
+  const debouncedFetchExpenses = useMemo(
+    () => debounce(fetchExpenses, 300),
+    [fetchExpenses]
+  );
+
   useEffect(() => {
-    fetchExpenses();
-  }, [fetchExpenses]);
+    // Use debounced fetch for search queries, immediate fetch for other filters
+    if (filters.search) {
+      debouncedFetchExpenses();
+    } else {
+      fetchExpenses();
+    }
+  }, [fetchExpenses, debouncedFetchExpenses, filters.search]);
 
   const handleFilterChange = (key: string, value: string) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
@@ -229,7 +240,6 @@ function ExpensesContent() {
       fetchExpenses();
       notifyDeleted("Expense");
     } catch (error) {
-      console.error("Error deleting expense:", error);
       notifyError(
         "Delete",
         error instanceof Error ? error.message : "Failed to delete expense"
@@ -291,6 +301,7 @@ function ExpensesContent() {
               2
             )}) must equal total amount (₹${totalAmount.toFixed(2)})`
           );
+          setOperationLoading(false);
           return;
         }
 
@@ -324,36 +335,47 @@ function ExpensesContent() {
         body: JSON.stringify(expenseData),
       });
 
-      if (response.ok) {
-        handleCloseDialog();
-        setNewExpense({
-          name: "",
-          amount: "",
-          description: "",
-          date: new Date().toISOString().split("T")[0],
-          category: "",
-          subcategory: "",
-          paidBy: "",
-          splitBetween: [],
-          isSplit: false,
-          saketAmount: "",
-          ayushAmount: "",
-        });
-        setManualSplitEdit(false);
-        fetchExpenses();
-        if (isEditing) {
-          notifyUpdated("Expense");
-        } else {
-          notifyAdded("Expense");
-        }
-      } else {
+      // Check if response is successful
+      if (!response.ok) {
         const errorData = await response.json();
-        setSubmitError(
+        throw new Error(
           errorData.error || `Failed to ${isEditing ? "update" : "add"} expense`
         );
       }
-    } catch {
-      setSubmitError(`Failed to ${editingExpense ? "update" : "add"} expense`);
+
+      // Close dialog and reset form
+      handleCloseDialog();
+      setNewExpense({
+        name: "",
+        amount: "",
+        description: "",
+        date: new Date().toISOString().split("T")[0],
+        category: "",
+        subcategory: "",
+        paidBy: "",
+        splitBetween: [],
+        isSplit: false,
+        saketAmount: "",
+        ayushAmount: "",
+      });
+      setManualSplitEdit(false);
+
+      // Refresh the expenses list
+      await fetchExpenses();
+
+      // Show success notification
+      if (isEditing) {
+        notifyUpdated("Expense");
+      } else {
+        notifyAdded("Expense");
+      }
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : `Failed to ${editingExpense ? "update" : "add"} expense`;
+      setSubmitError(errorMessage);
+      notifyError(editingExpense ? "Update" : "Create", errorMessage);
     } finally {
       setOperationLoading(false);
     }
@@ -367,30 +389,39 @@ function ExpensesContent() {
               <i className="bi bi-list-ul me-2"></i>
               Expenses
             </h1>
-            <button
-              onClick={() => {
-                setEditingExpense(null);
-                setNewExpense({
-                  name: "",
-                  amount: "",
-                  description: "",
-                  date: new Date().toISOString().split("T")[0],
-                  category: "",
-                  subcategory: "",
-                  paidBy: "",
-                  splitBetween: [],
-                  isSplit: false,
-                  saketAmount: "",
-                  ayushAmount: "",
-                });
-                setManualSplitEdit(false);
-                setShowAddExpenseDialog(true);
-              }}
-              className="btn btn-primary"
-            >
-              <i className="bi bi-plus-circle me-2"></i>
-              Add Expense
-            </button>
+            <div className="d-flex gap-2">
+              <ExportButton
+                endpoint="/api/expenses/export"
+                params={filters}
+                label="Export"
+                variant="outline-secondary"
+                icon="bi-download"
+              />
+              <button
+                onClick={() => {
+                  setEditingExpense(null);
+                  setNewExpense({
+                    name: "",
+                    amount: "",
+                    description: "",
+                    date: new Date().toISOString().split("T")[0],
+                    category: "",
+                    subcategory: "",
+                    paidBy: "",
+                    splitBetween: [],
+                    isSplit: false,
+                    saketAmount: "",
+                    ayushAmount: "",
+                  });
+                  setManualSplitEdit(false);
+                  setShowAddExpenseDialog(true);
+                }}
+                className="btn btn-primary"
+              >
+                <i className="bi bi-plus-circle me-2"></i>
+                Add Expense
+              </button>
+            </div>
           </div>
 
           {/* Filters */}
@@ -499,151 +530,163 @@ function ExpensesContent() {
                 />
               ) : (
                 <>
-                  <Table
-                    config={{
-                      columns: [
-                        {
-                          key: "date",
-                          header: "Date",
-                          accessor: "date",
-                          sortable: true,
-                          render: (value) => formatDate(value),
-                        },
-                        {
-                          key: "description",
-                          header: "Description",
-                          accessor: "description",
-                          render: (value, row) => (
-                            <div>
-                              <strong>{value}</strong>
-                              {row.subcategory && (
-                                <small className="text-muted d-block">
-                                  {row.subcategory}
-                                </small>
-                              )}
-                            </div>
-                          ),
-                        },
-                        {
-                          key: "category",
-                          header: "Category",
-                          render: (value, row) => (
-                            <Badge variant="secondary">
-                              {row.categoryDetails?.[0]?.name || row.category}
-                            </Badge>
-                          ),
-                        },
-                        {
-                          key: "amount",
-                          header: "Amount",
-                          accessor: "amount",
-                          sortable: true,
-                          render: (value, row) => (
-                            <div>
-                              <strong>{formatCurrency(value)}</strong>
-                              {row.isSplit && (
-                                <small className="text-muted d-block">
-                                  Split: S₹{row.splitDetails?.saketAmount} / A₹
-                                  {row.splitDetails?.ayushAmount}
-                                </small>
-                              )}
-                            </div>
-                          ),
-                        },
-                        {
-                          key: "paidBy",
-                          header: "Paid By",
-                          accessor: "paidBy",
-                          render: (value) => (
-                            <UserBadge user={value as "saket" | "ayush"} />
-                          ),
-                        },
-                        {
-                          key: "split",
-                          header: "Split",
-                          render: (value, row) => (
-                            <StatusBadge
-                              status={row.isSplit ? "split" : "personal"}
-                              type="split"
-                            />
-                          ),
-                        },
-                      ],
-                      data: expenses,
-                      keyExtractor: (expense) => expense._id,
-                      sortable: true,
-                      selectable: true,
-                      paginated: true,
-                      defaultSort: {
-                        column: filters.sortBy,
-                        direction: filters.sortOrder,
-                      },
-                      selection: {
-                        enabled: true,
-                        selectedRows: expenses.filter((expense) =>
-                          selectedExpenses.includes(expense._id)
+                  <TableCard<Expense>
+                    data={expenses}
+                    columns={[
+                      {
+                        key: "date",
+                        label: "Date",
+                        render: (expense: Expense) => (
+                          <span style={{ color: "var(--text-secondary)" }}>
+                            {formatDate(expense.date)}
+                          </span>
                         ),
-                        onSelectionChange: (selected) => {
-                          setSelectedExpenses(
-                            selected.map((expense) => expense._id)
-                          );
-                        },
-                        selectAll: true,
-                        getRowId: (expense) => expense._id,
                       },
-                      actions: [
-                        {
-                          label: "Edit",
-                          icon: "bi-pencil",
-                          onClick: (expense) => handleEditExpense(expense),
-                          variant: "secondary",
-                        },
-                        {
-                          label: "Delete",
-                          icon: "bi-trash",
-                          onClick: (expense) =>
-                            handleDeleteExpense(expense._id),
-                          variant: "danger",
-                        },
-                      ],
-                      bulkActions:
-                        selectedExpenses.length > 0
-                          ? [
-                              {
-                                label: "Delete Selected",
-                                icon: "bi-trash",
-                                onClick: () => handleBulkDelete(),
-                                variant: "danger",
-                                requiresSelection: true,
-                              },
-                            ]
-                          : [],
-                      pagination: {
-                        page: pagination.page,
-                        limit: pagination.limit,
-                        total: pagination.total,
-                        showSizeSelector: true,
-                        sizeSelectorOptions: [10, 20, 50, 100],
+                      {
+                        key: "description",
+                        label: "Description",
+                        render: (expense: Expense) => (
+                          <div>
+                            <strong>{expense.description}</strong>
+                            {expense.subcategory && (
+                              <small
+                                className="d-block"
+                                style={{ color: "var(--text-secondary)" }}
+                              >
+                                {expense.subcategory}
+                              </small>
+                            )}
+                          </div>
+                        ),
                       },
-                      onSort: (sort) => {
-                        setFilters((prev) => ({
-                          ...prev,
-                          sortBy: sort.column,
-                          sortOrder: sort.direction,
-                        }));
+                      {
+                        key: "category",
+                        label: "Category",
+                        render: (expense: Expense) => (
+                          <Badge variant="secondary">
+                            {expense.categoryDetails?.[0]?.name ||
+                              expense.category}
+                          </Badge>
+                        ),
                       },
-                      onPageChange: (page) => {
-                        setPagination((prev) => ({ ...prev, page }));
+                      {
+                        key: "amount",
+                        label: "Amount",
+                        render: (expense: Expense) => (
+                          <div>
+                            <strong>{formatCurrency(expense.amount)}</strong>
+                            {expense.isSplit && (
+                              <small
+                                className="d-block"
+                                style={{ color: "var(--text-secondary)" }}
+                              >
+                                Split: S₹{expense.splitDetails?.saketAmount} /
+                                A₹{expense.splitDetails?.ayushAmount}
+                              </small>
+                            )}
+                          </div>
+                        ),
                       },
-                      onPageSizeChange: (size) => {
-                        setPagination((prev) => ({
-                          ...prev,
-                          limit: size,
-                          page: 1,
-                        }));
+                      {
+                        key: "paidBy",
+                        label: "Paid By",
+                        render: (expense: Expense) => (
+                          <UserBadge
+                            user={expense.paidBy as "saket" | "ayush"}
+                          />
+                        ),
                       },
-                    }}
+                      {
+                        key: "split",
+                        label: "Split",
+                        render: (expense: Expense) => (
+                          <StatusBadge
+                            status={expense.isSplit ? "split" : "personal"}
+                            type="split"
+                          />
+                        ),
+                      },
+                    ]}
+                    actions={[
+                      {
+                        label: "",
+                        icon: "bi-pencil",
+                        onClick: (expense: Expense) =>
+                          handleEditExpense(expense),
+                        variant: "secondary",
+                      },
+                      {
+                        label: "",
+                        icon: "bi-trash",
+                        onClick: (expense: Expense) =>
+                          handleDeleteExpense(expense._id),
+                        variant: "danger",
+                      },
+                    ]}
+                    mobileCardRender={(expense: Expense) => ({
+                      title: expense.description,
+                      subtitle: formatDate(expense.date),
+                      amount: formatCurrency(expense.amount),
+                      meta:
+                        expense.categoryDetails?.[0]?.name || expense.category,
+                      badge: (
+                        <div style={{ display: "flex", gap: "0.5rem" }}>
+                          <UserBadge
+                            user={expense.paidBy as "saket" | "ayush"}
+                          />
+                          {expense.isSplit && (
+                            <StatusBadge status="split" type="split" />
+                          )}
+                        </div>
+                      ),
+                    })}
+                    emptyMessage="No expenses found"
+                    loading={loading}
                   />
+
+                  {/* Pagination Controls */}
+                  {pagination.pages > 1 && (
+                    <div className="pagination-controls d-flex justify-content-between align-items-center mt-3">
+                      <div className="pagination-info text-muted">
+                        Showing {(pagination.page - 1) * pagination.limit + 1}{" "}
+                        to{" "}
+                        {Math.min(
+                          pagination.page * pagination.limit,
+                          pagination.total
+                        )}{" "}
+                        of {pagination.total} expenses
+                      </div>
+                      <div className="pagination-buttons d-flex gap-2">
+                        <button
+                          className="btn btn-sm btn-outline-secondary"
+                          onClick={() =>
+                            setPagination((prev) => ({
+                              ...prev,
+                              page: prev.page - 1,
+                            }))
+                          }
+                          disabled={pagination.page === 1}
+                        >
+                          Previous
+                        </button>
+                        <span className="btn btn-sm btn-outline-secondary disabled">
+                          Page {pagination.page} of {pagination.pages}
+                        </span>
+                        <button
+                          className="btn btn-sm btn-outline-secondary"
+                          onClick={() =>
+                            setPagination((prev) => ({
+                              ...prev,
+                              page: prev.page + 1,
+                            }))
+                          }
+                          disabled={pagination.page === pagination.pages}
+                        >
+                          Next
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </>
               )}
             </div>
@@ -714,14 +757,14 @@ function ExpensesContent() {
                 ...newExpense,
                 amount,
               };
-              
+
               // Only auto-split if split is enabled and user hasn't manually edited
               if (newExpense.isSplit && !manualSplitEdit && amount) {
                 const halfAmount = (parseFloat(amount) / 2).toFixed(2);
                 updates.saketAmount = halfAmount;
                 updates.ayushAmount = halfAmount;
               }
-              
+
               setNewExpense(updates);
             }}
             required
@@ -832,11 +875,14 @@ function ExpensesContent() {
                       const totalAmount = parseFloat(newExpense.amount || "0");
                       const saketValue = parseFloat(saketAmount || "0");
                       const remainingAmount = totalAmount - saketValue;
-                      
+
                       setNewExpense({
                         ...newExpense,
                         saketAmount,
-                        ayushAmount: remainingAmount >= 0 ? remainingAmount.toFixed(2) : "0.00",
+                        ayushAmount:
+                          remainingAmount >= 0
+                            ? remainingAmount.toFixed(2)
+                            : "0.00",
                       });
                       // Mark that user has manually edited split amounts
                       setManualSplitEdit(true);
@@ -855,11 +901,14 @@ function ExpensesContent() {
                       const totalAmount = parseFloat(newExpense.amount || "0");
                       const ayushValue = parseFloat(ayushAmount || "0");
                       const remainingAmount = totalAmount - ayushValue;
-                      
+
                       setNewExpense({
                         ...newExpense,
                         ayushAmount,
-                        saketAmount: remainingAmount >= 0 ? remainingAmount.toFixed(2) : "0.00",
+                        saketAmount:
+                          remainingAmount >= 0
+                            ? remainingAmount.toFixed(2)
+                            : "0.00",
                       });
                       // Mark that user has manually edited split amounts
                       setManualSplitEdit(true);
@@ -869,7 +918,7 @@ function ExpensesContent() {
                   />
                 </div>
               </div>
-              <small className="text-muted">
+              <small style={{ color: "var(--text-secondary)" }}>
                 Total split: ₹
                 {(
                   parseFloat(newExpense.saketAmount || "0") +
@@ -882,7 +931,10 @@ function ExpensesContent() {
                     parseFloat(newExpense.ayushAmount || "0") -
                     parseFloat(newExpense.amount || "0")
                 ) > 0.01 && (
-                  <span className="text-danger"> - Amounts don&apos;t match!</span>
+                  <span style={{ color: "var(--status-error)" }}>
+                    {" "}
+                    - Amounts don&apos;t match!
+                  </span>
                 )}
               </small>
             </FormGroup>

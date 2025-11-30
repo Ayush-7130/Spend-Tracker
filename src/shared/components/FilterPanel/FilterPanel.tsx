@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import React from 'react';
-import { FilterPanelProps, FilterConfig, defaultFilterConfig } from './config';
+import React from "react";
+import { FilterPanelProps, FilterConfig, defaultFilterConfig } from "./config";
 
 export default function FilterPanel({
   filters,
@@ -9,16 +9,15 @@ export default function FilterPanel({
   onChange,
   onClear,
   loading = false,
-  className = '',
+  className = "",
   title,
   clearButtonText = defaultFilterConfig.clearButtonText,
   clearButtonVariant = defaultFilterConfig.clearButtonVariant,
   children,
 }: FilterPanelProps) {
-  
   const handleDateFocus = (e: React.FocusEvent<HTMLInputElement>) => {
     const target = e.target as HTMLInputElement;
-    target.type = 'date';
+    target.type = "date";
     setTimeout(() => {
       if (target.showPicker) target.showPicker();
     }, 0);
@@ -26,13 +25,13 @@ export default function FilterPanel({
 
   const handleDateBlur = (e: React.FocusEvent<HTMLInputElement>) => {
     const target = e.target as HTMLInputElement;
-    if (!target.value) target.type = 'text';
+    if (!target.value) target.type = "text";
   };
 
   const handleDateKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     const target = e.target as HTMLInputElement;
-    if (target.type === 'text') {
-      target.type = 'date';
+    if (target.type === "text") {
+      target.type = "date";
       setTimeout(() => {
         if (target.showPicker) target.showPicker();
       }, 0);
@@ -40,17 +39,26 @@ export default function FilterPanel({
   };
 
   const renderFilter = (filter: FilterConfig) => {
-    const colClass = `col-md-${filter.colSize || defaultFilterConfig.colSize}`;
-    
+    const colSize = filter.colSize || defaultFilterConfig.colSize;
+    // Handle decimal colSize values by converting to percentage (e.g., 1.5 -> 12.5%)
+    const colClass = colSize % 1 === 0 ? `col-md-${colSize}` : "";
+    const colStyle =
+      colSize % 1 !== 0
+        ? {
+            flex: `0 0 ${(colSize / 12) * 100}%`,
+            maxWidth: `${(colSize / 12) * 100}%`,
+          }
+        : {};
+
     switch (filter.type) {
-      case 'text':
+      case "text":
         return (
-          <div key={filter.key} className={colClass}>
+          <div key={filter.key} className={colClass} style={colStyle}>
             <input
               type="text"
               className="form-control"
               placeholder={filter.placeholder || filter.label}
-              value={values[filter.key] || ''}
+              value={values[filter.key] || ""}
               onChange={(e) => onChange(filter.key, e.target.value)}
               disabled={filter.disabled || loading}
               required={filter.required}
@@ -58,17 +66,19 @@ export default function FilterPanel({
           </div>
         );
 
-      case 'select':
+      case "select":
         return (
-          <div key={filter.key} className={colClass}>
+          <div key={filter.key} className={colClass} style={colStyle}>
             <select
               className="form-select"
-              value={values[filter.key] || ''}
+              value={values[filter.key] || ""}
               onChange={(e) => onChange(filter.key, e.target.value)}
               disabled={filter.disabled || loading}
               required={filter.required}
             >
-              <option value="">{filter.placeholder || `All ${filter.label}`}</option>
+              <option value="">
+                {filter.placeholder || `All ${filter.label}`}
+              </option>
               {filter.options?.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
@@ -78,53 +88,53 @@ export default function FilterPanel({
           </div>
         );
 
-      case 'date':
+      case "date":
         return (
-          <div key={filter.key} className={colClass}>
+          <div key={filter.key} className={colClass} style={colStyle}>
             <input
               type="text"
               className="form-control date-text-input"
-              value={values[filter.key] || ''}
+              value={values[filter.key] || ""}
               onChange={(e) => onChange(filter.key, e.target.value)}
               onFocus={handleDateFocus}
               onBlur={handleDateBlur}
               onKeyDown={handleDateKeyDown}
               placeholder={filter.placeholder || filter.label}
-              style={{ cursor: 'pointer' }}
+              style={{ cursor: "pointer" }}
               disabled={filter.disabled || loading}
               required={filter.required}
             />
           </div>
         );
 
-      case 'daterange':
+      case "daterange":
         return (
           <React.Fragment key={filter.key}>
-            <div className={colClass}>
+            <div className={colClass} style={colStyle}>
               <input
                 type="text"
                 className="form-control date-text-input"
-                value={values[`${filter.key}Start`] || ''}
+                value={values[`${filter.key}Start`] || ""}
                 onChange={(e) => onChange(`${filter.key}Start`, e.target.value)}
                 onFocus={handleDateFocus}
                 onBlur={handleDateBlur}
                 onKeyDown={handleDateKeyDown}
                 placeholder={`Start ${filter.label}`}
-                style={{ cursor: 'pointer' }}
+                style={{ cursor: "pointer" }}
                 disabled={filter.disabled || loading}
               />
             </div>
-            <div className={colClass}>
+            <div className={colClass} style={colStyle}>
               <input
                 type="text"
                 className="form-control date-text-input"
-                value={values[`${filter.key}End`] || ''}
+                value={values[`${filter.key}End`] || ""}
                 onChange={(e) => onChange(`${filter.key}End`, e.target.value)}
                 onFocus={handleDateFocus}
                 onBlur={handleDateBlur}
                 onKeyDown={handleDateKeyDown}
                 placeholder={`End ${filter.label}`}
-                style={{ cursor: 'pointer' }}
+                style={{ cursor: "pointer" }}
                 disabled={filter.disabled || loading}
               />
             </div>
@@ -144,10 +154,10 @@ export default function FilterPanel({
             <h6 className="mb-3">{title}</h6>
           </div>
         )}
-        
+
         <div className="row g-3">
           {filters.map(renderFilter)}
-          
+
           <div className="col-md-1">
             <button
               className={`btn btn-${clearButtonVariant} w-100`}
@@ -157,7 +167,11 @@ export default function FilterPanel({
             >
               {loading ? (
                 <>
-                  <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                  <span
+                    className="spinner-border spinner-border-sm me-1"
+                    role="status"
+                    aria-hidden="true"
+                  ></span>
                   Loading...
                 </>
               ) : (
@@ -166,12 +180,8 @@ export default function FilterPanel({
             </button>
           </div>
         </div>
-        
-        {children && (
-          <div className="mt-3">
-            {children}
-          </div>
-        )}
+
+        {children && <div className="mt-3">{children}</div>}
       </div>
     </div>
   );

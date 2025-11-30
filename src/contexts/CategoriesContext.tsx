@@ -65,7 +65,6 @@ export function CategoriesProvider({ children }: { children: ReactNode }) {
         throw new Error('Failed to fetch categories');
       }
     } catch (err) {
-      console.error('Failed to fetch categories:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch categories');
     } finally {
       setLoading(false);

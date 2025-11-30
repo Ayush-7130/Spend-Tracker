@@ -26,6 +26,7 @@ import {
   createLineDataset,
 } from "@/lib/utils";
 import { Table, LoadingSpinner, EmptyState } from "@/shared/components";
+import { useTheme } from "@/contexts/ThemeContext";
 
 ChartJS.register(
   CategoryScale,
@@ -74,6 +75,7 @@ interface UserAnalysisData {
 }
 
 export default function UserAnalyticsPage() {
+  const { theme } = useTheme();
   const resolvedParams = useParams();
   const userName = resolvedParams.name as string;
 
@@ -96,8 +98,6 @@ export default function UserAnalyticsPage() {
 
       const analyticsResult = await analyticsResponse.json();
 
-      console.log("Analytics result:", analyticsResult);
-
       if (analyticsResult.success && analyticsResult.data) {
         // Use the balance data directly from the API
         setData(analyticsResult.data);
@@ -106,7 +106,6 @@ export default function UserAnalyticsPage() {
         setError(analyticsResult.error || "No data returned from API");
       }
     } catch (err) {
-      console.error("Error fetching user data:", err);
       if (err instanceof Error) {
         setError(`API Error: ${err.message}`);
       } else {
@@ -130,10 +129,11 @@ export default function UserAnalyticsPage() {
           {
             data: data.categoryDistribution.amounts,
             backgroundColor: getChartColors(
-              data.categoryDistribution.labels.length
+              data.categoryDistribution.labels.length,
+              theme
             ),
             borderWidth: 2,
-            borderColor: "#ffffff",
+            borderColor: theme === "light" ? "#FFFFFF" : "#1E293B",
           },
         ],
       }
@@ -148,14 +148,14 @@ export default function UserAnalyticsPage() {
               userName.charAt(0).toUpperCase() + userName.slice(1)
             }'s Monthly Spending`,
             data.monthlyTrends.amounts,
-            getUserColor(userName)
+            getUserColor(userName, theme)
           ),
         ],
       }
     : null;
 
-  const pieChartOptions = getPieChartOptions();
-  const lineChartOptions = getLineChartOptions();
+  const pieChartOptions = getPieChartOptions(true, theme);
+  const lineChartOptions = getLineChartOptions(false, theme);
 
   if (loading) {
     return (
@@ -268,28 +268,6 @@ export default function UserAnalyticsPage() {
                       {formatCurrency(data.balance.totalPaid)}
                     </h5>
                     <small className="opacity-75">by {data.user}</small>
-                  </div>
-                </div>
-              </div>
-              <div className="col-6">
-                <div className="card bg-info text-white h-100">
-                  <div className="card-body">
-                    <h6 className="card-title">Total Owed</h6>
-                    <h5 className="mb-1">
-                      {formatCurrency(data.balance.totalOwed)}
-                    </h5>
-                    <small className="opacity-75">by others</small>
-                  </div>
-                </div>
-              </div>
-              <div className="col-6">
-                <div className="card bg-warning text-dark h-100">
-                  <div className="card-body">
-                    <h6 className="card-title">Total Owing</h6>
-                    <h5 className="mb-1">
-                      {formatCurrency(data.balance.totalOwing)}
-                    </h5>
-                    <small className="opacity-75">to others</small>
                   </div>
                 </div>
               </div>
@@ -473,15 +451,20 @@ export default function UserAnalyticsPage() {
                       <div className="col-12 mb-1">
                         <div className="d-flex justify-content-between align-items-center">
                           <span
-                            className="text-muted"
-                            style={{ fontSize: "0.75rem" }}
+                            style={{
+                              fontSize: "0.75rem",
+                              color: "var(--text-secondary)",
+                            }}
                           >
                             <i className="bi bi-credit-card me-1"></i>Total
                             Paid:
                           </span>
                           <span
-                            className="fw-bold text-success"
-                            style={{ fontSize: "0.8rem" }}
+                            className="fw-bold"
+                            style={{
+                              fontSize: "0.8rem",
+                              color: "var(--status-success)",
+                            }}
                           >
                             {formatCurrency(data.balance.totalPaid)}
                           </span>
@@ -490,8 +473,10 @@ export default function UserAnalyticsPage() {
                       <div className="col-12 mb-1">
                         <div className="d-flex justify-content-between align-items-center">
                           <span
-                            className="text-muted"
-                            style={{ fontSize: "0.75rem" }}
+                            style={{
+                              fontSize: "0.75rem",
+                              color: "var(--text-secondary)",
+                            }}
                           >
                             <i className="bi bi-arrow-down-circle me-1"></i>
                             Total Owed (to me):
@@ -507,15 +492,20 @@ export default function UserAnalyticsPage() {
                       <div className="col-12 mb-1">
                         <div className="d-flex justify-content-between align-items-center">
                           <span
-                            className="text-muted"
-                            style={{ fontSize: "0.75rem" }}
+                            style={{
+                              fontSize: "0.75rem",
+                              color: "var(--text-secondary)",
+                            }}
                           >
                             <i className="bi bi-arrow-up-circle me-1"></i>Total
                             Owing (by me):
                           </span>
                           <span
-                            className="fw-bold text-warning"
-                            style={{ fontSize: "0.8rem" }}
+                            className="fw-bold"
+                            style={{
+                              fontSize: "0.8rem",
+                              color: "var(--status-warning)",
+                            }}
                           >
                             {formatCurrency(data.balance.totalOwing)}
                           </span>
@@ -524,8 +514,10 @@ export default function UserAnalyticsPage() {
                       <div className="col-12 mb-1">
                         <div className="d-flex justify-content-between align-items-center">
                           <span
-                            className="text-muted"
-                            style={{ fontSize: "0.75rem" }}
+                            style={{
+                              fontSize: "0.75rem",
+                              color: "var(--text-secondary)",
+                            }}
                           >
                             <i className="bi bi-graph-up me-1"></i>Expense
                             Share:
@@ -543,8 +535,10 @@ export default function UserAnalyticsPage() {
                       <div className="col-12 mb-1">
                         <div className="d-flex justify-content-between align-items-center">
                           <span
-                            className="text-muted"
-                            style={{ fontSize: "0.75rem" }}
+                            style={{
+                              fontSize: "0.75rem",
+                              color: "var(--text-secondary)",
+                            }}
                           >
                             <i className="bi bi-percent me-1"></i>Payment Ratio:
                           </span>
@@ -567,21 +561,25 @@ export default function UserAnalyticsPage() {
                           <div key={user} className="col-12 mb-1">
                             <div className="d-flex justify-content-between align-items-center">
                               <span
-                                className="text-muted"
-                                style={{ fontSize: "0.75rem" }}
+                                style={{
+                                  fontSize: "0.75rem",
+                                  color: "var(--text-secondary)",
+                                }}
                               >
                                 <i className="bi bi-person me-1"></i>Balance
                                 with {user}:
                               </span>
                               <span
-                                className={`fw-bold ${
-                                  amount > 0
-                                    ? "text-success"
-                                    : amount < 0
-                                    ? "text-danger"
-                                    : "text-muted"
-                                }`}
-                                style={{ fontSize: "0.8rem" }}
+                                className="fw-bold"
+                                style={{
+                                  fontSize: "0.8rem",
+                                  color:
+                                    amount > 0
+                                      ? "var(--status-success)"
+                                      : amount < 0
+                                        ? "var(--status-error)"
+                                        : "var(--text-secondary)",
+                                }}
                               >
                                 {amount > 0 ? "+" : ""}
                                 {formatCurrency(amount)}
@@ -601,14 +599,16 @@ export default function UserAnalyticsPage() {
                             Balance:
                           </span>
                           <span
-                            className={`fw-bold ${
-                              data.balance.netBalance > 0
-                                ? "text-success"
-                                : data.balance.netBalance < 0
-                                ? "text-danger"
-                                : "text-muted"
-                            }`}
-                            style={{ fontSize: "0.9rem" }}
+                            className="fw-bold"
+                            style={{
+                              fontSize: "0.9rem",
+                              color:
+                                data.balance.netBalance > 0
+                                  ? "var(--status-success)"
+                                  : data.balance.netBalance < 0
+                                    ? "var(--status-error)"
+                                    : "var(--text-secondary)",
+                            }}
                           >
                             {data.balance.netBalance > 0 ? "+" : ""}
                             {formatCurrency(data.balance.netBalance)}
@@ -617,26 +617,14 @@ export default function UserAnalyticsPage() {
                       </div>
                       <div className="col-12 mt-2">
                         <div
-                          className="alert p-2 mb-0"
+                          className={`alert p-2 mb-0 ${
+                            data.balance.netBalance > 0
+                              ? "alert-success"
+                              : data.balance.netBalance < 0
+                                ? "alert-danger"
+                                : "alert-secondary"
+                          }`}
                           style={{
-                            backgroundColor:
-                              data.balance.netBalance > 0
-                                ? "#d1e7dd"
-                                : data.balance.netBalance < 0
-                                ? "#f8d7da"
-                                : "#f8f9fa",
-                            borderColor:
-                              data.balance.netBalance > 0
-                                ? "#badbcc"
-                                : data.balance.netBalance < 0
-                                ? "#f5c2c7"
-                                : "#dee2e6",
-                            color:
-                              data.balance.netBalance > 0
-                                ? "#0f5132"
-                                : data.balance.netBalance < 0
-                                ? "#842029"
-                                : "#495057",
                             fontSize: "0.7rem",
                           }}
                         >
@@ -645,8 +633,8 @@ export default function UserAnalyticsPage() {
                               data.balance.netBalance > 0
                                 ? "bi-arrow-up-circle"
                                 : data.balance.netBalance < 0
-                                ? "bi-arrow-down-circle"
-                                : "bi-check-circle"
+                                  ? "bi-arrow-down-circle"
+                                  : "bi-check-circle"
                             } me-1`}
                           ></i>
                           {data.balance.netBalance > 0
@@ -657,13 +645,13 @@ export default function UserAnalyticsPage() {
                                 data.balance.netBalance
                               )}`
                             : data.balance.netBalance < 0
-                            ? `${
-                                userName.charAt(0).toUpperCase() +
-                                userName.slice(1)
-                              } owes ${formatCurrency(
-                                Math.abs(data.balance.netBalance)
-                              )}`
-                            : "All settled!"}
+                              ? `${
+                                  userName.charAt(0).toUpperCase() +
+                                  userName.slice(1)
+                                } owes ${formatCurrency(
+                                  Math.abs(data.balance.netBalance)
+                                )}`
+                              : "All settled!"}
                         </div>
                       </div>
                     </div>
@@ -680,7 +668,7 @@ export default function UserAnalyticsPage() {
         .table-responsive,
         .position-relative {
           scrollbar-width: thin;
-          scrollbar-color: #cbd5e0 #f7fafc;
+          scrollbar-color: var(--border-secondary) var(--bg-tertiary);
         }
 
         .table-responsive::-webkit-scrollbar,
@@ -690,19 +678,19 @@ export default function UserAnalyticsPage() {
 
         .table-responsive::-webkit-scrollbar-track,
         .position-relative::-webkit-scrollbar-track {
-          background: #f7fafc;
+          background: var(--bg-tertiary);
           border-radius: 2px;
         }
 
         .table-responsive::-webkit-scrollbar-thumb,
         .position-relative::-webkit-scrollbar-thumb {
-          background: #cbd5e0;
+          background: var(--border-secondary);
           border-radius: 2px;
         }
 
         .table-responsive::-webkit-scrollbar-thumb:hover,
         .position-relative::-webkit-scrollbar-thumb:hover {
-          background: #a0aec0;
+          background: var(--text-tertiary);
         }
 
         .sticky-top,

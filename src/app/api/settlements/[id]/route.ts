@@ -72,7 +72,6 @@ export async function DELETE(
         }
       }
     } catch (notificationError) {
-      console.error('Failed to send delete notification:', notificationError);
       // Continue without failing the deletion
     }
     
@@ -82,7 +81,6 @@ export async function DELETE(
     });
     
   } catch (error) {
-    console.error('DELETE /api/settlements/[id] error:', error);
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }
@@ -174,7 +172,6 @@ export async function PUT(
         }
       }
     } catch (notificationError) {
-      console.error('Failed to send update notification:', notificationError);
       // Continue without failing the update
     }
     
@@ -184,7 +181,6 @@ export async function PUT(
     });
     
   } catch (error) {
-    console.error('PUT /api/settlements/[id] error:', error);
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }

@@ -1,19 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import MainLayout from "@/components/MainLayout";
 import Link from "next/link";
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend,
-  ArcElement,
-} from "chart.js";
-import { Doughnut } from "react-chartjs-2";
 import {
   formatCurrency,
   formatDate,
@@ -22,16 +11,26 @@ import {
   getChartColors,
 } from "@/lib/utils";
 import { Table, LoadingSpinner, EmptyState, Badge } from "@/shared/components";
+import { useTheme } from "@/contexts/ThemeContext";
 
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend,
-  ArcElement
-);
+// Lazy load Chart.js and react-chartjs-2 to reduce initial bundle size
+const DoughnutChart = lazy(async () => {
+  // Dynamically import Chart.js and register components
+  const ChartJS = await import("chart.js");
+  ChartJS.Chart.register(
+    ChartJS.CategoryScale,
+    ChartJS.LinearScale,
+    ChartJS.BarElement,
+    ChartJS.Title,
+    ChartJS.Tooltip,
+    ChartJS.Legend,
+    ChartJS.ArcElement
+  );
+
+  // Import and return the Doughnut component
+  const { Doughnut } = await import("react-chartjs-2");
+  return { default: Doughnut };
+});
 
 interface OverviewData {
   currentMonthTotal: number;
@@ -57,6 +56,7 @@ interface OverviewData {
 }
 
 export default function AnalyticsOverview() {
+  const { theme } = useTheme();
   const [data, setData] = useState<OverviewData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -78,7 +78,6 @@ export default function AnalyticsOverview() {
         setError(result.error || "Failed to fetch overview data");
       }
     } catch (err) {
-      console.error("Error fetching overview data:", err);
       setError("Failed to load overview data");
     } finally {
       setLoading(false);
@@ -92,16 +91,17 @@ export default function AnalyticsOverview() {
           {
             data: data.categoryDistribution.amounts,
             backgroundColor: getChartColors(
-              data.categoryDistribution.labels.length
+              data.categoryDistribution.labels.length,
+              theme
             ),
             borderWidth: 2,
-            borderColor: "#ffffff",
+            borderColor: theme === "light" ? "#FFFFFF" : "#1E293B",
           },
         ],
       }
     : null;
 
-  const chartOptions = getDoughnutChartOptions();
+  const chartOptions = getDoughnutChartOptions(true, theme);
 
   const getMonthIcon = () => {
     const currentMonth = new Date().getMonth(); // 0-11
@@ -328,7 +328,9 @@ export default function AnalyticsOverview() {
                             const getRankingVariant = (index: number) => {
                               if (index === 0) return "primary";
                               if (index === 1) return "success";
-                              return "warning";
+                              if (index === 2) return "info";
+                              if (index === 3) return "warning";
+                              return "secondary";
                             };
                             return (
                               <Badge variant={getRankingVariant(index)}>
@@ -363,7 +365,9 @@ export default function AnalyticsOverview() {
                           width: "70px",
                           align: "right",
                           render: (value) => (
-                            <span className="text-muted">{value}%</span>
+                            <span style={{ color: "var(--text-secondary)" }}>
+                              {value}%
+                            </span>
                           ),
                         },
                       ],
@@ -390,10 +394,18 @@ export default function AnalyticsOverview() {
                 <div className="card-body">
                   <div style={{ height: "300px" }}>
                     {categoryChartData && (
-                      <Doughnut
-                        data={categoryChartData}
-                        options={chartOptions}
-                      />
+                      <Suspense
+                        fallback={
+                          <div className="text-center py-5">
+                            <LoadingSpinner />
+                          </div>
+                        }
+                      >
+                        <DoughnutChart
+                          data={categoryChartData}
+                          options={chartOptions}
+                        />
+                      </Suspense>
                     )}
                   </div>
                 </div>

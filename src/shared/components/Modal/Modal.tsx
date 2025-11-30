@@ -72,8 +72,16 @@ export default function Modal({
         className={modalClasses}
         style={{
           display: 'block',
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
           backgroundColor: 'rgba(0,0,0,0.5)',
           backdropFilter: 'blur(2px)',
+          zIndex: 1055,
+          overflowX: 'hidden',
+          overflowY: 'auto',
         }}
         onClick={handleBackdropClick}
         role="dialog"

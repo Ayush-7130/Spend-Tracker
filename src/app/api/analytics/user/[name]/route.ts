@@ -362,7 +362,6 @@ export async function GET(
       data: userData
     });
   } catch (error) {
-    console.error('GET /api/analytics/user/[name] error:', error);
     return NextResponse.json(
       { success: false, error: 'Failed to fetch user analytics data' },
       { status: 500 }

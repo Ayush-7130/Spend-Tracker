@@ -76,8 +76,7 @@ export function WebVitalsReporter() {
           reportMetric("INP", metric.value, metric.rating);
         });
       })
-      .catch((error) => {
-      });
+      .catch((error) => {});
   }, []);
 
   return null;

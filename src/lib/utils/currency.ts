@@ -8,7 +8,7 @@
  * @returns Formatted currency string
  */
 export const formatCurrency = (amount: number): string => {
-  return `₹${amount.toLocaleString('en-IN')}`;
+  return `₹${amount.toLocaleString("en-IN")}`;
 };
 
 /**
@@ -17,7 +17,10 @@ export const formatCurrency = (amount: number): string => {
  * @param previous - Previous value
  * @returns Percentage change (positive for increase, negative for decrease)
  */
-export const calculatePercentageChange = (current: number, previous: number): number => {
+export const calculatePercentageChange = (
+  current: number,
+  previous: number
+): number => {
   if (previous === 0) return current > 0 ? 100 : 0;
   return ((current - previous) / previous) * 100;
 };
@@ -39,7 +42,10 @@ export const calculatePercentage = (part: number, whole: number): number => {
  * @param decimals - Number of decimal places (default: 2)
  * @returns Rounded number
  */
-export const roundToDecimals = (value: number, decimals: number = 2): number => {
+export const roundToDecimals = (
+  value: number,
+  decimals: number = 2
+): number => {
   return Math.round(value * Math.pow(10, decimals)) / Math.pow(10, decimals);
 };
 
@@ -49,5 +55,5 @@ export const roundToDecimals = (value: number, decimals: number = 2): number => 
  * @returns Formatted number string
  */
 export const formatNumber = (value: number): string => {
-  return value.toLocaleString('en-IN');
+  return value.toLocaleString("en-IN");
 };

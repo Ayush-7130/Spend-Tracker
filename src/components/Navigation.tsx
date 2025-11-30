@@ -26,8 +26,7 @@ export default function Navigation() {
   const handleLogout = async () => {
     try {
       await logout();
-    } catch (error) {
-    }
+    } catch (error) {}
   };
 
   // Don't show navigation on login/signup pages
@@ -110,10 +109,17 @@ export default function Navigation() {
           <div className="d-lg-none">
             {isAuthenticated ? (
               <div className="mt-2 mb-2">
-                <div className="d-flex align-items-center justify-content-between">
-                  <div className="d-flex align-items-center">
+                <div
+                  style={{
+                    backgroundColor: "var(--navbar-mobile-user-bg)",
+                    borderRadius: "0.5rem",
+                    padding: "1rem",
+                    border: "1px solid var(--navbar-mobile-user-border)",
+                  }}
+                >
+                  <div className="d-flex align-items-center mb-3">
                     <i
-                      className="bi bi-person-circle me-2"
+                      className="bi bi-person-circle fs-4 me-2"
                       style={{ color: "var(--navbar-text)" }}
                     ></i>
                     <div style={{ color: "var(--navbar-text)" }}>
@@ -121,22 +127,51 @@ export default function Navigation() {
                       <small className="opacity-75">{user?.email}</small>
                     </div>
                   </div>
-                  <button
-                    className="btn btn-sm ms-2"
-                    style={{
-                      backgroundColor: "transparent",
-                      borderColor: "var(--border-primary)",
-                      color: "var(--navbar-text)",
-                    }}
-                    onClick={handleLogout}
-                    aria-label="Sign out from account"
-                  >
-                    <i
-                      className="bi bi-box-arrow-right me-1"
-                      aria-hidden="true"
-                    ></i>
-                    Sign Out
-                  </button>
+
+                  {/* Profile and Sign Out Buttons in Row */}
+                  <div className="d-flex gap-2">
+                    <Link
+                      href="/profile"
+                      className="btn btn-sm flex-fill"
+                      style={{
+                        backgroundColor: "transparent",
+                        borderColor: "var(--border-primary)",
+                        color: "var(--navbar-text)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        whiteSpace: "nowrap",
+                      }}
+                      aria-label="View and edit profile"
+                    >
+                      <i
+                        className="bi bi-person-circle me-1"
+                        aria-hidden="true"
+                      ></i>
+                      My Profile
+                    </Link>
+
+                    <button
+                      className="btn btn-sm flex-fill"
+                      style={{
+                        backgroundColor: "transparent",
+                        borderColor: "var(--border-primary)",
+                        color: "var(--navbar-text)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        whiteSpace: "nowrap",
+                      }}
+                      onClick={handleLogout}
+                      aria-label="Sign out from account"
+                    >
+                      <i
+                        className="bi bi-box-arrow-right me-1"
+                        aria-hidden="true"
+                      ></i>
+                      Sign Out
+                    </button>
+                  </div>
                 </div>
 
                 {/* Mobile: Notification and Theme Toggle - Inside hamburger after account */}

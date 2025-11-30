@@ -1,13 +1,17 @@
 /**
  * API Middleware and Utilities
- * 
+ *
  * Common middleware functions and utilities for Next.js API routes.
  * Provides authentication, error handling, request validation, and response formatting.
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { getUserFromRequest } from '@/lib/auth';
-import { sanitizeInput, sanitizeSearchQuery, isValidObjectId } from '@/lib/utils/security';
+import { NextRequest, NextResponse } from "next/server";
+import { getUserFromRequest } from "@/lib/auth";
+import {
+  sanitizeInput,
+  sanitizeSearchQuery,
+  isValidObjectId,
+} from "@/lib/utils/security";
 
 // ===========================================================================
 // TYPES
@@ -66,12 +70,12 @@ export function successResponse<T>(
   if (cacheOptions) {
     const { maxAge = 60, staleWhileRevalidate = 30, etag } = cacheOptions;
     response.headers.set(
-      'Cache-Control',
+      "Cache-Control",
       `public, s-maxage=${maxAge}, stale-while-revalidate=${staleWhileRevalidate}`
     );
-    
+
     if (etag) {
-      response.headers.set('ETag', etag);
+      response.headers.set("ETag", etag);
     }
   }
 
@@ -107,7 +111,7 @@ export function validationErrorResponse(
   return NextResponse.json(
     {
       success: false,
-      error: 'Validation failed',
+      error: "Validation failed",
       errors,
     },
     { status: 400 }
@@ -118,7 +122,7 @@ export function validationErrorResponse(
  * Format not found response
  */
 export function notFoundResponse(
-  message: string = 'Resource not found'
+  message: string = "Resource not found"
 ): NextResponse<ApiResponse> {
   return errorResponse(message, 404);
 }
@@ -127,7 +131,7 @@ export function notFoundResponse(
  * Format unauthorized response
  */
 export function unauthorizedResponse(
-  message: string = 'Unauthorized access'
+  message: string = "Unauthorized access"
 ): NextResponse<ApiResponse> {
   return errorResponse(message, 401);
 }
@@ -136,7 +140,7 @@ export function unauthorizedResponse(
  * Format forbidden response
  */
 export function forbiddenResponse(
-  message: string = 'Access forbidden'
+  message: string = "Access forbidden"
 ): NextResponse<ApiResponse> {
   return errorResponse(message, 403);
 }
@@ -156,7 +160,6 @@ export function withErrorHandling<T = any>(
     try {
       return await handler(req, context);
     } catch (error) {
-
       // Handle known error types
       if (error instanceof ValidationError) {
         return validationErrorResponse(error.errors);
@@ -176,8 +179,8 @@ export function withErrorHandling<T = any>(
 
       // Handle unknown errors
       const message =
-        error instanceof Error ? error.message : 'An unexpected error occurred';
-      
+        error instanceof Error ? error.message : "An unexpected error occurred";
+
       return errorResponse(message, 500);
     }
   };
@@ -192,20 +195,23 @@ export function withErrorHandling<T = any>(
  * Returns 401 if user is not authenticated
  */
 export function withAuth<T = any>(
-  handler: (req: NextRequest, context: RequestContext) => Promise<NextResponse<ApiResponse<T>>>
+  handler: (
+    req: NextRequest,
+    context: RequestContext
+  ) => Promise<NextResponse<ApiResponse<T>>>
 ): ApiHandler<T> {
   return withErrorHandling(async (req: NextRequest, routeContext?: any) => {
     // Get user from JWT token
     const jwtPayload = await getUserFromRequest(req);
 
     if (!jwtPayload) {
-      return unauthorizedResponse('Authentication required');
+      return unauthorizedResponse("Authentication required");
     }
 
     const user: AuthenticatedUser = {
       id: jwtPayload.userId,
       email: jwtPayload.email,
-      name: jwtPayload.email.split('@')[0], // Extract name from email if not in payload
+      name: jwtPayload.email.split("@")[0], // Extract name from email if not in payload
     };
 
     const context: RequestContext = {
@@ -236,11 +242,11 @@ export function withMethods<T = any>(
           success: false,
           error: `Method ${req.method} not allowed`,
         },
-        { 
+        {
           status: 405,
           headers: {
-            'Allow': allowedMethods.join(', ')
-          }
+            Allow: allowedMethods.join(", "),
+          },
         }
       );
     }
@@ -279,7 +285,7 @@ export async function validateBody<T>(
     return {
       valid: false,
       errors: {
-        body: 'Invalid JSON body',
+        body: "Invalid JSON body",
       },
     };
   }
@@ -291,29 +297,29 @@ export async function validateBody<T>(
 
 export class ValidationError extends Error {
   constructor(public errors: Record<string, string>) {
-    super('Validation failed');
-    this.name = 'ValidationError';
+    super("Validation failed");
+    this.name = "ValidationError";
   }
 }
 
 export class NotFoundError extends Error {
-  constructor(message: string = 'Resource not found') {
+  constructor(message: string = "Resource not found") {
     super(message);
-    this.name = 'NotFoundError';
+    this.name = "NotFoundError";
   }
 }
 
 export class UnauthorizedError extends Error {
-  constructor(message: string = 'Unauthorized') {
+  constructor(message: string = "Unauthorized") {
     super(message);
-    this.name = 'UnauthorizedError';
+    this.name = "UnauthorizedError";
   }
 }
 
 export class ForbiddenError extends Error {
-  constructor(message: string = 'Forbidden') {
+  constructor(message: string = "Forbidden") {
     super(message);
-    this.name = 'ForbiddenError';
+    this.name = "ForbiddenError";
   }
 }
 
@@ -379,8 +385,8 @@ export async function hasValidJsonBody(req: NextRequest): Promise<boolean> {
  * Sanitize search query parameter
  */
 export function getSanitizedSearchQuery(req: NextRequest): string {
-  const search = req.nextUrl.searchParams.get('search');
-  return search ? sanitizeSearchQuery(search) : '';
+  const search = req.nextUrl.searchParams.get("search");
+  return search ? sanitizeSearchQuery(search) : "";
 }
 
 /**
@@ -388,16 +394,16 @@ export function getSanitizedSearchQuery(req: NextRequest): string {
  */
 export function getValidObjectId(
   id: string | undefined,
-  paramName: string = 'id'
+  paramName: string = "id"
 ): string {
   if (!id) {
     throw new ValidationError({ [paramName]: `${paramName} is required` });
   }
-  
+
   if (!isValidObjectId(id)) {
     throw new ValidationError({ [paramName]: `Invalid ${paramName} format` });
   }
-  
+
   return id;
 }
 
@@ -409,13 +415,13 @@ export function sanitizeBodyFields<T extends Record<string, any>>(
   fields: (keyof T)[]
 ): T {
   const sanitized = { ...body };
-  
+
   fields.forEach((field) => {
-    if (typeof sanitized[field] === 'string') {
+    if (typeof sanitized[field] === "string") {
       sanitized[field] = sanitizeInput(sanitized[field] as string) as any;
     }
   });
-  
+
   return sanitized;
 }
 

@@ -1,13 +1,13 @@
 /**
  * Generic API Hooks
- * 
+ *
  * Reusable hooks for common API patterns like list fetching, detail views,
  * and mutations (create/update/delete). These hooks handle loading states,
  * error handling, and data management automatically.
  */
 
-import { useState, useEffect, useCallback } from 'react';
-import { ApiError } from '@/datasource/base';
+import { useState, useEffect, useCallback } from "react";
+import { ApiError } from "@/datasource/base";
 
 // ===========================================================================
 // TYPES
@@ -81,7 +81,9 @@ export interface UseMutationResult<TData = any, TVariables = any> {
   reset: () => void;
 }
 
-export interface UsePaginatedListOptions<TFilters = any> extends UseListOptions<TFilters> {
+export interface UsePaginatedListOptions<
+  TFilters = any,
+> extends UseListOptions<TFilters> {
   /** Items per page */
   pageSize?: number;
 }
@@ -93,7 +95,10 @@ export interface PaginationState {
   totalPages: number;
 }
 
-export interface UsePaginatedListResult<TItem, TFilters = any> extends UseListResult<TItem, TFilters> {
+export interface UsePaginatedListResult<
+  TItem,
+  TFilters = any,
+> extends UseListResult<TItem, TFilters> {
   /** Pagination state */
   pagination: PaginationState;
   /** Go to specific page */
@@ -111,7 +116,7 @@ export interface UsePaginatedListResult<TItem, TFilters = any> extends UseListRe
 
 /**
  * Generic hook for fetching and managing lists of data
- * 
+ *
  * @example
  * ```tsx
  * const { data: expenses, loading, error, setFilters } = useList(
@@ -143,9 +148,10 @@ export function useList<TItem, TFilters = any>(
       const result = await fetchFn(filters);
       setData(result);
     } catch (err) {
-      const errorMessage = err instanceof ApiError 
-        ? err.message 
-        : 'An error occurred while fetching data';
+      const errorMessage =
+        err instanceof ApiError
+          ? err.message
+          : "An error occurred while fetching data";
       setError(errorMessage);
     } finally {
       setLoading(false);
@@ -184,7 +190,7 @@ export function useList<TItem, TFilters = any>(
 
 /**
  * Generic hook for fetching and managing paginated lists of data
- * 
+ *
  * @example
  * ```tsx
  * const { data, loading, pagination, goToPage } = usePaginatedList(
@@ -234,10 +240,15 @@ export function usePaginatedList<TItem, TFilters = any>(
 
     try {
       const result = await fetchFn(filters);
-      
+
       // Handle different response structures
-      const items = result.items || result.expenses || result.settlements || result.categories || [];
-      
+      const items =
+        result.items ||
+        result.expenses ||
+        result.settlements ||
+        result.categories ||
+        [];
+
       setData(items as TItem[]);
       setPagination({
         page: result.page,
@@ -246,9 +257,10 @@ export function usePaginatedList<TItem, TFilters = any>(
         totalPages: result.totalPages,
       });
     } catch (err) {
-      const errorMessage = err instanceof ApiError 
-        ? err.message 
-        : 'An error occurred while fetching data';
+      const errorMessage =
+        err instanceof ApiError
+          ? err.message
+          : "An error occurred while fetching data";
       setError(errorMessage);
     } finally {
       setLoading(false);
@@ -261,19 +273,25 @@ export function usePaginatedList<TItem, TFilters = any>(
     }
   }, [autoFetch, fetchData]);
 
-  const setFilters = useCallback((newFilters: TFilters) => {
-    setFiltersState({
-      ...newFilters,
-      page: 1, // Reset to page 1 when filters change
-      limit: pageSize,
-    } as TFilters);
-  }, [pageSize]);
+  const setFilters = useCallback(
+    (newFilters: TFilters) => {
+      setFiltersState({
+        ...newFilters,
+        page: 1, // Reset to page 1 when filters change
+        limit: pageSize,
+      } as TFilters);
+    },
+    [pageSize]
+  );
 
   const goToPage = useCallback((page: number) => {
-    setFiltersState(prev => ({
-      ...prev,
-      page,
-    } as TFilters));
+    setFiltersState(
+      (prev) =>
+        ({
+          ...prev,
+          page,
+        }) as TFilters
+    );
   }, []);
 
   const nextPage = useCallback(() => {
@@ -314,7 +332,7 @@ export function usePaginatedList<TItem, TFilters = any>(
 
 /**
  * Generic hook for fetching details of a single item
- * 
+ *
  * @example
  * ```tsx
  * const { data: expense, loading, error } = useDetail(
@@ -346,9 +364,10 @@ export function useDetail<TItem>(
       const result = await fetchFn(id);
       setData(result);
     } catch (err) {
-      const errorMessage = err instanceof ApiError 
-        ? err.message 
-        : 'An error occurred while fetching data';
+      const errorMessage =
+        err instanceof ApiError
+          ? err.message
+          : "An error occurred while fetching data";
       setError(errorMessage);
     } finally {
       setLoading(false);
@@ -381,7 +400,7 @@ export function useDetail<TItem>(
 
 /**
  * Generic hook for mutations (create, update, delete)
- * 
+ *
  * @example
  * ```tsx
  * const { mutate: createExpense, loading } = useMutation(
@@ -417,9 +436,10 @@ export function useMutation<TData = any, TVariables = any>(
         onSuccess?.(result);
         return result;
       } catch (err) {
-        const errorMessage = err instanceof ApiError 
-          ? err.message 
-          : 'An error occurred during the operation';
+        const errorMessage =
+          err instanceof ApiError
+            ? err.message
+            : "An error occurred during the operation";
         setError(errorMessage);
         onError?.(errorMessage);
         throw err;
@@ -464,7 +484,7 @@ export function useMutation<TData = any, TVariables = any>(
 /**
  * Simple hook for managing data, loading, and error states
  * Useful for custom fetch logic that doesn't fit the generic patterns
- * 
+ *
  * @example
  * ```tsx
  * const { data, loading, error, setData, setLoading, setError } = useDataState<User>();

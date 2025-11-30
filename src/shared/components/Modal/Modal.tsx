@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import React from 'react';
-import { ModalProps, defaultModalConfig, modalSizeClasses } from './config';
+import React from "react";
+import { ModalProps, defaultModalConfig, modalSizeClasses } from "./config";
 
 export default function Modal({
   show,
@@ -16,26 +16,25 @@ export default function Modal({
   backdrop = defaultModalConfig.backdrop,
   keyboard = defaultModalConfig.keyboard,
   fade = defaultModalConfig.fade,
-  className = '',
-  headerClassName = '',
-  bodyClassName = '',
-  footerClassName = '',
+  className = "",
+  headerClassName = "",
+  bodyClassName = "",
+  footerClassName = "",
   closeButton = true,
   onBackdropClick,
 }: ModalProps) {
-  
   // Handle escape key
   React.useEffect(() => {
     if (!show || !keyboard) return;
-    
+
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
+      if (e.key === "Escape") {
         onClose();
       }
     };
-    
-    document.addEventListener('keydown', handleEscape);
-    return () => document.removeEventListener('keydown', handleEscape);
+
+    document.addEventListener("keydown", handleEscape);
+    return () => document.removeEventListener("keydown", handleEscape);
   }, [show, keyboard, onClose]);
 
   // Handle backdrop click
@@ -52,18 +51,22 @@ export default function Modal({
   if (!show) return null;
 
   const modalClasses = [
-    'modal',
-    fade ? 'fade' : '',
-    show ? 'show' : '',
-    className
-  ].filter(Boolean).join(' ');
+    "modal",
+    fade ? "fade" : "",
+    show ? "show" : "",
+    className,
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   const dialogClasses = [
-    'modal-dialog',
-    size ? modalSizeClasses[size] : '',
-    centered ? 'modal-dialog-centered' : '',
-    scrollable ? 'modal-dialog-scrollable' : ''
-  ].filter(Boolean).join(' ');
+    "modal-dialog",
+    size ? modalSizeClasses[size] : "",
+    centered ? "modal-dialog-centered" : "",
+    scrollable ? "modal-dialog-scrollable" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   return (
     <>
@@ -71,17 +74,17 @@ export default function Modal({
       <div
         className={modalClasses}
         style={{
-          display: 'block',
-          position: 'fixed',
+          display: "block",
+          position: "fixed",
           top: 0,
           left: 0,
-          width: '100%',
-          height: '100%',
-          backgroundColor: 'rgba(0,0,0,0.5)',
-          backdropFilter: 'blur(2px)',
+          width: "100%",
+          height: "100%",
+          backgroundColor: "rgba(0,0,0,0.5)",
+          backdropFilter: "blur(2px)",
           zIndex: 1055,
-          overflowX: 'hidden',
-          overflowY: 'auto',
+          overflowX: "hidden",
+          overflowY: "auto",
         }}
         onClick={handleBackdropClick}
         role="dialog"
@@ -107,15 +110,11 @@ export default function Modal({
             </div>
 
             {/* Body */}
-            <div className={`modal-body ${bodyClassName}`}>
-              {children}
-            </div>
+            <div className={`modal-body ${bodyClassName}`}>{children}</div>
 
             {/* Footer */}
             {footer && (
-              <div className={`modal-footer ${footerClassName}`}>
-                {footer}
-              </div>
+              <div className={`modal-footer ${footerClassName}`}>{footer}</div>
             )}
           </div>
         </div>

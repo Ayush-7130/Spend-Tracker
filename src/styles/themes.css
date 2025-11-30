@@ -75,6 +75,8 @@
   --navbar-hover-bg: rgba(162, 148, 249, 0.1);
   --navbar-shadow:
     0 1px 3px rgba(162, 148, 249, 0.15), 0 1px 2px rgba(205, 193, 255, 0.1);
+  --navbar-mobile-user-bg: rgba(162, 148, 249, 0.15);
+  --navbar-mobile-user-border: #cdc1ff;
 
   /* Cards - Purple Gradient & Shadow */
   --card-bg: #ffffff;
@@ -213,6 +215,8 @@
   --navbar-accent: #ffffff;
   --navbar-hover-bg: rgba(255, 255, 255, 0.1);
   --navbar-shadow: 0 1px 3px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2);
+  --navbar-mobile-user-bg: rgba(0, 0, 0, 0.4);
+  --navbar-mobile-user-border: #374151;
 
   /* Cards - Subtle Gradient & Glow */
   --card-bg: #1e293b;

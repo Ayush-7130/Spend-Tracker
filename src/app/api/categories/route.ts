@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
-import clientPromise from '@/lib/mongodb';
-import { getUserFromRequest } from '@/lib/auth';
+import { NextRequest, NextResponse } from "next/server";
+import clientPromise from "@/lib/mongodb";
+import { getUserFromRequest } from "@/lib/auth";
 
 interface Category {
   _id: string;
@@ -16,23 +16,26 @@ export async function GET(request: NextRequest) {
   const user = await getUserFromRequest(request);
   if (!user) {
     return NextResponse.json(
-      { success: false, error: 'Authentication required' },
+      { success: false, error: "Authentication required" },
       { status: 401 }
     );
   }
   try {
     const client = await clientPromise;
-    const db = client.db('spend-tracker');
-    
-    const categories = await db.collection<Category>('categories').find({}).toArray();
-    
+    const db = client.db("spend-tracker");
+
+    const categories = await db
+      .collection<Category>("categories")
+      .find({})
+      .toArray();
+
     return NextResponse.json({
       success: true,
-      data: categories
+      data: categories,
     });
   } catch (error) {
     return NextResponse.json(
-      { success: false, error: 'Failed to fetch categories' },
+      { success: false, error: "Failed to fetch categories" },
       { status: 500 }
     );
   }
@@ -43,7 +46,7 @@ export async function POST(request: NextRequest) {
   const user = await getUserFromRequest(request);
   if (!user) {
     return NextResponse.json(
-      { success: false, error: 'Authentication required' },
+      { success: false, error: "Authentication required" },
       { status: 401 }
     );
   }
@@ -51,37 +54,40 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { name, description, subcategories = [] } = body;
-    
+
     if (!name || !description) {
       return NextResponse.json(
-        { success: false, error: 'Name and description are required' },
+        { success: false, error: "Name and description are required" },
         { status: 400 }
       );
     }
-    
+
     const client = await clientPromise;
-    const db = client.db('spend-tracker');
-    
+    const db = client.db("spend-tracker");
+
     // Generate kebab-case ID from name
-    const _id = name.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-');
-    
+    const _id = name
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, "-")
+      .replace(/-+/g, "-");
+
     const category = {
       _id,
       name,
       description,
       subcategories,
-      createdAt: new Date()
+      createdAt: new Date(),
     };
-    
-    await db.collection<Category>('categories').insertOne(category);
-    
+
+    await db.collection<Category>("categories").insertOne(category);
+
     return NextResponse.json({
       success: true,
-      data: category
+      data: category,
     });
   } catch (error) {
     return NextResponse.json(
-      { success: false, error: 'Failed to create category' },
+      { success: false, error: "Failed to create category" },
       { status: 500 }
     );
   }

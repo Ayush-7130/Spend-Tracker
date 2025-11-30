@@ -17,24 +17,24 @@ export const calculateSettlement = (
   settlementRequired: number;
   settlementMessage: string;
 } => {
-  const saketShare = saketTotal + (splitTotal / 2);
-  const ayushShare = ayushTotal + (splitTotal / 2);
-  
+  const saketShare = saketTotal + splitTotal / 2;
+  const ayushShare = ayushTotal + splitTotal / 2;
+
   const difference = Math.abs(saketShare - ayushShare);
-  
+
   if (difference < 1) {
     return {
       settlementRequired: 0,
-      settlementMessage: "No settlement required"
+      settlementMessage: "No settlement required",
     };
   }
-  
+
   const whoOwes = saketShare > ayushShare ? "Ayush" : "Saket";
   const whoReceives = saketShare > ayushShare ? "Saket" : "Ayush";
-  
+
   return {
     settlementRequired: difference,
-    settlementMessage: `${whoOwes} owes ${whoReceives}`
+    settlementMessage: `${whoOwes} owes ${whoReceives}`,
   };
 };
 
@@ -47,10 +47,10 @@ export const calculateCategoryPercentages = <T extends { amount: number }>(
   categories: T[]
 ): (T & { percentage: number })[] => {
   const total = categories.reduce((sum, cat) => sum + cat.amount, 0);
-  
-  return categories.map(category => ({
+
+  return categories.map((category) => ({
     ...category,
-    percentage: total > 0 ? (category.amount / total) * 100 : 0
+    percentage: total > 0 ? (category.amount / total) * 100 : 0,
   }));
 };
 
@@ -59,29 +59,31 @@ export const calculateCategoryPercentages = <T extends { amount: number }>(
  * @param change - Percentage change value
  * @returns Object with icon and color class
  */
-export const getChangeIndicator = (change: number): {
+export const getChangeIndicator = (
+  change: number
+): {
   icon: string;
   color: string;
-  direction: 'up' | 'down' | 'neutral';
+  direction: "up" | "down" | "neutral";
 } => {
   if (change > 0) {
-    return { 
-      icon: 'bi-arrow-up', 
-      color: 'text-danger',
-      direction: 'up'
+    return {
+      icon: "bi-arrow-up",
+      color: "text-danger",
+      direction: "up",
     };
   }
   if (change < 0) {
-    return { 
-      icon: 'bi-arrow-down', 
-      color: 'text-success',
-      direction: 'down'
+    return {
+      icon: "bi-arrow-down",
+      color: "text-success",
+      direction: "down",
     };
   }
-  return { 
-    icon: 'bi-dash', 
-    color: 'text-muted',
-    direction: 'neutral'
+  return {
+    icon: "bi-dash",
+    color: "text-muted",
+    direction: "neutral",
   };
 };
 
@@ -91,7 +93,10 @@ export const getChangeIndicator = (change: number): {
  * @param days - Number of days
  * @returns Daily average
  */
-export const calculateDailyAverage = (totalAmount: number, days: number): number => {
+export const calculateDailyAverage = (
+  totalAmount: number,
+  days: number
+): number => {
   if (days <= 0) return 0;
   return totalAmount / days;
 };
@@ -104,12 +109,12 @@ export const calculateDailyAverage = (totalAmount: number, days: number): number
 export const calculateRunningTotals = (amounts: number[]): number[] => {
   const runningTotals: number[] = [];
   let total = 0;
-  
+
   for (const amount of amounts) {
     total += amount;
     runningTotals.push(total);
   }
-  
+
   return runningTotals;
 };
 
@@ -119,44 +124,49 @@ export const calculateRunningTotals = (amounts: number[]): number[] => {
  * @param period - Grouping period
  * @returns Grouped data
  */
-export const groupExpensesByPeriod = <T extends { date: string; amount: number }>(
+export const groupExpensesByPeriod = <
+  T extends { date: string; amount: number },
+>(
   expenses: T[],
-  period: 'daily' | 'weekly' | 'monthly' | 'yearly'
+  period: "daily" | "weekly" | "monthly" | "yearly"
 ): Record<string, { total: number; count: number; expenses: T[] }> => {
-  const grouped: Record<string, { total: number; count: number; expenses: T[] }> = {};
-  
+  const grouped: Record<
+    string,
+    { total: number; count: number; expenses: T[] }
+  > = {};
+
   for (const expense of expenses) {
     const date = new Date(expense.date);
     let key: string;
-    
+
     switch (period) {
-      case 'daily':
-        key = date.toISOString().split('T')[0]; // YYYY-MM-DD
+      case "daily":
+        key = date.toISOString().split("T")[0]; // YYYY-MM-DD
         break;
-      case 'weekly':
+      case "weekly":
         const weekStart = new Date(date);
         weekStart.setDate(date.getDate() - date.getDay());
-        key = weekStart.toISOString().split('T')[0];
+        key = weekStart.toISOString().split("T")[0];
         break;
-      case 'monthly':
-        key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      case "monthly":
+        key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
         break;
-      case 'yearly':
+      case "yearly":
         key = String(date.getFullYear());
         break;
       default:
-        key = date.toISOString().split('T')[0];
+        key = date.toISOString().split("T")[0];
     }
-    
+
     if (!grouped[key]) {
       grouped[key] = { total: 0, count: 0, expenses: [] };
     }
-    
+
     grouped[key].total += expense.amount;
     grouped[key].count += 1;
     grouped[key].expenses.push(expense);
   }
-  
+
   return grouped;
 };
 
@@ -170,9 +180,7 @@ export const getTopCategories = <T extends { amount: number }>(
   categories: T[],
   limit: number = 5
 ): T[] => {
-  return categories
-    .sort((a, b) => b.amount - a.amount)
-    .slice(0, limit);
+  return categories.sort((a, b) => b.amount - a.amount).slice(0, limit);
 };
 
 /**
@@ -189,9 +197,12 @@ export const calculateMonthOverMonthGrowth = (
   percentage: number;
 } => {
   const amount = currentMonth - previousMonth;
-  const percentage = previousMonth === 0 
-    ? (currentMonth > 0 ? 100 : 0)
-    : (amount / previousMonth) * 100;
-  
+  const percentage =
+    previousMonth === 0
+      ? currentMonth > 0
+        ? 100
+        : 0
+      : (amount / previousMonth) * 100;
+
   return { amount, percentage };
 };

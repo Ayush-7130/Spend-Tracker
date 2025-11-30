@@ -1,6 +1,6 @@
 /**
  * Security Utilities
- * 
+ *
  * Helper functions for security best practices.
  */
 
@@ -12,23 +12,23 @@
  * Sanitize string input to prevent XSS
  */
 export function sanitizeInput(input: string): string {
-  if (!input) return '';
+  if (!input) return "";
 
   return input
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#x27;')
-    .replace(/\//g, '&#x2F;');
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#x27;")
+    .replace(/\//g, "&#x2F;");
 }
 
 /**
  * Sanitize HTML (removes all tags)
  */
 export function stripHtml(html: string): string {
-  if (!html) return '';
-  return html.replace(/<[^>]*>/g, '');
+  if (!html) return "";
+  return html.replace(/<[^>]*>/g, "");
 }
 
 /**
@@ -50,19 +50,19 @@ export function isValidPassword(password: string): {
   const errors: string[] = [];
 
   if (password.length < 8) {
-    errors.push('Password must be at least 8 characters long');
+    errors.push("Password must be at least 8 characters long");
   }
 
   if (!/[A-Z]/.test(password)) {
-    errors.push('Password must contain at least one uppercase letter');
+    errors.push("Password must contain at least one uppercase letter");
   }
 
   if (!/[a-z]/.test(password)) {
-    errors.push('Password must contain at least one lowercase letter');
+    errors.push("Password must contain at least one lowercase letter");
   }
 
   if (!/[0-9]/.test(password)) {
-    errors.push('Password must contain at least one number');
+    errors.push("Password must contain at least one number");
   }
 
   return {
@@ -75,15 +75,18 @@ export function isValidPassword(password: string): {
  * Generate secure random string
  */
 export function generateSecureToken(length: number = 32): string {
-  if (typeof window !== 'undefined' && window.crypto) {
+  if (typeof window !== "undefined" && window.crypto) {
     const array = new Uint8Array(length);
     window.crypto.getRandomValues(array);
-    return Array.from(array, (byte) => byte.toString(16).padStart(2, '0')).join('');
+    return Array.from(array, (byte) => byte.toString(16).padStart(2, "0")).join(
+      ""
+    );
   }
 
   // Fallback for server-side
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  let result = '';
+  const chars =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  let result = "";
   for (let i = 0; i < length; i++) {
     result += chars.charAt(Math.floor(Math.random() * chars.length));
   }
@@ -98,12 +101,12 @@ export function generateSecureToken(length: number = 32): string {
  * Escape special characters for MongoDB queries
  */
 export function escapeMongoDB(input: string): string {
-  if (!input) return '';
+  if (!input) return "";
 
   return input
-    .replace(/\\/g, '\\\\')
-    .replace(/\$/g, '\\$')
-    .replace(/\./g, '\\.');
+    .replace(/\\/g, "\\\\")
+    .replace(/\$/g, "\\$")
+    .replace(/\./g, "\\.");
 }
 
 /**
@@ -117,10 +120,10 @@ export function isValidObjectId(id: string): boolean {
  * Sanitize search query
  */
 export function sanitizeSearchQuery(query: string): string {
-  if (!query) return '';
+  if (!query) return "";
 
   // Remove special regex characters
-  return query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 // ===========================================================================
@@ -138,8 +141,8 @@ export function generateCsrfToken(): string {
  * Store CSRF token in session storage
  */
 export function storeCsrfToken(token: string): void {
-  if (typeof window !== 'undefined') {
-    sessionStorage.setItem('csrf_token', token);
+  if (typeof window !== "undefined") {
+    sessionStorage.setItem("csrf_token", token);
   }
 }
 
@@ -147,8 +150,8 @@ export function storeCsrfToken(token: string): void {
  * Get CSRF token from session storage
  */
 export function getCsrfToken(): string | null {
-  if (typeof window !== 'undefined') {
-    return sessionStorage.getItem('csrf_token');
+  if (typeof window !== "undefined") {
+    return sessionStorage.getItem("csrf_token");
   }
   return null;
 }
@@ -157,8 +160,8 @@ export function getCsrfToken(): string | null {
  * Clear CSRF token
  */
 export function clearCsrfToken(): void {
-  if (typeof window !== 'undefined') {
-    sessionStorage.removeItem('csrf_token');
+  if (typeof window !== "undefined") {
+    sessionStorage.removeItem("csrf_token");
   }
 }
 
@@ -170,10 +173,10 @@ export function clearCsrfToken(): void {
  * Store JWT token securely
  */
 export function storeAuthToken(token: string): void {
-  if (typeof window !== 'undefined') {
+  if (typeof window !== "undefined") {
     // Use httpOnly cookies in production
     // For now, using localStorage (should be upgraded to httpOnly cookies)
-    localStorage.setItem('token', token);
+    localStorage.setItem("token", token);
   }
 }
 
@@ -181,8 +184,8 @@ export function storeAuthToken(token: string): void {
  * Get JWT token
  */
 export function getAuthToken(): string | null {
-  if (typeof window !== 'undefined') {
-    return localStorage.getItem('token');
+  if (typeof window !== "undefined") {
+    return localStorage.getItem("token");
   }
   return null;
 }
@@ -191,9 +194,9 @@ export function getAuthToken(): string | null {
  * Clear JWT token
  */
 export function clearAuthToken(): void {
-  if (typeof window !== 'undefined') {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+  if (typeof window !== "undefined") {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
   }
 }
 
@@ -202,11 +205,11 @@ export function clearAuthToken(): void {
  */
 export function decodeJwt(token: string): any | null {
   try {
-    const parts = token.split('.');
+    const parts = token.split(".");
     if (parts.length !== 3) return null;
 
     const payload = parts[1];
-    const decoded = atob(payload.replace(/-/g, '+').replace(/_/g, '/'));
+    const decoded = atob(payload.replace(/-/g, "+").replace(/_/g, "/"));
     return JSON.parse(decoded);
   } catch (error) {
     return null;
@@ -249,7 +252,9 @@ export class RateLimiter {
     const requests = this.requests.get(key) || [];
 
     // Remove old requests outside the window
-    const recentRequests = requests.filter((time) => now - time < this.windowMs);
+    const recentRequests = requests.filter(
+      (time) => now - time < this.windowMs
+    );
 
     if (recentRequests.length >= this.maxRequests) {
       return false;
@@ -282,7 +287,10 @@ export class RateLimiter {
 /**
  * Check if URL is from allowed domain
  */
-export function isAllowedDomain(url: string, allowedDomains: string[]): boolean {
+export function isAllowedDomain(
+  url: string,
+  allowedDomains: string[]
+): boolean {
   try {
     const urlObj = new URL(url);
     return allowedDomains.some((domain) => urlObj.hostname.endsWith(domain));
@@ -294,8 +302,11 @@ export function isAllowedDomain(url: string, allowedDomains: string[]): boolean 
 /**
  * Validate file type
  */
-export function isAllowedFileType(filename: string, allowedTypes: string[]): boolean {
-  const extension = filename.split('.').pop()?.toLowerCase();
+export function isAllowedFileType(
+  filename: string,
+  allowedTypes: string[]
+): boolean {
+  const extension = filename.split(".").pop()?.toLowerCase();
   return extension ? allowedTypes.includes(extension) : false;
 }
 
@@ -315,20 +326,20 @@ export function isAllowedFileSize(size: number, maxSizeBytes: number): boolean {
  */
 export function createSecureHeaders(includeAuth: boolean = true): HeadersInit {
   const headers: HeadersInit = {
-    'Content-Type': 'application/json',
-    'X-Requested-With': 'XMLHttpRequest',
+    "Content-Type": "application/json",
+    "X-Requested-With": "XMLHttpRequest",
   };
 
   if (includeAuth) {
     const token = getAuthToken();
     if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
+      headers["Authorization"] = `Bearer ${token}`;
     }
   }
 
   const csrfToken = getCsrfToken();
   if (csrfToken) {
-    headers['X-CSRF-Token'] = csrfToken;
+    headers["X-CSRF-Token"] = csrfToken;
   }
 
   return headers;
@@ -342,12 +353,14 @@ export function createSecureHeaders(includeAuth: boolean = true): HeadersInit {
  * Mask email address
  */
 export function maskEmail(email: string): string {
-  if (!email || !email.includes('@')) return email;
+  if (!email || !email.includes("@")) return email;
 
-  const [username, domain] = email.split('@');
+  const [username, domain] = email.split("@");
   const maskedUsername =
     username.length > 2
-      ? username.charAt(0) + '*'.repeat(username.length - 2) + username.charAt(username.length - 1)
+      ? username.charAt(0) +
+        "*".repeat(username.length - 2) +
+        username.charAt(username.length - 1)
       : username;
 
   return `${maskedUsername}@${domain}`;
@@ -357,24 +370,24 @@ export function maskEmail(email: string): string {
  * Mask credit card number
  */
 export function maskCreditCard(cardNumber: string): string {
-  if (!cardNumber) return '';
+  if (!cardNumber) return "";
 
-  const cleaned = cardNumber.replace(/\s/g, '');
+  const cleaned = cardNumber.replace(/\s/g, "");
   if (cleaned.length < 4) return cardNumber;
 
-  return '*'.repeat(cleaned.length - 4) + cleaned.slice(-4);
+  return "*".repeat(cleaned.length - 4) + cleaned.slice(-4);
 }
 
 /**
  * Mask phone number
  */
 export function maskPhoneNumber(phone: string): string {
-  if (!phone) return '';
+  if (!phone) return "";
 
-  const cleaned = phone.replace(/\D/g, '');
+  const cleaned = phone.replace(/\D/g, "");
   if (cleaned.length < 4) return phone;
 
-  return '*'.repeat(cleaned.length - 4) + cleaned.slice(-4);
+  return "*".repeat(cleaned.length - 4) + cleaned.slice(-4);
 }
 
 // ===========================================================================
@@ -384,14 +397,17 @@ export function maskPhoneNumber(phone: string): string {
 /**
  * Safely log object (removes sensitive fields)
  */
-export function safeLog(obj: any, sensitiveFields: string[] = ['password', 'token', 'apiKey']): any {
-  if (!obj || typeof obj !== 'object') return obj;
+export function safeLog(
+  obj: any,
+  sensitiveFields: string[] = ["password", "token", "apiKey"]
+): any {
+  if (!obj || typeof obj !== "object") return obj;
 
   const safe = { ...obj };
 
   sensitiveFields.forEach((field) => {
     if (field in safe) {
-      safe[field] = '[REDACTED]';
+      safe[field] = "[REDACTED]";
     }
   });
 

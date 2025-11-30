@@ -1,7 +1,7 @@
 // LoadingSpinner configuration types
 export interface LoadingSpinnerConfig {
-  size?: 'small' | 'medium' | 'large';
-  variant?: 'primary' | 'secondary' | 'light' | 'dark';
+  size?: "small" | "medium" | "large";
+  variant?: "primary" | "secondary" | "light" | "dark";
   text?: string;
   showText?: boolean;
   centered?: boolean;
@@ -13,26 +13,26 @@ export interface LoadingSpinnerConfig {
 export const DefaultLoadingConfigs = {
   // Basic spinner
   basic: (text?: string): LoadingSpinnerConfig => ({
-    size: 'medium',
-    variant: 'primary',
-    text: text || 'Loading...',
+    size: "medium",
+    variant: "primary",
+    text: text || "Loading...",
     showText: true,
     centered: true,
   }),
 
   // Small inline spinner
   inline: (): LoadingSpinnerConfig => ({
-    size: 'small',
-    variant: 'primary',
+    size: "small",
+    variant: "primary",
     showText: false,
     centered: false,
   }),
 
   // Overlay spinner for full-screen loading
   overlay: (text?: string): LoadingSpinnerConfig => ({
-    size: 'large',
-    variant: 'light',
-    text: text || 'Loading...',
+    size: "large",
+    variant: "light",
+    text: text || "Loading...",
     showText: true,
     centered: true,
     overlay: true,
@@ -40,11 +40,11 @@ export const DefaultLoadingConfigs = {
 
   // Table loading spinner
   table: (text?: string): LoadingSpinnerConfig => ({
-    size: 'medium',
-    variant: 'primary',
-    text: text || 'Loading data...',
+    size: "medium",
+    variant: "primary",
+    text: text || "Loading data...",
     showText: true,
     centered: true,
-    className: 'table-loading-spinner',
+    className: "table-loading-spinner",
   }),
 };

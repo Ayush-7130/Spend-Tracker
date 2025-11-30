@@ -1,58 +1,65 @@
-'use client';
+"use client";
 
-import { LoadingSpinnerConfig } from './config';
+import { LoadingSpinnerConfig } from "./config";
 
 interface LoadingSpinnerProps {
   config?: LoadingSpinnerConfig;
   className?: string;
 }
 
-export default function LoadingSpinner({ config, className = '' }: LoadingSpinnerProps) {
+export default function LoadingSpinner({
+  config,
+  className = "",
+}: LoadingSpinnerProps) {
   const {
-    size = 'medium',
-    variant = 'primary',
-    text = 'Loading...',
+    size = "medium",
+    variant = "primary",
+    text = "Loading...",
     showText = true,
     centered = true,
     overlay = false,
-    className: configClassName = '',
+    className: configClassName = "",
   } = config || {};
 
   const sizeClasses = {
-    small: 'spinner-sm',
-    medium: 'spinner-md', 
-    large: 'spinner-lg',
+    small: "spinner-sm",
+    medium: "spinner-md",
+    large: "spinner-lg",
   };
 
   const sizeContainerClasses = {
-    small: 'loading-small',
-    medium: 'loading-medium',
-    large: 'loading-large',
+    small: "loading-small",
+    medium: "loading-medium",
+    large: "loading-large",
   };
 
   const variantClasses = {
-    primary: 'spinner-primary',
-    secondary: 'spinner-secondary',
-    light: 'spinner-light',
-    dark: 'spinner-dark',
+    primary: "spinner-primary",
+    secondary: "spinner-secondary",
+    light: "spinner-light",
+    dark: "spinner-dark",
   };
 
   const spinnerClasses = [
-    'loading-spinner',
+    "loading-spinner",
     sizeClasses[size],
     variantClasses[variant],
-    centered ? 'spinner-centered' : '',
-    overlay ? 'spinner-overlay' : '',
-  ].filter(Boolean).join(' ');
+    centered ? "spinner-centered" : "",
+    overlay ? "spinner-overlay" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   const containerClasses = [
-    'loading-container',
+    "loading-container",
     sizeContainerClasses[size],
-    centered ? 'loading-centered' : '',
-    overlay ? 'loading-overlay' : '',
+    centered ? "loading-centered" : "",
+    overlay ? "loading-overlay" : "",
     configClassName,
     className,
-  ].filter(Boolean).join(' ');
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   if (overlay) {
     return (

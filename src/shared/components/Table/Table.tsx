@@ -232,7 +232,7 @@ export default function Table<T = any>({
       return getNestedValue(row, column.accessor || column.key);
     },
     []
-  ); // eslint-disable-line react-hooks/exhaustive-deps
+  );  
 
   // Render loading state
   if (config.loading) {

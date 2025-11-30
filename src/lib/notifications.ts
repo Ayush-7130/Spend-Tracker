@@ -99,8 +99,7 @@ export class NotificationService {
         entityType: this.getEntityType(notificationData.type),
         read: false,
       });
-    } catch (error) {
-    }
+    } catch (error) {}
   }
 
   // Send notification to all users except the actor
@@ -132,8 +131,7 @@ export class NotificationService {
       if (notifications.length > 0) {
         await db.collection("notifications").insertMany(notifications);
       }
-    } catch (error) {
-    }
+    } catch (error) {}
   }
 
   // Get user notifications with pagination
@@ -265,8 +263,7 @@ export class NotificationService {
         metadata: { deviceInfo, ipAddress },
         createdAt: now,
       });
-    } catch (error) {
-    }
+    } catch (error) {}
   }
 
   async notifyPasswordReset(
@@ -289,8 +286,7 @@ export class NotificationService {
         metadata: { deviceInfo, ipAddress },
         createdAt: now,
       });
-    } catch (error) {
-    }
+    } catch (error) {}
   }
 
   async notifyNewLogin(
@@ -365,8 +361,7 @@ export class NotificationService {
         metadata: { deviceInfo },
         createdAt: now,
       });
-    } catch (error) {
-    }
+    } catch (error) {}
   }
 
   async notifyMFAEnabled(userId: string): Promise<void> {
@@ -382,8 +377,7 @@ export class NotificationService {
         read: false,
         createdAt: now,
       });
-    } catch (error) {
-    }
+    } catch (error) {}
   }
 
   async notifyMFADisabled(userId: string): Promise<void> {
@@ -399,8 +393,7 @@ export class NotificationService {
         read: false,
         createdAt: now,
       });
-    } catch (error) {
-    }
+    } catch (error) {}
   }
 
   // Clean up expired notifications (should be run periodically)

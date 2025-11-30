@@ -147,8 +147,7 @@ export default function Home() {
         const settlementsResult = await settlementsResponse.json();
         setRecentSettlements(settlementsResult.slice(0, 5)); // Get recent 5 settlements
       }
-    } catch (err) {
-    }
+    } catch (err) {}
   };
 
   useEffect(() => {

@@ -1,11 +1,11 @@
-import { ReactNode } from 'react';
+import { ReactNode } from "react";
 
 // Modal configuration types
 export interface ModalConfig {
-  size?: 'sm' | 'md' | 'lg' | 'xl';
+  size?: "sm" | "md" | "lg" | "xl";
   centered?: boolean;
   scrollable?: boolean;
-  backdrop?: boolean | 'static';
+  backdrop?: boolean | "static";
   keyboard?: boolean;
   fade?: boolean;
 }
@@ -26,7 +26,7 @@ export interface ModalProps extends ModalConfig {
 }
 
 export const defaultModalConfig: ModalConfig = {
-  size: 'md',
+  size: "md",
   centered: false,
   scrollable: false,
   backdrop: true,
@@ -35,8 +35,8 @@ export const defaultModalConfig: ModalConfig = {
 };
 
 export const modalSizeClasses = {
-  sm: 'modal-sm',
-  md: '',
-  lg: 'modal-lg',
-  xl: 'modal-xl',
+  sm: "modal-sm",
+  md: "",
+  lg: "modal-lg",
+  xl: "modal-xl",
 };

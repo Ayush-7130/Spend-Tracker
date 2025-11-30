@@ -3,24 +3,21 @@
  * Export all TableCard related components and utilities
  */
 
-export { TableCard } from './TableCard';
-export type { 
+export { TableCard } from "./TableCard";
+export type {
   TableCardProps,
   Column,
   Action,
   MobileCardData,
-} from './TableCard';
+} from "./TableCard";
 
 export {
   createTableCardColumn,
   createTableCardConfig,
   defaultTableCardConfig,
-} from './config';
+} from "./config";
 
-export type {
-  TableCardConfig,
-  TableCardColumnConfig,
-} from './config';
+export type { TableCardConfig, TableCardColumnConfig } from "./config";
 
 // Re-export for convenience
-export { default } from './TableCard';
+export { default } from "./TableCard";

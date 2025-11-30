@@ -12,16 +12,16 @@ export const fetchData = async <T>(
   try {
     const response = await fetch(url, options);
     const result = await response.json();
-    
+
     if (!response.ok) {
       throw new Error(result.error || `HTTP error! status: ${response.status}`);
     }
-    
+
     return result;
   } catch (error) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to fetch data'
+      error: error instanceof Error ? error.message : "Failed to fetch data",
     };
   }
 };
@@ -31,30 +31,32 @@ export const fetchData = async <T>(
  */
 export const deleteItem = async (
   url: string,
-  itemName: string = 'item',
+  itemName: string = "item",
   confirmMessage?: string
 ): Promise<{ success: boolean; error?: string }> => {
-  const message = confirmMessage || `Are you sure you want to delete this ${itemName}?`;
-  
+  const message =
+    confirmMessage || `Are you sure you want to delete this ${itemName}?`;
+
   if (!confirm(message)) {
-    return { success: false, error: 'Cancelled by user' };
+    return { success: false, error: "Cancelled by user" };
   }
 
   try {
     const response = await fetch(url, {
-      method: 'DELETE'
+      method: "DELETE",
     });
-    
+
     if (!response.ok) {
       const result = await response.json();
       throw new Error(result.error || `Failed to delete ${itemName}`);
     }
-    
+
     return { success: true };
   } catch (error) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : `Failed to delete ${itemName}`
+      error:
+        error instanceof Error ? error.message : `Failed to delete ${itemName}`,
     };
   }
 };
@@ -65,27 +67,28 @@ export const deleteItem = async (
 export const bulkDelete = async (
   ids: string[],
   baseUrl: string,
-  itemName: string = 'items'
+  itemName: string = "items"
 ): Promise<{ success: boolean; error?: string }> => {
   if (ids.length === 0) {
-    return { success: false, error: 'No items selected' };
+    return { success: false, error: "No items selected" };
   }
 
   if (!confirm(`Delete ${ids.length} ${itemName}?`)) {
-    return { success: false, error: 'Cancelled by user' };
+    return { success: false, error: "Cancelled by user" };
   }
 
   try {
-    const promises = ids.map(id => 
-      fetch(`${baseUrl}/${id}`, { method: 'DELETE' })
+    const promises = ids.map((id) =>
+      fetch(`${baseUrl}/${id}`, { method: "DELETE" })
     );
-    
+
     await Promise.all(promises);
     return { success: true };
   } catch (error) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : `Failed to delete ${itemName}`
+      error:
+        error instanceof Error ? error.message : `Failed to delete ${itemName}`,
     };
   }
 };
@@ -96,28 +99,28 @@ export const bulkDelete = async (
 export const submitForm = async <T>(
   url: string,
   data: T,
-  method: 'POST' | 'PUT' = 'POST'
+  method: "POST" | "PUT" = "POST"
 ): Promise<{ success: boolean; data?: unknown; error?: string }> => {
   try {
     const response = await fetch(url, {
       method,
       headers: {
-        'Content-Type': 'application/json'
+        "Content-Type": "application/json",
       },
-      body: JSON.stringify(data)
+      body: JSON.stringify(data),
     });
-    
+
     const result = await response.json();
-    
+
     if (!response.ok) {
       throw new Error(result.error || `Failed to ${method.toLowerCase()} data`);
     }
-    
+
     return result;
   } catch (error) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to submit form'
+      error: error instanceof Error ? error.message : "Failed to submit form",
     };
   }
 };
@@ -130,13 +133,13 @@ export const buildUrlWithParams = (
   params: Record<string, string | number | boolean | undefined>
 ): string => {
   const searchParams = new URLSearchParams();
-  
+
   Object.entries(params).forEach(([key, value]) => {
-    if (value !== undefined && value !== null && value !== '') {
+    if (value !== undefined && value !== null && value !== "") {
       searchParams.append(key, value.toString());
     }
   });
-  
+
   const queryString = searchParams.toString();
   return queryString ? `${baseUrl}?${queryString}` : baseUrl;
 };
@@ -170,7 +173,7 @@ export const createPaginationHandler = (
     if (pagination.page > 1) {
       setPagination({ ...pagination, page: pagination.page - 1 });
     }
-  }
+  },
 });
 
 /**
@@ -178,7 +181,7 @@ export const createPaginationHandler = (
  */
 export interface SortConfig {
   sortBy: string;
-  sortOrder: 'asc' | 'desc';
+  sortOrder: "asc" | "desc";
 }
 
 export const createSortHandler = (
@@ -186,11 +189,14 @@ export const createSortHandler = (
   setSortConfig: (config: SortConfig) => void
 ) => ({
   handleSort: (column: string) => {
-    const newOrder = sortConfig.sortBy === column && sortConfig.sortOrder === 'desc' ? 'asc' : 'desc';
+    const newOrder =
+      sortConfig.sortBy === column && sortConfig.sortOrder === "desc"
+        ? "asc"
+        : "desc";
     setSortConfig({ sortBy: column, sortOrder: newOrder });
   },
   getSortIcon: (column: string) => {
-    if (sortConfig.sortBy !== column) return 'bi-arrow-down-up';
-    return sortConfig.sortOrder === 'asc' ? 'bi-arrow-up' : 'bi-arrow-down';
-  }
+    if (sortConfig.sortBy !== column) return "bi-arrow-down-up";
+    return sortConfig.sortOrder === "asc" ? "bi-arrow-up" : "bi-arrow-down";
+  },
 });

@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from "react";
 
 export interface NotificationProps {
   id: string;
-  type: 'success' | 'error' | 'warning' | 'info';
+  type: "success" | "error" | "warning" | "info";
   title: string;
   message?: string;
   duration?: number;
@@ -20,7 +20,7 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
   message,
   duration = 5000,
   onClose,
-  isVisible
+  isVisible,
 }) => {
   const [progress, setProgress] = useState(100);
 
@@ -29,7 +29,7 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
 
     const interval = setInterval(() => {
       setProgress((prev) => {
-        const newProgress = prev - (100 / (duration / 100));
+        const newProgress = prev - 100 / (duration / 100);
         if (newProgress <= 0) {
           clearInterval(interval);
           onClose(id);
@@ -44,35 +44,35 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
 
   const getTypeConfig = () => {
     switch (type) {
-      case 'success':
+      case "success":
         return {
-          bgClass: 'alert-success',
-          icon: 'bi-check-circle-fill',
-          borderColor: 'var(--notification-success-border)'
+          bgClass: "alert-success",
+          icon: "bi-check-circle-fill",
+          borderColor: "var(--notification-success-border)",
         };
-      case 'error':
+      case "error":
         return {
-          bgClass: 'alert-danger',
-          icon: 'bi-x-circle-fill',
-          borderColor: 'var(--notification-error-border)'
+          bgClass: "alert-danger",
+          icon: "bi-x-circle-fill",
+          borderColor: "var(--notification-error-border)",
         };
-      case 'warning':
+      case "warning":
         return {
-          bgClass: 'alert-warning',
-          icon: 'bi-exclamation-triangle-fill',
-          borderColor: 'var(--notification-warning-border)'
+          bgClass: "alert-warning",
+          icon: "bi-exclamation-triangle-fill",
+          borderColor: "var(--notification-warning-border)",
         };
-      case 'info':
+      case "info":
         return {
-          bgClass: 'alert-info',
-          icon: 'bi-info-circle-fill',
-          borderColor: 'var(--notification-info-border)'
+          bgClass: "alert-info",
+          icon: "bi-info-circle-fill",
+          borderColor: "var(--notification-info-border)",
         };
       default:
         return {
-          bgClass: 'alert-secondary',
-          icon: 'bi-bell-fill',
-          borderColor: 'var(--border-secondary)'
+          bgClass: "alert-secondary",
+          icon: "bi-bell-fill",
+          borderColor: "var(--border-secondary)",
         };
     }
   };
@@ -82,17 +82,22 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
   return (
     <div
       className={`alert ${config.bgClass} alert-dismissible d-flex align-items-start mb-3 shadow-sm notification-item ${
-        isVisible ? 'slide-in' : 'slide-out'
+        isVisible ? "slide-in" : "slide-out"
       }`}
       style={{
-        position: 'relative',
-        overflow: 'hidden',
+        position: "relative",
+        overflow: "hidden",
         border: `1px solid ${config.borderColor}`,
-        borderRadius: '8px',
-        animation: isVisible ? 'slideInRight 0.3s ease-out' : 'slideOutRight 0.3s ease-in'
+        borderRadius: "8px",
+        animation: isVisible
+          ? "slideInRight 0.3s ease-out"
+          : "slideOutRight 0.3s ease-in",
       }}
     >
-      <i className={`bi ${config.icon} me-3`} style={{ fontSize: '1.2em', marginTop: '2px' }}></i>
+      <i
+        className={`bi ${config.icon} me-3`}
+        style={{ fontSize: "1.2em", marginTop: "2px" }}
+      ></i>
       <div className="flex-grow-1">
         <div className="fw-bold">{title}</div>
         {message && <div className="small mt-1">{message}</div>}
@@ -103,15 +108,15 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
         onClick={() => onClose(id)}
         aria-label="Close"
       ></button>
-      
+
       {/* Progress bar */}
       <div
         className="position-absolute bottom-0 start-0"
         style={{
-          height: '3px',
-          backgroundColor: 'rgba(0,0,0,0.1)',
+          height: "3px",
+          backgroundColor: "rgba(0,0,0,0.1)",
           width: `${progress}%`,
-          transition: 'width 0.1s linear'
+          transition: "width 0.1s linear",
         }}
       ></div>
 
@@ -144,7 +149,7 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
 
         .notification-item:hover {
           transform: translateX(-5px);
-          box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
         }
 
         /* Mobile responsive styles */
@@ -157,7 +162,7 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
             max-width: 280px !important;
           }
         }
-        
+
         @media (max-width: 375px) {
           .notification-container {
             top: 5px !important;
@@ -165,36 +170,36 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
             left: 5px !important;
             max-width: 260px !important;
           }
-          
+
           .notification-item {
             padding: 0.4rem !important;
             margin-bottom: 0.4rem !important;
           }
-          
+
           .notification-item .fw-bold {
             font-size: 0.85rem !important;
             line-height: 1.2 !important;
           }
-          
+
           .notification-item .small {
             font-size: 0.7rem !important;
           }
-          
+
           .notification-item .bi {
             font-size: 0.9rem !important;
           }
         }
-        
+
         /* Extra small devices */
         @media (max-width: 320px) {
           .notification-container {
             max-width: 240px !important;
           }
-          
+
           .notification-item {
             padding: 0.3rem !important;
           }
-          
+
           .notification-item .fw-bold {
             font-size: 0.8rem !important;
           }
@@ -211,25 +216,27 @@ interface NotificationContainerProps {
 
 export const NotificationContainer: React.FC<NotificationContainerProps> = ({
   notifications,
-  onClose
+  onClose,
 }) => {
-  const [visibleNotifications, setVisibleNotifications] = useState<string[]>([]);
+  const [visibleNotifications, setVisibleNotifications] = useState<string[]>(
+    []
+  );
 
   useEffect(() => {
     // Show new notifications
     const newNotificationIds = notifications
-      .map(n => n.id)
-      .filter(id => !visibleNotifications.includes(id));
-    
+      .map((n) => n.id)
+      .filter((id) => !visibleNotifications.includes(id));
+
     if (newNotificationIds.length > 0) {
-      setVisibleNotifications(prev => [...prev, ...newNotificationIds]);
+      setVisibleNotifications((prev) => [...prev, ...newNotificationIds]);
     }
   }, [notifications, visibleNotifications]);
 
   const handleClose = (id: string) => {
     // Remove from visible list first (for animation)
-    setVisibleNotifications(prev => prev.filter(notifId => notifId !== id));
-    
+    setVisibleNotifications((prev) => prev.filter((notifId) => notifId !== id));
+
     // Then remove from notifications after animation
     setTimeout(() => {
       onClose(id);
@@ -242,11 +249,11 @@ export const NotificationContainer: React.FC<NotificationContainerProps> = ({
     <div
       className="position-fixed notification-container"
       style={{
-        top: '20px',
-        right: '20px',
+        top: "20px",
+        right: "20px",
         zIndex: 9999,
-        maxWidth: '320px',
-        width: '100%'
+        maxWidth: "320px",
+        width: "100%",
       }}
     >
       {notifications.map((notification) => (

@@ -1,12 +1,12 @@
 /**
  * Table Utilities
- * 
+ *
  * Shared table configurations, column definitions, and utilities
  * to reduce duplication across expense and settlement tables.
  */
 
-import { formatCurrency } from './currency';
-import { formatDate } from './date';
+import { formatCurrency } from "./currency";
+import { formatDate } from "./date";
 
 // ===========================================================================
 // TYPES
@@ -24,7 +24,7 @@ export interface Column<T = any> {
   /** Column width */
   width?: string;
   /** Column alignment */
-  align?: 'left' | 'center' | 'right';
+  align?: "left" | "center" | "right";
   /** Is column visible by default */
   visible?: boolean;
   /** Custom className for column */
@@ -39,7 +39,7 @@ export interface TableAction<T = any> {
   /** Action handler */
   onClick: (item: T) => void;
   /** Action variant/color */
-  variant?: 'primary' | 'secondary' | 'success' | 'danger' | 'warning' | 'info';
+  variant?: "primary" | "secondary" | "success" | "danger" | "warning" | "info";
   /** Condition to show action */
   show?: (item: T) => boolean;
   /** Is action loading */
@@ -48,7 +48,7 @@ export interface TableAction<T = any> {
 
 export interface SortState {
   field: string;
-  direction: 'asc' | 'desc';
+  direction: "asc" | "desc";
 }
 
 export interface PaginationConfig {
@@ -67,20 +67,20 @@ export interface PaginationConfig {
  */
 export function createDateColumn<T>(
   key: string,
-  label: string = 'Date',
-  format: 'full' | 'short' | 'relative' = 'short'
+  label: string = "Date",
+  format: "full" | "short" | "relative" = "short"
 ): Column<T> {
-  const dateOptions: Intl.DateTimeFormatOptions = 
-    format === 'full'
-      ? { day: '2-digit', month: 'short', year: 'numeric' }
-      : { day: '2-digit', month: 'short' };
+  const dateOptions: Intl.DateTimeFormatOptions =
+    format === "full"
+      ? { day: "2-digit", month: "short", year: "numeric" }
+      : { day: "2-digit", month: "short" };
 
   return {
     key,
     label,
     sortable: true,
     render: (item: any) => formatDate(item[key], dateOptions),
-    width: '120px',
+    width: "120px",
   };
 }
 
@@ -89,7 +89,7 @@ export function createDateColumn<T>(
  */
 export function createAmountColumn<T>(
   key: string,
-  label: string = 'Amount',
+  label: string = "Amount",
   options?: {
     colorize?: boolean;
     showSign?: boolean;
@@ -101,15 +101,16 @@ export function createAmountColumn<T>(
     key,
     label,
     sortable: true,
-    align: 'right',
-    width: '120px',
+    align: "right",
+    width: "120px",
     render: (item: any) => {
       const amount = item[key];
       const formatted = formatCurrency(Math.abs(amount));
       const display = showSign && amount > 0 ? `+${formatted}` : formatted;
 
       if (colorize) {
-        const className = amount > 0 ? 'text-success' : amount < 0 ? 'text-danger' : '';
+        const className =
+          amount > 0 ? "text-success" : amount < 0 ? "text-danger" : "";
         return <span className={className}>{display}</span>;
       }
 
@@ -123,7 +124,7 @@ export function createAmountColumn<T>(
  */
 export function createUserColumn<T>(
   key: string,
-  label: string = 'User',
+  label: string = "User",
   options?: {
     showBadge?: boolean;
   }
@@ -134,12 +135,12 @@ export function createUserColumn<T>(
     key,
     label,
     sortable: true,
-    width: '150px',
+    width: "150px",
     render: (item: any) => {
       const value = item[key];
-      
+
       if (showBadge) {
-        const color = value.toLowerCase() === 'saket' ? 'primary' : 'success';
+        const color = value.toLowerCase() === "saket" ? "primary" : "success";
         return (
           <span className={`badge bg-${color}`}>
             {value.charAt(0).toUpperCase() + value.slice(1)}
@@ -157,15 +158,15 @@ export function createUserColumn<T>(
  */
 export function createStatusColumn<T>(
   key: string,
-  label: string = 'Status',
+  label: string = "Status",
   colorMap?: Record<string, string>
 ): Column<T> {
   const defaultColorMap: Record<string, string> = {
-    pending: 'warning',
-    completed: 'success',
-    settled: 'success',
-    cancelled: 'secondary',
-    active: 'info',
+    pending: "warning",
+    completed: "success",
+    settled: "success",
+    cancelled: "secondary",
+    active: "info",
   };
 
   const colors = colorMap || defaultColorMap;
@@ -174,10 +175,10 @@ export function createStatusColumn<T>(
     key,
     label,
     sortable: true,
-    width: '120px',
+    width: "120px",
     render: (item: any) => {
       const status = item[key];
-      const color = colors[status.toLowerCase()] || 'secondary';
+      const color = colors[status.toLowerCase()] || "secondary";
       return (
         <span className={`badge bg-${color}`}>
           {status.charAt(0).toUpperCase() + status.slice(1)}
@@ -190,24 +191,22 @@ export function createStatusColumn<T>(
 /**
  * Actions column configuration
  */
-export function createActionsColumn<T>(
-  actions: TableAction<T>[]
-): Column<T> {
+export function createActionsColumn<T>(actions: TableAction<T>[]): Column<T> {
   return {
-    key: 'actions',
-    label: 'Actions',
+    key: "actions",
+    label: "Actions",
     sortable: false,
-    width: '150px',
-    align: 'center',
+    width: "150px",
+    align: "center",
     render: (item: T) => (
       <div className="btn-group btn-group-sm">
         {actions
-          .filter(action => !action.show || action.show(item))
+          .filter((action) => !action.show || action.show(item))
           .map((action, index) => (
             <button
               key={index}
               type="button"
-              className={`btn btn-${action.variant || 'primary'}`}
+              className={`btn btn-${action.variant || "primary"}`}
               onClick={() => action.onClick(item)}
               disabled={action.loading}
             >
@@ -225,7 +224,7 @@ export function createActionsColumn<T>(
  */
 export function createDescriptionColumn<T>(
   key: string,
-  label: string = 'Description',
+  label: string = "Description",
   maxLength: number = 50
 ): Column<T> {
   return {
@@ -233,15 +232,11 @@ export function createDescriptionColumn<T>(
     label,
     sortable: false,
     render: (item: any) => {
-      const value = item[key] || '-';
+      const value = item[key] || "-";
       if (value.length <= maxLength) {
         return value;
       }
-      return (
-        <span title={value}>
-          {value.substring(0, maxLength)}...
-        </span>
-      );
+      return <span title={value}>{value.substring(0, maxLength)}...</span>;
     },
   };
 }
@@ -253,10 +248,7 @@ export function createDescriptionColumn<T>(
 /**
  * Sort array of items by field and direction
  */
-export function sortItems<T>(
-  items: T[],
-  sortState: SortState
-): T[] {
+export function sortItems<T>(items: T[], sortState: SortState): T[] {
   if (!sortState.field) {
     return items;
   }
@@ -272,27 +264,25 @@ export function sortItems<T>(
 
     // Handle dates
     if (aValue instanceof Date && bValue instanceof Date) {
-      return sortState.direction === 'asc'
+      return sortState.direction === "asc"
         ? aValue.getTime() - bValue.getTime()
         : bValue.getTime() - aValue.getTime();
     }
 
     // Handle strings (case-insensitive)
-    if (typeof aValue === 'string' && typeof bValue === 'string') {
-      return sortState.direction === 'asc'
+    if (typeof aValue === "string" && typeof bValue === "string") {
+      return sortState.direction === "asc"
         ? aValue.localeCompare(bValue)
         : bValue.localeCompare(aValue);
     }
 
     // Handle numbers
-    if (typeof aValue === 'number' && typeof bValue === 'number') {
-      return sortState.direction === 'asc'
-        ? aValue - bValue
-        : bValue - aValue;
+    if (typeof aValue === "number" && typeof bValue === "number") {
+      return sortState.direction === "asc" ? aValue - bValue : bValue - aValue;
     }
 
     // Fallback to string comparison
-    return sortState.direction === 'asc'
+    return sortState.direction === "asc"
       ? String(aValue).localeCompare(String(bValue))
       : String(bValue).localeCompare(String(aValue));
   });
@@ -301,19 +291,16 @@ export function sortItems<T>(
 /**
  * Toggle sort direction for field
  */
-export function toggleSort(
-  currentSort: SortState,
-  field: string
-): SortState {
+export function toggleSort(currentSort: SortState, field: string): SortState {
   if (currentSort.field === field) {
     return {
       field,
-      direction: currentSort.direction === 'asc' ? 'desc' : 'asc',
+      direction: currentSort.direction === "asc" ? "desc" : "asc",
     };
   }
   return {
     field,
-    direction: 'asc',
+    direction: "asc",
   };
 }
 
@@ -335,8 +322,8 @@ export function filterBySearch<T>(
 
   const lowerSearch = searchTerm.toLowerCase();
 
-  return items.filter(item =>
-    searchFields.some(field => {
+  return items.filter((item) =>
+    searchFields.some((field) => {
       const value = item[field];
       if (value == null) return false;
       return String(value).toLowerCase().includes(lowerSearch);
@@ -382,7 +369,7 @@ export function getPaginationInfo(pagination: PaginationConfig): string {
   const end = Math.min(pagination.page * pagination.limit, pagination.total);
 
   if (pagination.total === 0) {
-    return 'No items';
+    return "No items";
   }
 
   return `Showing ${start}-${end} of ${pagination.total}`;
@@ -400,7 +387,7 @@ export function toggleSelection<T extends { _id: string }>(
   itemId: string
 ): string[] {
   if (selected.includes(itemId)) {
-    return selected.filter(id => id !== itemId);
+    return selected.filter((id) => id !== itemId);
   }
   return [...selected, itemId];
 }
@@ -415,7 +402,7 @@ export function toggleSelectAll<T extends { _id: string }>(
   if (selected.length === items.length) {
     return [];
   }
-  return items.map(item => item._id);
+  return items.map((item) => item._id);
 }
 
 /**

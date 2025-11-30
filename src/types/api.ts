@@ -278,8 +278,7 @@ export interface CreateSettlementRequest {
 /**
  * Update settlement request
  */
-export interface UpdateSettlementRequest
-  extends Partial<CreateSettlementRequest> {
+export interface UpdateSettlementRequest extends Partial<CreateSettlementRequest> {
   _id: string;
 }
 

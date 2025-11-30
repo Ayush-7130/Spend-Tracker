@@ -462,22 +462,13 @@ const SettlementsPage: React.FC = () => {
                   Settlements
                 </h1>
               </div>
-              <div className="d-flex gap-2">
-                <ExportButton
-                  endpoint="/api/settlements/export"
-                  params={filters}
-                  label="Export"
-                  variant="outline-secondary"
-                  icon="bi-download"
-                />
-                <button
-                  onClick={() => setShowSettlementDialog(true)}
-                  className="btn btn-primary"
-                >
-                  <i className="bi bi-plus-circle me-2"></i>
-                  Record Settlement
-                </button>
-              </div>
+              <button
+                onClick={() => setShowSettlementDialog(true)}
+                className="btn btn-primary"
+              >
+                <i className="bi bi-plus-circle me-2"></i>
+                Record Settlement
+              </button>
             </div>
 
             {error && (
@@ -771,11 +762,19 @@ const SettlementsPage: React.FC = () => {
 
             {/* Full Settlement Table */}
             <div className="card">
-              <div className="card-header">
+              <div className="card-header d-flex justify-content-between align-items-center">
                 <h5 className="mb-0">
                   <i className="bi bi-table me-2"></i>
                   All Settlements
                 </h5>
+                <ExportButton
+                  endpoint="/api/settlements/export"
+                  params={filters}
+                  label="Export"
+                  variant="outline-secondary"
+                  icon="bi-download"
+                  size="sm"
+                />
               </div>
               <div
                 className="card-body"

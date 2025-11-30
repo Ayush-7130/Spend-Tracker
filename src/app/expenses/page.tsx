@@ -389,39 +389,30 @@ function ExpensesContent() {
               <i className="bi bi-list-ul me-2"></i>
               Expenses
             </h1>
-            <div className="d-flex gap-2">
-              <ExportButton
-                endpoint="/api/expenses/export"
-                params={filters}
-                label="Export"
-                variant="outline-secondary"
-                icon="bi-download"
-              />
-              <button
-                onClick={() => {
-                  setEditingExpense(null);
-                  setNewExpense({
-                    name: "",
-                    amount: "",
-                    description: "",
-                    date: new Date().toISOString().split("T")[0],
-                    category: "",
-                    subcategory: "",
-                    paidBy: "",
-                    splitBetween: [],
-                    isSplit: false,
-                    saketAmount: "",
-                    ayushAmount: "",
-                  });
-                  setManualSplitEdit(false);
-                  setShowAddExpenseDialog(true);
-                }}
-                className="btn btn-primary"
-              >
-                <i className="bi bi-plus-circle me-2"></i>
-                Add Expense
-              </button>
-            </div>
+            <button
+              onClick={() => {
+                setEditingExpense(null);
+                setNewExpense({
+                  name: "",
+                  amount: "",
+                  description: "",
+                  date: new Date().toISOString().split("T")[0],
+                  category: "",
+                  subcategory: "",
+                  paidBy: "",
+                  splitBetween: [],
+                  isSplit: false,
+                  saketAmount: "",
+                  ayushAmount: "",
+                });
+                setManualSplitEdit(false);
+                setShowAddExpenseDialog(true);
+              }}
+              className="btn btn-primary"
+            >
+              <i className="bi bi-plus-circle me-2"></i>
+              Add Expense
+            </button>
           </div>
 
           {/* Filters */}
@@ -484,6 +475,20 @@ function ExpensesContent() {
 
           {/* Expenses Table */}
           <div className="card">
+            <div className="card-header d-flex justify-content-between align-items-center">
+              <h5 className="mb-0">
+                <i className="bi bi-table me-2"></i>
+                Expense List
+              </h5>
+              <ExportButton
+                endpoint="/api/expenses/export"
+                params={filters}
+                label="Export"
+                variant="outline-secondary"
+                icon="bi-download"
+                size="sm"
+              />
+            </div>
             <div className="card-body">
               {loading ? (
                 <div className="text-center py-4">

@@ -1,18 +1,15 @@
 // Form field components
-export { 
+export {
   InputField,
   SelectField,
   TextareaField,
   DateField,
   CheckboxField,
-  RadioField
-} from './FormFields';
+  RadioField,
+} from "./FormFields";
 
 // Form wrapper components
-export {
-  FieldWrapper,
-  FormGroup
-} from './FormWrappers';
+export { FieldWrapper, FormGroup } from "./FormWrappers";
 
 // Form configuration and types
-export * from './config';
+export * from "./config";

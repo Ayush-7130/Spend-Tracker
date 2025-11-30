@@ -109,9 +109,8 @@ const handleChangePassword = createApiRoute({
 
       // Get device info for notification
       const userAgent = request.headers.get("user-agent") || "Unknown";
-      const { parseUserAgent, getIpAddress } = await import(
-        "@/lib/device-info"
-      );
+      const { parseUserAgent, getIpAddress } =
+        await import("@/lib/device-info");
       const deviceInfo = parseUserAgent(userAgent);
       const ipAddress = getIpAddress(request.headers);
       const deviceDescription = `${deviceInfo.browser} on ${deviceInfo.os}`;

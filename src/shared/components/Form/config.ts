@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import { ReactNode } from "react";
 
 // Base form field types
 export interface BaseFormFieldProps {
@@ -15,7 +15,7 @@ export interface BaseFormFieldProps {
 
 // Input field configuration
 export interface InputFieldProps extends BaseFormFieldProps {
-  type: 'text' | 'number' | 'email' | 'password' | 'url' | 'tel';
+  type: "text" | "number" | "email" | "password" | "url" | "tel";
   placeholder?: string;
   min?: number;
   max?: number;
@@ -42,7 +42,7 @@ export interface TextareaFieldProps extends BaseFormFieldProps {
   cols?: number;
   placeholder?: string;
   maxLength?: number;
-  resize?: 'none' | 'vertical' | 'horizontal' | 'both';
+  resize?: "none" | "vertical" | "horizontal" | "both";
 }
 
 // Date field configuration
@@ -53,13 +53,16 @@ export interface DateFieldProps extends BaseFormFieldProps {
 }
 
 // Checkbox field configuration
-export interface CheckboxFieldProps extends Omit<BaseFormFieldProps, 'value' | 'onChange'> {
+export interface CheckboxFieldProps extends Omit<
+  BaseFormFieldProps,
+  "value" | "onChange"
+> {
   checked: boolean;
   onChange: (checked: boolean) => void;
-  variant?: 'default' | 'switch';
+  variant?: "default" | "switch";
 }
 
-// Radio field configuration  
+// Radio field configuration
 export interface RadioFieldProps extends BaseFormFieldProps {
   options: Array<{
     label: string;
@@ -92,13 +95,13 @@ export interface FieldWrapperProps {
 }
 
 export const fieldSizeClasses = {
-  sm: 'form-control-sm',
-  md: '',
-  lg: 'form-control-lg',
+  sm: "form-control-sm",
+  md: "",
+  lg: "form-control-lg",
 } as const;
 
 export const fieldVariantClasses = {
-  default: '',
-  filled: 'form-control-filled',
-  outlined: 'form-control-outlined',
+  default: "",
+  filled: "form-control-filled",
+  outlined: "form-control-outlined",
 } as const;

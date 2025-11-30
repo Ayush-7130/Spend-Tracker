@@ -1,6 +1,6 @@
 /**
  * Accessibility Utilities
- * 
+ *
  * Helper functions and utilities for improving WCAG 2.1 compliance.
  */
 
@@ -19,7 +19,7 @@ export function generateAriaId(prefix: string): string {
  * Create ARIA label from text content
  */
 export function createAriaLabel(text: string, context?: string): string {
-  const cleanText = text.replace(/<[^>]*>/g, '').trim();
+  const cleanText = text.replace(/<[^>]*>/g, "").trim();
   return context ? `${context}: ${cleanText}` : cleanText;
 }
 
@@ -52,12 +52,12 @@ export class FocusTrap {
     }
 
     // Add event listeners
-    document.addEventListener('keydown', this.handleKeyDown);
+    document.addEventListener("keydown", this.handleKeyDown);
   }
 
   deactivate() {
     // Remove event listeners
-    document.removeEventListener('keydown', this.handleKeyDown);
+    document.removeEventListener("keydown", this.handleKeyDown);
 
     // Restore previous focus
     if (this.previousFocus) {
@@ -66,12 +66,13 @@ export class FocusTrap {
   }
 
   private handleKeyDown = (e: KeyboardEvent) => {
-    if (e.key !== 'Tab') return;
+    if (e.key !== "Tab") return;
 
     if (this.focusableElements.length === 0) return;
 
     const firstElement = this.focusableElements[0];
-    const lastElement = this.focusableElements[this.focusableElements.length - 1];
+    const lastElement =
+      this.focusableElements[this.focusableElements.length - 1];
 
     if (e.shiftKey) {
       // Shift + Tab
@@ -91,8 +92,10 @@ export class FocusTrap {
   private getFocusableElements(): HTMLElement[] {
     const selector =
       'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
-    
-    return Array.from(this.container.querySelectorAll(selector)) as HTMLElement[];
+
+    return Array.from(
+      this.container.querySelectorAll(selector)
+    ) as HTMLElement[];
   }
 }
 
@@ -115,9 +118,11 @@ export function focusElement(selector: string, delay: number = 100): void {
 /**
  * Handle escape key for closing modals/dialogs
  */
-export function handleEscapeKey(callback: () => void): (e: KeyboardEvent) => void {
+export function handleEscapeKey(
+  callback: () => void
+): (e: KeyboardEvent) => void {
   return (e: KeyboardEvent) => {
-    if (e.key === 'Escape') {
+    if (e.key === "Escape") {
       callback();
     }
   };
@@ -126,9 +131,11 @@ export function handleEscapeKey(callback: () => void): (e: KeyboardEvent) => voi
 /**
  * Handle enter/space keys for custom interactive elements
  */
-export function handleActionKeys(callback: () => void): (e: KeyboardEvent) => void {
+export function handleActionKeys(
+  callback: () => void
+): (e: KeyboardEvent) => void {
   return (e: KeyboardEvent) => {
-    if (e.key === 'Enter' || e.key === ' ') {
+    if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
       callback();
     }
@@ -146,19 +153,19 @@ export function handleArrowKeys(options: {
 }): (e: KeyboardEvent) => void {
   return (e: KeyboardEvent) => {
     switch (e.key) {
-      case 'ArrowUp':
+      case "ArrowUp":
         e.preventDefault();
         options.onUp?.();
         break;
-      case 'ArrowDown':
+      case "ArrowDown":
         e.preventDefault();
         options.onDown?.();
         break;
-      case 'ArrowLeft':
+      case "ArrowLeft":
         e.preventDefault();
         options.onLeft?.();
         break;
-      case 'ArrowRight':
+      case "ArrowRight":
         e.preventDefault();
         options.onRight?.();
         break;
@@ -173,12 +180,15 @@ export function handleArrowKeys(options: {
 /**
  * Announce message to screen readers
  */
-export function announceToScreenReader(message: string, priority: 'polite' | 'assertive' = 'polite'): void {
-  const announcement = document.createElement('div');
-  announcement.setAttribute('role', 'status');
-  announcement.setAttribute('aria-live', priority);
-  announcement.setAttribute('aria-atomic', 'true');
-  announcement.className = 'visually-hidden';
+export function announceToScreenReader(
+  message: string,
+  priority: "polite" | "assertive" = "polite"
+): void {
+  const announcement = document.createElement("div");
+  announcement.setAttribute("role", "status");
+  announcement.setAttribute("aria-live", priority);
+  announcement.setAttribute("aria-atomic", "true");
+  announcement.className = "visually-hidden";
   announcement.textContent = message;
 
   document.body.appendChild(announcement);
@@ -191,12 +201,15 @@ export function announceToScreenReader(message: string, priority: 'polite' | 'as
 /**
  * Create skip link for keyboard navigation
  */
-export function createSkipLink(targetId: string, label: string = 'Skip to main content'): HTMLAnchorElement {
-  const skipLink = document.createElement('a');
+export function createSkipLink(
+  targetId: string,
+  label: string = "Skip to main content"
+): HTMLAnchorElement {
+  const skipLink = document.createElement("a");
   skipLink.href = `#${targetId}`;
-  skipLink.className = 'visually-hidden-focusable';
+  skipLink.className = "visually-hidden-focusable";
   skipLink.textContent = label;
-  skipLink.addEventListener('click', (e) => {
+  skipLink.addEventListener("click", (e) => {
     e.preventDefault();
     const target = document.getElementById(targetId);
     if (target) {
@@ -257,14 +270,20 @@ function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
 /**
  * Check if contrast ratio meets WCAG AA standards
  */
-export function meetsWCAGAA(contrastRatio: number, isLargeText: boolean = false): boolean {
+export function meetsWCAGAA(
+  contrastRatio: number,
+  isLargeText: boolean = false
+): boolean {
   return isLargeText ? contrastRatio >= 3 : contrastRatio >= 4.5;
 }
 
 /**
  * Check if contrast ratio meets WCAG AAA standards
  */
-export function meetsWCAGAAA(contrastRatio: number, isLargeText: boolean = false): boolean {
+export function meetsWCAGAAA(
+  contrastRatio: number,
+  isLargeText: boolean = false
+): boolean {
   return isLargeText ? contrastRatio >= 4.5 : contrastRatio >= 7;
 }
 
@@ -283,7 +302,10 @@ export function meetsTouchTargetSize(element: HTMLElement): boolean {
 /**
  * Get recommended touch target size
  */
-export function getRecommendedTouchTargetSize(): { width: number; height: number } {
+export function getRecommendedTouchTargetSize(): {
+  width: number;
+  height: number;
+} {
   return { width: 44, height: 44 };
 }
 
@@ -294,14 +316,17 @@ export function getRecommendedTouchTargetSize(): { width: number; height: number
 /**
  * Associate label with input programmatically
  */
-export function associateLabelWithInput(labelId: string, inputId: string): void {
+export function associateLabelWithInput(
+  labelId: string,
+  inputId: string
+): void {
   const label = document.getElementById(labelId);
   const input = document.getElementById(inputId);
 
   if (label && input) {
-    label.setAttribute('for', inputId);
-    if (!input.getAttribute('aria-labelledby')) {
-      input.setAttribute('aria-labelledby', labelId);
+    label.setAttribute("for", inputId);
+    if (!input.getAttribute("aria-labelledby")) {
+      input.setAttribute("aria-labelledby", labelId);
     }
   }
 }
@@ -309,15 +334,18 @@ export function associateLabelWithInput(labelId: string, inputId: string): void 
 /**
  * Add required field indicator
  */
-export function markFieldAsRequired(inputId: string, required: boolean = true): void {
+export function markFieldAsRequired(
+  inputId: string,
+  required: boolean = true
+): void {
   const input = document.getElementById(inputId);
   if (input) {
     if (required) {
-      input.setAttribute('required', '');
-      input.setAttribute('aria-required', 'true');
+      input.setAttribute("required", "");
+      input.setAttribute("aria-required", "true");
     } else {
-      input.removeAttribute('required');
-      input.removeAttribute('aria-required');
+      input.removeAttribute("required");
+      input.removeAttribute("aria-required");
     }
   }
 }
@@ -333,17 +361,17 @@ export function addErrorToField(inputId: string, errorMessage: string): void {
   let errorElement = document.getElementById(errorId);
 
   if (!errorElement) {
-    errorElement = document.createElement('div');
+    errorElement = document.createElement("div");
     errorElement.id = errorId;
-    errorElement.className = 'invalid-feedback';
-    errorElement.setAttribute('role', 'alert');
+    errorElement.className = "invalid-feedback";
+    errorElement.setAttribute("role", "alert");
     input.parentElement?.appendChild(errorElement);
   }
 
   errorElement.textContent = errorMessage;
-  input.setAttribute('aria-invalid', 'true');
-  input.setAttribute('aria-describedby', errorId);
-  input.classList.add('is-invalid');
+  input.setAttribute("aria-invalid", "true");
+  input.setAttribute("aria-describedby", errorId);
+  input.classList.add("is-invalid");
 }
 
 /**
@@ -360,9 +388,9 @@ export function clearErrorFromField(inputId: string): void {
     errorElement.remove();
   }
 
-  input.removeAttribute('aria-invalid');
-  input.removeAttribute('aria-describedby');
-  input.classList.remove('is-invalid');
+  input.removeAttribute("aria-invalid");
+  input.removeAttribute("aria-describedby");
+  input.classList.remove("is-invalid");
 }
 
 // ===========================================================================

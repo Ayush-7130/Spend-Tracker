@@ -11,13 +11,14 @@
 export const formatDate = (
   dateString: string | Date,
   options: Intl.DateTimeFormatOptions = {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric'
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
   }
 ): string => {
-  const date = typeof dateString === 'string' ? new Date(dateString) : dateString;
-  return date.toLocaleDateString('en-IN', options);
+  const date =
+    typeof dateString === "string" ? new Date(dateString) : dateString;
+  return date.toLocaleDateString("en-IN", options);
 };
 
 /**
@@ -27,8 +28,8 @@ export const formatDate = (
  */
 export const formatDateShort = (dateString: string | Date): string => {
   return formatDate(dateString, {
-    day: '2-digit',
-    month: 'short'
+    day: "2-digit",
+    month: "short",
   });
 };
 
@@ -39,8 +40,8 @@ export const formatDateShort = (dateString: string | Date): string => {
  */
 export const formatTimelineDate = (dateString: string): string => {
   return formatDate(dateString, {
-    day: '2-digit',
-    month: 'short'
+    day: "2-digit",
+    month: "short",
   });
 };
 
@@ -52,10 +53,10 @@ export const getCurrentMonthRange = (): { start: string; end: string } => {
   const now = new Date();
   const start = new Date(now.getFullYear(), now.getMonth(), 1);
   const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-  
+
   return {
-    start: start.toISOString().split('T')[0],
-    end: end.toISOString().split('T')[0]
+    start: start.toISOString().split("T")[0],
+    end: end.toISOString().split("T")[0],
   };
 };
 
@@ -67,7 +68,7 @@ export const getCurrentMonthRange = (): { start: string; end: string } => {
  * @returns Object with start and end dates
  */
 export const getDateRange = (
-  period: 'week' | 'month' | 'quarter' | 'year' | 'custom',
+  period: "week" | "month" | "quarter" | "year" | "custom",
   customStart?: string,
   customEnd?: string
 ): { start: Date; end: Date } => {
@@ -76,20 +77,20 @@ export const getDateRange = (
   let end: Date = new Date();
 
   switch (period) {
-    case 'week':
+    case "week":
       start = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
       break;
-    case 'month':
+    case "month":
       start = new Date(now.getFullYear(), now.getMonth(), 1);
       break;
-    case 'quarter':
+    case "quarter":
       const currentQuarter = Math.floor(now.getMonth() / 3);
       start = new Date(now.getFullYear(), currentQuarter * 3, 1);
       break;
-    case 'year':
+    case "year":
       start = new Date(now.getFullYear(), 0, 1);
       break;
-    case 'custom':
+    case "custom":
       if (customStart && customEnd) {
         start = new Date(customStart);
         end = new Date(customEnd);
@@ -111,9 +112,11 @@ export const getDateRange = (
  */
 export const isToday = (date: Date | string): boolean => {
   const today = new Date();
-  const checkDate = typeof date === 'string' ? new Date(date) : date;
-  
-  return checkDate.getDate() === today.getDate() &&
-         checkDate.getMonth() === today.getMonth() &&
-         checkDate.getFullYear() === today.getFullYear();
+  const checkDate = typeof date === "string" ? new Date(date) : date;
+
+  return (
+    checkDate.getDate() === today.getDate() &&
+    checkDate.getMonth() === today.getMonth() &&
+    checkDate.getFullYear() === today.getFullYear()
+  );
 };

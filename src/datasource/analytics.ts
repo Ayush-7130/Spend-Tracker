@@ -1,4 +1,4 @@
-import { api, withRetry } from './base';
+import { api, withRetry } from "./base";
 
 // Analytics-related types
 export interface AnalyticsOverview {
@@ -86,7 +86,7 @@ export interface ComparisonData {
 }
 
 export interface AdvancedFilters {
-  user?: 'all' | 'saket' | 'ayush';
+  user?: "all" | "saket" | "ayush";
   startDate?: string;
   endDate?: string;
   categories?: string[];
@@ -95,7 +95,7 @@ export interface AdvancedFilters {
     max: number;
   };
   includeSettlements?: boolean;
-  groupBy?: 'day' | 'week' | 'month' | 'year';
+  groupBy?: "day" | "week" | "month" | "year";
 }
 
 // Analytics Datasource
@@ -103,9 +103,11 @@ export class AnalyticsDataSource {
   /**
    * Get dashboard overview data
    */
-  static async getDashboardOverview(user?: 'all' | 'saket' | 'ayush'): Promise<AnalyticsOverview> {
-    return withRetry(() => 
-      api.get<AnalyticsOverview>('/analytics/overview', { user: user || 'all' })
+  static async getDashboardOverview(
+    user?: "all" | "saket" | "ayush"
+  ): Promise<AnalyticsOverview> {
+    return withRetry(() =>
+      api.get<AnalyticsOverview>("/analytics/overview", { user: user || "all" })
     );
   }
 
@@ -113,13 +115,13 @@ export class AnalyticsDataSource {
    * Get timeline/trend data for charts
    */
   static async getTimelineData(
-    period: 'week' | 'month' | 'year' = 'month',
+    period: "week" | "month" | "year" = "month",
     filters?: AdvancedFilters
   ): Promise<TimelineData[]> {
-    return withRetry(() => 
-      api.get<TimelineData[]>('/analytics/timeline', { 
-        period, 
-        ...filters 
+    return withRetry(() =>
+      api.get<TimelineData[]>("/analytics/timeline", {
+        period,
+        ...filters,
       })
     );
   }
@@ -128,13 +130,13 @@ export class AnalyticsDataSource {
    * Get category-wise trends over time
    */
   static async getCategoryTrends(
-    period: 'week' | 'month' | 'year' = 'month',
+    period: "week" | "month" | "year" = "month",
     filters?: AdvancedFilters
   ): Promise<CategoryTrend[]> {
-    return withRetry(() => 
-      api.get<CategoryTrend[]>('/analytics/trends', { 
-        period, 
-        ...filters 
+    return withRetry(() =>
+      api.get<CategoryTrend[]>("/analytics/trends", {
+        period,
+        ...filters,
       })
     );
   }
@@ -143,12 +145,12 @@ export class AnalyticsDataSource {
    * Get detailed user analytics
    */
   static async getUserAnalytics(
-    username: 'saket' | 'ayush',
-    timeframe?: 'week' | 'month' | 'year' | 'all'
+    username: "saket" | "ayush",
+    timeframe?: "week" | "month" | "year" | "all"
   ): Promise<UserAnalytics> {
-    return withRetry(() => 
-      api.get<UserAnalytics>(`/analytics/user/${username}`, { 
-        timeframe: timeframe || 'all' 
+    return withRetry(() =>
+      api.get<UserAnalytics>(`/analytics/user/${username}`, {
+        timeframe: timeframe || "all",
       })
     );
   }
@@ -157,11 +159,11 @@ export class AnalyticsDataSource {
    * Get user comparison data
    */
   static async getUserComparison(
-    metric: 'spending' | 'categories' | 'frequency' = 'spending',
-    period: 'week' | 'month' | 'year' = 'month'
+    metric: "spending" | "categories" | "frequency" = "spending",
+    period: "week" | "month" | "year" = "month"
   ): Promise<ComparisonData> {
-    return withRetry(() => 
-      api.get<ComparisonData>('/analytics/comparison', { metric, period })
+    return withRetry(() =>
+      api.get<ComparisonData>("/analytics/comparison", { metric, period })
     );
   }
 
@@ -174,9 +176,7 @@ export class AnalyticsDataSource {
     backgroundColor: string[];
     total: number;
   }> {
-    return withRetry(() => 
-      api.get('/analytics/categories', filters)
-    );
+    return withRetry(() => api.get("/analytics/categories", filters));
   }
 
   /**
@@ -200,9 +200,7 @@ export class AnalyticsDataSource {
       }>;
     };
   }> {
-    return withRetry(() => 
-      api.get('/analytics/patterns', filters)
-    );
+    return withRetry(() => api.get("/analytics/patterns", filters));
   }
 
   /**
@@ -216,19 +214,21 @@ export class AnalyticsDataSource {
     totalExpenses: number;
     expenseCount: number;
     averageExpense: number;
-    topCategories: Array<{ category: string; amount: number; percentage: number }>;
+    topCategories: Array<{
+      category: string;
+      amount: number;
+      percentage: number;
+    }>;
     userBreakdown: Record<string, { amount: number; count: number }>;
     weeklyBreakdown: Array<{ week: string; amount: number; count: number }>;
     goals: {
       budgetGoal?: number;
       actualSpending: number;
       variance: number;
-      status: 'under' | 'over' | 'on-track';
+      status: "under" | "over" | "on-track";
     };
   }> {
-    return withRetry(() => 
-      api.get('/analytics/summary', { month, year })
-    );
+    return withRetry(() => api.get("/analytics/summary", { month, year }));
   }
 
   /**
@@ -236,7 +236,7 @@ export class AnalyticsDataSource {
    */
   static async getExpenseForecast(
     months: number = 3,
-    method: 'linear' | 'seasonal' | 'trend' = 'trend'
+    method: "linear" | "seasonal" | "trend" = "trend"
   ): Promise<{
     forecast: Array<{
       period: string;
@@ -248,9 +248,7 @@ export class AnalyticsDataSource {
     methodology: string;
     recommendations: string[];
   }> {
-    return withRetry(() => 
-      api.get('/analytics/forecast', { months, method })
-    );
+    return withRetry(() => api.get("/analytics/forecast", { months, method }));
   }
 
   /**
@@ -259,12 +257,12 @@ export class AnalyticsDataSource {
   static async getBudgetAnalysis(budgetAmount?: number): Promise<{
     currentMonthSpending: number;
     projectedMonthlySpending: number;
-    budgetStatus: 'under' | 'over' | 'on-track';
+    budgetStatus: "under" | "over" | "on-track";
     remainingBudget: number;
     daysRemaining: number;
     dailyBudgetRemaining: number;
     recommendations: Array<{
-      type: 'warning' | 'suggestion' | 'congratulation';
+      type: "warning" | "suggestion" | "congratulation";
       message: string;
       category?: string;
       amount?: number;
@@ -273,12 +271,10 @@ export class AnalyticsDataSource {
       category: string;
       suggested: number;
       current: number;
-      status: 'under' | 'over' | 'on-track';
+      status: "under" | "over" | "on-track";
     }>;
   }> {
-    return withRetry(() => 
-      api.get('/analytics/budget', { budgetAmount })
-    );
+    return withRetry(() => api.get("/analytics/budget", { budgetAmount }));
   }
 
   /**
@@ -288,23 +284,21 @@ export class AnalyticsDataSource {
     metrics: string[];
     dimensions: string[];
     filters?: AdvancedFilters;
-    aggregation?: 'sum' | 'avg' | 'count' | 'min' | 'max';
+    aggregation?: "sum" | "avg" | "count" | "min" | "max";
   }): Promise<any> {
-    return withRetry(() => 
-      api.post('/analytics/advanced', query)
-    );
+    return withRetry(() => api.post("/analytics/advanced", query));
   }
 
   /**
    * Export analytics data
    */
   static async exportAnalytics(
-    format: 'csv' | 'json' | 'pdf' = 'json',
-    reportType: 'summary' | 'detailed' | 'charts' = 'summary',
+    format: "csv" | "json" | "pdf" = "json",
+    reportType: "summary" | "detailed" | "charts" = "summary",
     filters?: AdvancedFilters
   ): Promise<{ data: any; filename: string; url?: string }> {
-    return withRetry(() => 
-      api.get('/analytics/export', { format, reportType, ...filters })
+    return withRetry(() =>
+      api.get("/analytics/export", { format, reportType, ...filters })
     );
   }
 }

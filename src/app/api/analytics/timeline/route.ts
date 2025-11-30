@@ -1,31 +1,31 @@
-import { NextRequest, NextResponse } from 'next/server';
-import clientPromise from '@/lib/mongodb';
-import { getUserFromRequest } from '@/lib/auth';
+import { NextRequest, NextResponse } from "next/server";
+import clientPromise from "@/lib/mongodb";
+import { getUserFromRequest } from "@/lib/auth";
 
 export async function GET(request: NextRequest) {
   // Check authentication
   const user = await getUserFromRequest(request);
   if (!user) {
     return NextResponse.json(
-      { success: false, error: 'Authentication required' },
+      { success: false, error: "Authentication required" },
       { status: 401 }
     );
   }
   try {
     const { searchParams } = new URL(request.url);
-    const period = searchParams.get('period') || 'month';
-    const customStart = searchParams.get('startDate');
-    const customEnd = searchParams.get('endDate');
+    const period = searchParams.get("period") || "month";
+    const customStart = searchParams.get("startDate");
+    const customEnd = searchParams.get("endDate");
 
     const client = await clientPromise;
-    const db = client.db('spend-tracker');
+    const db = client.db("spend-tracker");
 
     // Generate complete date range helper function
     const generateDateRange = (start: Date, end: Date) => {
       const dates = [];
       const current = new Date(start);
       while (current <= end) {
-        dates.push(current.toISOString().split('T')[0]);
+        dates.push(current.toISOString().split("T")[0]);
         current.setDate(current.getDate() + 1);
       }
       return dates;
@@ -36,21 +36,32 @@ export async function GET(request: NextRequest) {
     const now = new Date();
 
     switch (period) {
-      case 'week':
+      case "week":
         // Start 6 days ago, end today (inclusive of current date)
-        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6);
-        endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+        startDate = new Date(
+          now.getFullYear(),
+          now.getMonth(),
+          now.getDate() - 6
+        );
+        endDate = new Date(
+          now.getFullYear(),
+          now.getMonth(),
+          now.getDate(),
+          23,
+          59,
+          59
+        );
         break;
-      case 'quarter':
+      case "quarter":
         const quarterStart = Math.floor(now.getMonth() / 3) * 3;
         startDate = new Date(now.getFullYear(), quarterStart, 1);
         endDate = new Date(now.getFullYear(), quarterStart + 3, 0);
         break;
-      case 'year':
+      case "year":
         startDate = new Date(now.getFullYear(), 0, 1);
         endDate = new Date(now.getFullYear(), 11, 31);
         break;
-      case 'custom':
+      case "custom":
         if (customStart && customEnd) {
           startDate = new Date(customStart);
           endDate = new Date(customEnd);
@@ -69,81 +80,102 @@ export async function GET(request: NextRequest) {
     }
 
     // Get daily spending trends
-    const dailyTrends = await db.collection('expenses').aggregate([
-      {
-        $match: {
-          date: {
-            $gte: startDate,
-            $lte: endDate
-          }
-        }
-      },
-      {
-        $group: {
-          _id: {
-            $dateToString: { format: '%Y-%m-%d', date: '$date' }
+    const dailyTrends = await db
+      .collection("expenses")
+      .aggregate([
+        {
+          $match: {
+            date: {
+              $gte: startDate,
+              $lte: endDate,
+            },
           },
-          totalAmount: { $sum: '$amount' }
-        }
-      },
-      {
-        $sort: { '_id': 1 }
-      }
-    ]).toArray();
+        },
+        {
+          $group: {
+            _id: {
+              $dateToString: { format: "%Y-%m-%d", date: "$date" },
+            },
+            totalAmount: { $sum: "$amount" },
+          },
+        },
+        {
+          $sort: { _id: 1 },
+        },
+      ])
+      .toArray();
 
     // Get category-wise data based on selected period for stacked chart
-    const categoryData = await db.collection('expenses').aggregate([
-      {
-        $match: {
-          date: {
-            $gte: startDate,
-            $lte: endDate
-          }
-        }
-      },
-      {
-        $lookup: {
-          from: 'categories',
-          localField: 'category',
-          foreignField: '_id',
-          as: 'categoryDetails'
-        }
-      },
-      {
-        $group: {
-          _id: {
-            period: {
-              $switch: {
-                branches: [
-                  {
-                    case: { $eq: [period, 'week'] },
-                    then: { $dateToString: { format: '%Y-%m-%d', date: '$date' } }
-                  },
-                  {
-                    case: { $eq: [period, 'month'] },
-                    then: { $dateToString: { format: '%Y-%m-%d', date: '$date' } }
-                  },
-                  {
-                    case: { $eq: [period, 'quarter'] },
-                    then: { $dateToString: { format: '%Y-%m', date: '$date' } }
-                  },
-                  {
-                    case: { $eq: [period, 'year'] },
-                    then: { $dateToString: { format: '%Y-%m', date: '$date' } }
-                  }
-                ],
-                default: { $dateToString: { format: '%Y-%m-%d', date: '$date' } }
-              }
+    const categoryData = await db
+      .collection("expenses")
+      .aggregate([
+        {
+          $match: {
+            date: {
+              $gte: startDate,
+              $lte: endDate,
             },
-            category: { $ifNull: [{ $arrayElemAt: ['$categoryDetails.name', 0] }, 'Uncategorized'] }
           },
-          amount: { $sum: '$amount' }
-        }
-      },
-      {
-        $sort: { '_id.period': 1 }
-      }
-    ]).toArray();
+        },
+        {
+          $lookup: {
+            from: "categories",
+            localField: "category",
+            foreignField: "_id",
+            as: "categoryDetails",
+          },
+        },
+        {
+          $group: {
+            _id: {
+              period: {
+                $switch: {
+                  branches: [
+                    {
+                      case: { $eq: [period, "week"] },
+                      then: {
+                        $dateToString: { format: "%Y-%m-%d", date: "$date" },
+                      },
+                    },
+                    {
+                      case: { $eq: [period, "month"] },
+                      then: {
+                        $dateToString: { format: "%Y-%m-%d", date: "$date" },
+                      },
+                    },
+                    {
+                      case: { $eq: [period, "quarter"] },
+                      then: {
+                        $dateToString: { format: "%Y-%m", date: "$date" },
+                      },
+                    },
+                    {
+                      case: { $eq: [period, "year"] },
+                      then: {
+                        $dateToString: { format: "%Y-%m", date: "$date" },
+                      },
+                    },
+                  ],
+                  default: {
+                    $dateToString: { format: "%Y-%m-%d", date: "$date" },
+                  },
+                },
+              },
+              category: {
+                $ifNull: [
+                  { $arrayElemAt: ["$categoryDetails.name", 0] },
+                  "Uncategorized",
+                ],
+              },
+            },
+            amount: { $sum: "$amount" },
+          },
+        },
+        {
+          $sort: { "_id.period": 1 },
+        },
+      ])
+      .toArray();
 
     // Process category data for chart
     const periodsSet = new Set<string>();
@@ -171,16 +203,22 @@ export async function GET(request: NextRequest) {
 
     // Generate complete period range for category chart (same as daily trends)
     let completePeriods: string[];
-    if (period === 'week' || period === 'month' || period === 'custom') {
+    if (period === "week" || period === "month" || period === "custom") {
       // For daily granularity, use the same date range as daily trends
       completePeriods = generateDateRange(startDate, endDate);
-    } else if (period === 'quarter' || period === 'year') {
+    } else if (period === "quarter" || period === "year") {
       // For monthly granularity, generate month range
       completePeriods = [];
-      const current = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+      const current = new Date(
+        startDate.getFullYear(),
+        startDate.getMonth(),
+        1
+      );
       const end = new Date(endDate.getFullYear(), endDate.getMonth(), 1);
       while (current <= end) {
-        completePeriods.push(current.toISOString().split('T')[0].substring(0, 7)); // YYYY-MM format
+        completePeriods.push(
+          current.toISOString().split("T")[0].substring(0, 7)
+        ); // YYYY-MM format
         current.setMonth(current.getMonth() + 1);
       }
     } else {
@@ -188,35 +226,40 @@ export async function GET(request: NextRequest) {
     }
 
     const categories = Array.from(categoriesSet);
-    const chartData = categories.map(category =>
-      completePeriods.map(periodKey => categoryAmounts[category]?.[periodKey] || 0)
+    const chartData = categories.map((category) =>
+      completePeriods.map(
+        (periodKey) => categoryAmounts[category]?.[periodKey] || 0
+      )
     );
 
     // Format period labels based on period type
     const formatPeriodLabel = (periodKey: string) => {
-      if (period === 'week' || period === 'month' || period === 'custom') {
+      if (period === "week" || period === "month" || period === "custom") {
         const date = new Date(periodKey);
-        return date.toLocaleDateString('en-IN', {
-          day: '2-digit',
-          month: 'short'
+        return date.toLocaleDateString("en-IN", {
+          day: "2-digit",
+          month: "short",
         });
-      } else if (period === 'quarter' || period === 'year') {
-        const date = new Date(periodKey + '-01');
-        return date.toLocaleDateString('en-IN', {
-          month: 'short',
-          year: '2-digit'
+      } else if (period === "quarter" || period === "year") {
+        const date = new Date(periodKey + "-01");
+        return date.toLocaleDateString("en-IN", {
+          month: "short",
+          year: "2-digit",
         });
       }
       return periodKey;
     };
 
     // Get period totals for users with proper split logic
-    const allExpenses = await db.collection('expenses').find({
-      date: {
-        $gte: startDate,
-        $lte: endDate
-      }
-    }).toArray();
+    const allExpenses = await db
+      .collection("expenses")
+      .find({
+        date: {
+          $gte: startDate,
+          $lte: endDate,
+        },
+      })
+      .toArray();
 
     // Calculate totals for each user
     let saketPersonal = 0;
@@ -231,9 +274,9 @@ export async function GET(request: NextRequest) {
         ayushSplit += expense.splitDetails.ayushAmount || 0;
       } else if (!expense.isSplit) {
         // For non-split expenses, add to personal based on who paid
-        if (expense.paidBy.toLowerCase() === 'saket') {
+        if (expense.paidBy.toLowerCase() === "saket") {
           saketPersonal += expense.amount;
-        } else if (expense.paidBy.toLowerCase() === 'ayush') {
+        } else if (expense.paidBy.toLowerCase() === "ayush") {
           ayushPersonal += expense.amount;
         }
       }
@@ -245,17 +288,25 @@ export async function GET(request: NextRequest) {
 
     // Calculate settlement using the same logic as settlements balance API
     // Get all split expenses (filter by date range)
-    const splitExpenses = await db.collection('expenses')
+    const splitExpenses = await db
+      .collection("expenses")
       .find({
         isSplit: true,
-        date: { $gte: startDate.toISOString().split('T')[0], $lte: endDate.toISOString().split('T')[0] }
+        date: {
+          $gte: startDate.toISOString().split("T")[0],
+          $lte: endDate.toISOString().split("T")[0],
+        },
       })
       .toArray();
 
     // Get all settlements (filter by date range)
-    const settlements = await db.collection('settlements')
+    const settlements = await db
+      .collection("settlements")
       .find({
-        date: { $gte: startDate.toISOString().split('T')[0], $lte: endDate.toISOString().split('T')[0] }
+        date: {
+          $gte: startDate.toISOString().split("T")[0],
+          $lte: endDate.toISOString().split("T")[0],
+        },
       })
       .toArray();
 
@@ -270,13 +321,13 @@ export async function GET(request: NextRequest) {
         const paidBy = expense.paidBy;
 
         // Calculate what each person should pay vs what the payer paid
-        if (paidBy.toLowerCase() === 'saket') {
+        if (paidBy.toLowerCase() === "saket") {
           // Saket paid, Ayush owes his portion
           if (ayushAmount > 0) {
             const key = `Ayush_to_Saket`;
             balances[key] = (balances[key] || 0) + ayushAmount;
           }
-        } else if (paidBy.toLowerCase() === 'ayush') {
+        } else if (paidBy.toLowerCase() === "ayush") {
           // Ayush paid, Saket owes his portion
           if (saketAmount > 0) {
             const key = `Saket_to_Ayush`;
@@ -288,10 +339,10 @@ export async function GET(request: NextRequest) {
         const amountPerPerson = expense.amount / 2;
         const paidBy = expense.paidBy;
 
-        if (paidBy.toLowerCase() === 'saket') {
+        if (paidBy.toLowerCase() === "saket") {
           const key = `Ayush_to_Saket`;
           balances[key] = (balances[key] || 0) + amountPerPerson;
-        } else if (paidBy.toLowerCase() === 'ayush') {
+        } else if (paidBy.toLowerCase() === "ayush") {
           const key = `Saket_to_Ayush`;
           balances[key] = (balances[key] || 0) + amountPerPerson;
         }
@@ -305,14 +356,14 @@ export async function GET(request: NextRequest) {
     }
 
     // Calculate net balances (show only one row per user pair)
-    const saketOwesAyush = (balances['Saket_to_Ayush'] || 0);
-    const ayushOwesSaket = (balances['Ayush_to_Saket'] || 0);
+    const saketOwesAyush = balances["Saket_to_Ayush"] || 0;
+    const ayushOwesSaket = balances["Ayush_to_Saket"] || 0;
 
     // Calculate net difference
     const netBalance = ayushOwesSaket - saketOwesAyush;
 
     let settlementRequired = 0;
-    let settlementMessage = 'All settled up!';
+    let settlementMessage = "All settled up!";
 
     // Show only one net balance row
     if (Math.abs(netBalance) > 0.01) {
@@ -328,11 +379,15 @@ export async function GET(request: NextRequest) {
     }
 
     const dateRange = generateDateRange(startDate, endDate);
-    const dailyAmountsMap = new Map(dailyTrends.map(d => [d._id, d.totalAmount]));
+    const dailyAmountsMap = new Map(
+      dailyTrends.map((d) => [d._id, d.totalAmount])
+    );
 
     const completeDaily = {
       dates: dateRange,
-      amounts: dateRange.map(date => Math.round((dailyAmountsMap.get(date) || 0) * 100) / 100)
+      amounts: dateRange.map(
+        (date) => Math.round((dailyAmountsMap.get(date) || 0) * 100) / 100
+      ),
     };
 
     const timelineData = {
@@ -340,9 +395,9 @@ export async function GET(request: NextRequest) {
       categoryMonthly: {
         categories,
         periods: completePeriods.map(formatPeriodLabel),
-        data: chartData.map(categoryData =>
-          categoryData.map(amount => Math.round(amount * 100) / 100)
-        )
+        data: chartData.map((categoryData) =>
+          categoryData.map((amount) => Math.round(amount * 100) / 100)
+        ),
       },
       periodTotals: {
         saketTotal: Math.round(saketTotal * 100) / 100,
@@ -351,17 +406,17 @@ export async function GET(request: NextRequest) {
         ayushSplit: Math.round(ayushSplit * 100) / 100,
         splitTotal: Math.round(splitTotal * 100) / 100,
         settlementRequired: settlementRequired,
-        settlementMessage
-      }
+        settlementMessage,
+      },
     };
 
     return NextResponse.json({
       success: true,
-      data: timelineData
+      data: timelineData,
     });
   } catch (error) {
     return NextResponse.json(
-      { success: false, error: 'Failed to fetch timeline data' },
+      { success: false, error: "Failed to fetch timeline data" },
       { status: 500 }
     );
   }

@@ -1,12 +1,12 @@
 /**
  * Generic Form Hook
- * 
+ *
  * Reusable hook for form state management, validation, and submission.
  * Handles common form patterns like field changes, validation, errors,
  * and loading states.
  */
 
-import { useState, useCallback, ChangeEvent, FormEvent } from 'react';
+import { useState, useCallback, ChangeEvent, FormEvent } from "react";
 
 // ===========================================================================
 // TYPES
@@ -59,7 +59,9 @@ export interface UseFormResult<TFormData extends Record<string, any>> {
   /** Handle field change */
   handleChange: (
     field: keyof TFormData
-  ) => (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => void;
+  ) => (
+    e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+  ) => void;
   /** Set field value directly */
   setFieldValue: (field: keyof TFormData, value: any) => void;
   /** Set multiple field values */
@@ -81,7 +83,9 @@ export interface UseFormResult<TFormData extends Record<string, any>> {
   /** Get field props (value, onChange, onBlur) */
   getFieldProps: (field: keyof TFormData) => {
     value: TFormData[typeof field];
-    onChange: (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => void;
+    onChange: (
+      e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+    ) => void;
     onBlur: () => void;
     name: string;
   };
@@ -92,12 +96,12 @@ export interface UseFormResult<TFormData extends Record<string, any>> {
 // ===========================================================================
 
 export const validators = {
-  required: (message = 'This field is required'): ValidationRule => ({
+  required: (message = "This field is required"): ValidationRule => ({
     validate: (value) => {
-      if (value === null || value === undefined || value === '') {
+      if (value === null || value === undefined || value === "") {
         return message;
       }
-      if (typeof value === 'string' && value.trim() === '') {
+      if (typeof value === "string" && value.trim() === "") {
         return message;
       }
       return null;
@@ -106,7 +110,7 @@ export const validators = {
 
   minLength: (min: number, message?: string): ValidationRule<string> => ({
     validate: (value) => {
-      if (typeof value === 'string' && value.length < min) {
+      if (typeof value === "string" && value.length < min) {
         return message || `Must be at least ${min} characters`;
       }
       return null;
@@ -115,17 +119,17 @@ export const validators = {
 
   maxLength: (max: number, message?: string): ValidationRule<string> => ({
     validate: (value) => {
-      if (typeof value === 'string' && value.length > max) {
+      if (typeof value === "string" && value.length > max) {
         return message || `Must be at most ${max} characters`;
       }
       return null;
     },
   }),
 
-  email: (message = 'Invalid email address'): ValidationRule<string> => ({
+  email: (message = "Invalid email address"): ValidationRule<string> => ({
     validate: (value) => {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (typeof value === 'string' && value && !emailRegex.test(value)) {
+      if (typeof value === "string" && value && !emailRegex.test(value)) {
         return message;
       }
       return null;
@@ -134,7 +138,7 @@ export const validators = {
 
   min: (min: number, message?: string): ValidationRule<number> => ({
     validate: (value) => {
-      if (typeof value === 'number' && value < min) {
+      if (typeof value === "number" && value < min) {
         return message || `Must be at least ${min}`;
       }
       return null;
@@ -143,23 +147,29 @@ export const validators = {
 
   max: (max: number, message?: string): ValidationRule<number> => ({
     validate: (value) => {
-      if (typeof value === 'number' && value > max) {
+      if (typeof value === "number" && value > max) {
         return message || `Must be at most ${max}`;
       }
       return null;
     },
   }),
 
-  pattern: (regex: RegExp, message = 'Invalid format'): ValidationRule<string> => ({
+  pattern: (
+    regex: RegExp,
+    message = "Invalid format"
+  ): ValidationRule<string> => ({
     validate: (value) => {
-      if (typeof value === 'string' && value && !regex.test(value)) {
+      if (typeof value === "string" && value && !regex.test(value)) {
         return message;
       }
       return null;
     },
   }),
 
-  matches: (field: string, message = 'Fields do not match'): ValidationRule => ({
+  matches: (
+    field: string,
+    message = "Fields do not match"
+  ): ValidationRule => ({
     validate: (value, allValues) => {
       if (allValues && value !== allValues[field]) {
         return message;
@@ -168,7 +178,10 @@ export const validators = {
     },
   }),
 
-  custom: (validator: (value: any, allValues?: any) => boolean, message: string): ValidationRule => ({
+  custom: (
+    validator: (value: any, allValues?: any) => boolean,
+    message: string
+  ): ValidationRule => ({
     validate: (value, allValues) => {
       if (!validator(value, allValues)) {
         return message;
@@ -185,7 +198,7 @@ export const validators = {
 
 /**
  * Generic hook for form state and validation management
- * 
+ *
  * @example
  * ```tsx
  * const form = useForm({
@@ -208,7 +221,13 @@ export const validators = {
 export function useForm<TFormData extends Record<string, any>>(
   config: FormConfig<TFormData>
 ): UseFormResult<TFormData> {
-  const { fields, validate: formValidate, onSubmit, onSuccess, onError } = config;
+  const {
+    fields,
+    validate: formValidate,
+    onSubmit,
+    onSuccess,
+    onError,
+  } = config;
 
   // Initialize values from field configs
   const initialValues = Object.keys(fields).reduce((acc, key) => {
@@ -217,8 +236,12 @@ export function useForm<TFormData extends Record<string, any>>(
   }, {} as TFormData);
 
   const [values, setValues] = useState<TFormData>(initialValues);
-  const [errors, setErrors] = useState<Partial<Record<keyof TFormData, string>>>({});
-  const [touched, setTouched] = useState<Partial<Record<keyof TFormData, boolean>>>({});
+  const [errors, setErrors] = useState<
+    Partial<Record<keyof TFormData, string>>
+  >({});
+  const [touched, setTouched] = useState<
+    Partial<Record<keyof TFormData, boolean>>
+  >({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasSubmitted, setHasSubmitted] = useState(false);
 
@@ -275,17 +298,21 @@ export function useForm<TFormData extends Record<string, any>>(
   // Handle field change
   const handleChange = useCallback(
     (field: keyof TFormData) =>
-      (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+      (
+        e: ChangeEvent<
+          HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+        >
+      ) => {
         const target = e.target as HTMLInputElement;
         let value: any = target.value;
 
         // Handle checkboxes
-        if (target.type === 'checkbox') {
+        if (target.type === "checkbox") {
           value = target.checked;
         }
         // Handle numbers
-        else if (target.type === 'number') {
-          value = target.value === '' ? '' : Number(target.value);
+        else if (target.type === "number") {
+          value = target.value === "" ? "" : Number(target.value);
         }
 
         // Apply transform if provided
@@ -351,10 +378,13 @@ export function useForm<TFormData extends Record<string, any>>(
       setHasSubmitted(true);
 
       // Mark all fields as touched
-      const allTouched = Object.keys(fields).reduce((acc, key) => {
-        acc[key as keyof TFormData] = true;
-        return acc;
-      }, {} as Record<keyof TFormData, boolean>);
+      const allTouched = Object.keys(fields).reduce(
+        (acc, key) => {
+          acc[key as keyof TFormData] = true;
+          return acc;
+        },
+        {} as Record<keyof TFormData, boolean>
+      );
       setTouched(allTouched);
 
       // Validate form
@@ -369,7 +399,8 @@ export function useForm<TFormData extends Record<string, any>>(
         await onSubmit(values);
         onSuccess?.(values);
       } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'An error occurred';
+        const errorMessage =
+          err instanceof Error ? err.message : "An error occurred";
         onError?.(errorMessage);
       } finally {
         setIsSubmitting(false);

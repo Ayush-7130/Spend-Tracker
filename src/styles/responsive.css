@@ -1,6 +1,6 @@
 /**
  * Responsive CSS Fixes
- * 
+ *
  * Mobile-first responsive design improvements for all components.
  * Breakpoints: mobile (<640px), tablet (640px-1024px), desktop (>1024px)
  */
@@ -270,11 +270,11 @@
     display: block !important;
     padding: 1rem;
   }
-  
+
   .table-responsive {
     display: none !important;
   }
-  
+
   .table-mobile-card {
     background: var(--card-bg);
     border: 1px solid var(--card-border);
@@ -283,7 +283,7 @@
     margin-bottom: 1rem;
     box-shadow: var(--card-shadow);
   }
-  
+
   .table-mobile-card-row {
     display: flex;
     justify-content: space-between;
@@ -291,25 +291,25 @@
     padding: 0.5rem 0;
     border-bottom: 1px solid var(--border-secondary);
   }
-  
+
   .table-mobile-card-row:last-child {
     border-bottom: none;
   }
-  
+
   .table-mobile-card-label {
     font-weight: 600;
     color: var(--text-secondary);
     font-size: 0.875rem;
     flex: 0 0 40%;
   }
-  
+
   .table-mobile-card-value {
     color: var(--text-primary);
     font-size: 0.875rem;
     flex: 0 0 60%;
     text-align: right;
   }
-  
+
   .table-mobile-card-actions {
     display: flex;
     gap: 0.5rem;
@@ -488,7 +488,7 @@
     flex-shrink: 0;
     display: block;
   }
-  
+
   .table th input[type="checkbox"],
   .table td input[type="checkbox"] {
     transform: scale(1);
@@ -602,6 +602,26 @@
     padding: 0.75rem 1rem;
   }
 
+  .card-header.d-flex {
+    /* Keep items in row on mobile */
+    align-items: center !important;
+  }
+
+  .card-header.d-flex h5 {
+    margin-bottom: 0;
+    font-size: 1rem;
+  }
+
+  .card-header.d-flex .btn {
+    white-space: nowrap;
+    font-size: 0.75rem;
+    padding: 0.375rem 0.5rem;
+  }
+
+  .card-header.d-flex .btn i {
+    font-size: 0.875rem;
+  }
+
   .card-footer {
     padding: 0.75rem 1rem;
   }
@@ -654,7 +674,8 @@
   }
 
   /* Hide page numbers, show only prev/next */
-  .pagination-hide-numbers .page-item:not(.page-item-prev):not(.page-item-next) {
+  .pagination-hide-numbers
+    .page-item:not(.page-item-prev):not(.page-item-next) {
     display: none;
   }
 
@@ -716,6 +737,19 @@
   .page-header-actions .btn {
     width: 100%;
   }
+
+  /* Page title with action button - keep in row on mobile */
+  .d-flex.justify-content-between.align-items-center h1,
+  .d-flex.justify-content-between.align-items-center h2,
+  .d-flex.justify-content-between.align-items-center h3 {
+    font-size: 1.25rem;
+  }
+
+  .d-flex.justify-content-between.align-items-center .btn {
+    white-space: nowrap;
+    font-size: 0.875rem;
+    padding: 0.5rem 0.75rem;
+  }
 }
 
 /* ==========================================================================
@@ -724,7 +758,7 @@
 
 @media (max-width: 640px) {
   /* Force single column on mobile */
-  .row.mobile-single-column > [class*='col-'] {
+  .row.mobile-single-column > [class*="col-"] {
     flex: 0 0 100%;
     max-width: 100%;
     margin-bottom: 1rem;

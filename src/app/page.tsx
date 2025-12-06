@@ -147,7 +147,7 @@ export default function Home() {
         const settlementsResult = await settlementsResponse.json();
         setRecentSettlements(settlementsResult.slice(0, 5)); // Get recent 5 settlements
       }
-    } catch (err) {}
+    } catch {}
   };
 
   useEffect(() => {
@@ -171,7 +171,7 @@ export default function Home() {
       } else {
         setError(result.error || "Failed to fetch dashboard data");
       }
-    } catch (err) {
+    } catch {
       setError("Failed to load dashboard data");
     } finally {
       setLoading(false);
@@ -567,7 +567,7 @@ export default function Home() {
 
           {/* Recent Expenses */}
           <div className="row mb-4">
-            <div className="col-md-8">
+            <div className="col-md-8 mb-3 mb-md-0">
               <div className="card h-100">
                 <div className="card-header d-flex justify-content-between align-items-center">
                   <h5 className="mb-0">
@@ -582,7 +582,7 @@ export default function Home() {
                     View All
                   </Link>
                 </div>
-                <div className="card-body">
+                <div className="card-body p-0">
                   {dashboardData.recentExpenses.length === 0 ? (
                     <EmptyState
                       icon="📋"
@@ -711,7 +711,7 @@ export default function Home() {
           {/* Settlement Status - Only show when All Users is selected */}
           {selectedUser === "all" && settlementData && (
             <div className="row mb-4">
-              <div className="col-md-8">
+              <div className="col-md-8 mb-3 mb-md-0">
                 <div className="card h-100">
                   <div className="card-header d-flex justify-content-between align-items-center">
                     <h6 className="mb-0">
@@ -725,7 +725,7 @@ export default function Home() {
                       View All
                     </Link>
                   </div>
-                  <div className="card-body">
+                  <div className="card-body p-0">
                     {settlementData.balances.length > 0 ? (
                       <Table
                         config={{
@@ -875,7 +875,7 @@ export default function Home() {
                       View All Settlements
                     </Link>
                   </div>
-                  <div className="card-body">
+                  <div className="card-body p-0">
                     {recentSettlements.length === 0 ? (
                       <EmptyState
                         icon="💼"

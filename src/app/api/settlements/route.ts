@@ -3,6 +3,7 @@ import { ObjectId } from "mongodb";
 import { getUserFromRequest } from "@/lib/auth";
 import { NotificationService } from "@/lib/notifications";
 import clientPromise from "@/lib/mongodb";
+import { invalidateCache } from "@/lib/cache";
 
 export async function GET() {
   try {
@@ -17,7 +18,7 @@ export async function GET() {
       .toArray();
 
     return NextResponse.json(settlements);
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: "Failed to fetch settlements" },
       { status: 500 }
@@ -96,16 +97,19 @@ export async function POST(request: NextRequest) {
           amount: parseFloat(amount),
         });
       }
-    } catch (notificationError) {
+    } catch {
       // Continue without failing the settlement creation
     }
+
+    // Invalidate settlement cache
+    invalidateCache.settlement();
 
     return NextResponse.json({
       success: true,
       settlementId: result.insertedId,
       settlement: { ...settlement, _id: result.insertedId },
     });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: "Failed to create settlement" },
       { status: 500 }

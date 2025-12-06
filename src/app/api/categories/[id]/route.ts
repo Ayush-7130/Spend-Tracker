@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import clientPromise from "@/lib/mongodb";
+import { invalidateCache } from "@/lib/cache";
 
 interface Category {
   _id: string;
@@ -56,11 +57,14 @@ export async function PUT(
       );
     }
 
+    // Invalidate category cache
+    invalidateCache.category();
+
     return NextResponse.json({
       success: true,
       message: "Category updated successfully",
     });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { success: false, error: "Failed to update category" },
       { status: 500 }
@@ -112,11 +116,14 @@ export async function DELETE(
       );
     }
 
+    // Invalidate category cache
+    invalidateCache.category();
+
     return NextResponse.json({
       success: true,
       message: "Category deleted successfully",
     });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { success: false, error: "Failed to delete category" },
       { status: 500 }

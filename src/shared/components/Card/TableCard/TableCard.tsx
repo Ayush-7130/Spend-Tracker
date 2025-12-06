@@ -59,6 +59,7 @@ export interface MobileCardData {
   amount?: string;
   meta?: string;
   badge?: React.ReactNode;
+  splitInfo?: React.ReactNode;
 }
 
 export interface TableCardProps<T> {
@@ -216,6 +217,11 @@ export function TableCard<T>({
                 )}
                 {cardData.meta && (
                   <div className={styles.cardMeta}>{cardData.meta}</div>
+                )}
+                {cardData.splitInfo && (
+                  <div className={styles.cardSplitInfo}>
+                    {cardData.splitInfo}
+                  </div>
                 )}
               </div>
 

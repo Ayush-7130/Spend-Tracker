@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
         if (session) {
           sessionId = session._id.toString();
         }
-      } catch (error) {
+      } catch {
         // Ignore session lookup errors - will show all notifications
       }
     }
@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
       success: true,
       data: result,
     });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { success: false, error: "Failed to get notifications" },
       { status: 500 }
@@ -149,7 +149,7 @@ export async function PATCH(request: NextRequest) {
         { status: 400 }
       );
     }
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { success: false, error: "Failed to update notifications" },
       { status: 500 }

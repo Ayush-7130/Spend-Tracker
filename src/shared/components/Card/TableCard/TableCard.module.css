@@ -2,6 +2,11 @@
 
 .container {
   width: 100%;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--card-shadow);
 }
 
 /* Desktop View - Table */
@@ -117,6 +122,19 @@
   font-weight: 500;
   grid-column: 1 / -1;
   grid-row: 2;
+}
+
+.cardSplitInfo {
+  font-size: 0.875rem;
+  color: var(--text-primary);
+  padding: 0.5rem 0.75rem;
+  background: var(--table-row-hover);
+  border-radius: var(--radius-md);
+  border-left: 3px solid var(--status-info);
+  font-weight: 500;
+  grid-column: 1 / -1;
+  grid-row: 3;
+  margin-top: 0.5rem;
 }
 
 .cardActions {

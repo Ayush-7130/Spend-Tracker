@@ -44,7 +44,7 @@ export async function getCategories() {
         _id: cat._id.toString(),
       })),
     };
-  } catch (error) {
+  } catch {
     return {
       success: false,
       error: "Failed to fetch categories",
@@ -105,7 +105,7 @@ export async function createCategory(formData: CategoryFormData) {
         _id: result.insertedId.toString(),
       },
     };
-  } catch (error) {
+  } catch {
     return {
       success: false,
       error: "Failed to create category",
@@ -182,7 +182,7 @@ export async function updateCategory(id: string, formData: CategoryFormData) {
         ...updateData,
       },
     };
-  } catch (error) {
+  } catch {
     return {
       success: false,
       error: "Failed to update category",
@@ -239,7 +239,7 @@ export async function deleteCategory(id: string) {
     return {
       success: true,
     };
-  } catch (error) {
+  } catch {
     return {
       success: false,
       error: "Failed to delete category",

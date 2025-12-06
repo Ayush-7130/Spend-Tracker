@@ -211,7 +211,7 @@ export function decodeJwt(token: string): any | null {
     const payload = parts[1];
     const decoded = atob(payload.replace(/-/g, "+").replace(/_/g, "/"));
     return JSON.parse(decoded);
-  } catch (error) {
+  } catch {
     return null;
   }
 }
@@ -294,7 +294,7 @@ export function isAllowedDomain(
   try {
     const urlObj = new URL(url);
     return allowedDomains.some((domain) => urlObj.hostname.endsWith(domain));
-  } catch (error) {
+  } catch {
     return false;
   }
 }
@@ -418,7 +418,7 @@ export function safeLog(
 // EXPORT
 // ===========================================================================
 
-export default {
+const securityUtils = {
   sanitizeInput,
   stripHtml,
   isValidEmail,
@@ -446,3 +446,5 @@ export default {
   maskPhoneNumber,
   safeLog,
 };
+
+export default securityUtils;

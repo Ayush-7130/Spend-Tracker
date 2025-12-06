@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
     /*
     const client = await clientPromise;
     const db = client.db('spend-tracker');
-    
+
     await db.collection('web_vitals').insertOne({
       ...body,
       userAgent: request.headers.get('user-agent'),
@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
       { success: true, message: "Metric recorded" },
       { status: 200 }
     );
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { success: false, error: "Failed to record metric" },
       { status: 500 }

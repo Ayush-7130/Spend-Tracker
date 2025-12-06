@@ -5,7 +5,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import MainLayout from "@/components/MainLayout";
@@ -49,11 +49,7 @@ export default function SessionsPage() {
   const router = useRouter();
   const { showWarning, showError } = useNotification();
 
-  useEffect(() => {
-    fetchSessions();
-  }, []);
-
-  async function fetchSessions() {
+  const fetchSessions = useCallback(async () => {
     try {
       setLoading(true);
       const response = await fetch("/api/auth/sessions", {
@@ -72,11 +68,17 @@ export default function SessionsPage() {
       } else {
         setError(data.error || "Failed to fetch sessions");
       }
-    } catch (err) {
-      setError("An error occurred while fetching sessions");    } finally {
+    } catch {
+      setError("An error occurred while fetching sessions");
+    } finally {
       setLoading(false);
     }
-  }
+  }, [router]);
+
+  useEffect(() => {
+    fetchSessions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function promptRevokeSession(sessionId: string, isCurrent: boolean) {
     setConfirmDialog({
@@ -121,8 +123,9 @@ export default function SessionsPage() {
           7000
         );
       }
-    } catch (err) {
-      showError("Error", "An error occurred while revoking session", 7000);    } finally {
+    } catch {
+      showError("Error", "An error occurred while revoking session", 7000);
+    } finally {
       setRevoking(null);
     }
   }
@@ -165,8 +168,9 @@ export default function SessionsPage() {
           );
         }
       }
-    } catch (err) {
-      showError("Error", "An error occurred while revoking sessions", 7000);    } finally {
+    } catch {
+      showError("Error", "An error occurred while revoking sessions", 7000);
+    } finally {
       setRevoking(null);
     }
   }

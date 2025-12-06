@@ -225,9 +225,10 @@ export async function POST(request: NextRequest) {
     // PREPARE RESPONSE
     // ========================================================================
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       passwordHash: _,
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       emailVerificationToken: __,
       ...userResponse
     } = userDoc;

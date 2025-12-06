@@ -26,7 +26,7 @@ export default function Navigation() {
   const handleLogout = async () => {
     try {
       await logout();
-    } catch (error) {}
+    } catch {}
   };
 
   // Don't show navigation on login/signup pages

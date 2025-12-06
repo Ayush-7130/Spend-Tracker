@@ -382,10 +382,7 @@ export function getPaginationInfo(pagination: PaginationConfig): string {
 /**
  * Toggle item selection
  */
-export function toggleSelection<T extends { _id: string }>(
-  selected: string[],
-  itemId: string
-): string[] {
+export function toggleSelection(selected: string[], itemId: string): string[] {
   if (selected.includes(itemId)) {
     return selected.filter((id) => id !== itemId);
   }
@@ -395,8 +392,8 @@ export function toggleSelection<T extends { _id: string }>(
 /**
  * Toggle all items selection
  */
-export function toggleSelectAll<T extends { _id: string }>(
-  items: T[],
+export function toggleSelectAll(
+  items: { _id: string }[],
   selected: string[]
 ): string[] {
   if (selected.length === items.length) {
@@ -408,8 +405,8 @@ export function toggleSelectAll<T extends { _id: string }>(
 /**
  * Check if all items are selected
  */
-export function isAllSelected<T extends { _id: string }>(
-  items: T[],
+export function isAllSelected(
+  items: { _id: string }[],
   selected: string[]
 ): boolean {
   return items.length > 0 && items.length === selected.length;
@@ -419,7 +416,7 @@ export function isAllSelected<T extends { _id: string }>(
 // EXPORTS
 // ===========================================================================
 
-export default {
+const tableUtils = {
   createDateColumn,
   createAmountColumn,
   createUserColumn,
@@ -435,3 +432,5 @@ export default {
   toggleSelectAll,
   isAllSelected,
 };
+
+export default tableUtils;

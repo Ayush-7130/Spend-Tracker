@@ -62,13 +62,13 @@ const messageGenerators: Record<
     `🔐 Your password was reset${data.entityName ? ` from ${data.entityName}` : ""}`,
   new_login: (data) =>
     `🔔 New login detected${data.entityName ? ` from ${data.entityName}` : ""}`,
-  failed_login_attempts: (data) =>
-    `⚠️ ${data.entityName || "Multiple failed login attempts detected on your account"}`,
+  failed_login_attempts: () =>
+    `⚠️ Multiple failed login attempts detected on your account`,
   session_revoked: (data) =>
     `🚪 A session was revoked${data.entityName ? `: ${data.entityName}` : ""}`,
-  mfa_enabled: (data) =>
+  mfa_enabled: () =>
     `✅ Two-factor authentication has been enabled on your account`,
-  mfa_disabled: (data) =>
+  mfa_disabled: () =>
     `⚠️ Two-factor authentication has been disabled on your account`,
 };
 
@@ -99,7 +99,7 @@ export class NotificationService {
         entityType: this.getEntityType(notificationData.type),
         read: false,
       });
-    } catch (error) {}
+    } catch {}
   }
 
   // Send notification to all users except the actor
@@ -131,7 +131,7 @@ export class NotificationService {
       if (notifications.length > 0) {
         await db.collection("notifications").insertMany(notifications);
       }
-    } catch (error) {}
+    } catch {}
   }
 
   // Get user notifications with pagination
@@ -178,7 +178,7 @@ export class NotificationService {
         total,
         unreadCount,
       };
-    } catch (error) {
+    } catch {
       return { notifications: [], total: 0, unreadCount: 0 };
     }
   }
@@ -196,7 +196,7 @@ export class NotificationService {
         .collection("notifications")
         .updateMany({ userId, read: false }, { $set: { read: true } });
       return result.modifiedCount > 0;
-    } catch (error) {
+    } catch {
       return false;
     }
   }
@@ -214,7 +214,7 @@ export class NotificationService {
       });
 
       return result.deletedCount;
-    } catch (error) {
+    } catch {
       return 0;
     }
   }
@@ -263,7 +263,7 @@ export class NotificationService {
         metadata: { deviceInfo, ipAddress },
         createdAt: now,
       });
-    } catch (error) {}
+    } catch {}
   }
 
   async notifyPasswordReset(
@@ -286,7 +286,7 @@ export class NotificationService {
         metadata: { deviceInfo, ipAddress },
         createdAt: now,
       });
-    } catch (error) {}
+    } catch {}
   }
 
   async notifyNewLogin(
@@ -313,7 +313,7 @@ export class NotificationService {
         metadata: { deviceInfo, location, excludeSessionId },
         createdAt: now,
       });
-    } catch (error) {
+    } catch {
       // Silent fail - notification is not critical
     }
   }
@@ -337,7 +337,7 @@ export class NotificationService {
         metadata: { attemptCount },
         createdAt: now,
       });
-    } catch (error) {
+    } catch {
       // Silent fail - notification is not critical
     }
   }
@@ -361,7 +361,7 @@ export class NotificationService {
         metadata: { deviceInfo },
         createdAt: now,
       });
-    } catch (error) {}
+    } catch {}
   }
 
   async notifyMFAEnabled(userId: string): Promise<void> {
@@ -377,7 +377,7 @@ export class NotificationService {
         read: false,
         createdAt: now,
       });
-    } catch (error) {}
+    } catch {}
   }
 
   async notifyMFADisabled(userId: string): Promise<void> {
@@ -393,7 +393,7 @@ export class NotificationService {
         read: false,
         createdAt: now,
       });
-    } catch (error) {}
+    } catch {}
   }
 
   // Clean up expired notifications (should be run periodically)
@@ -407,7 +407,7 @@ export class NotificationService {
       });
 
       return result.deletedCount;
-    } catch (error) {
+    } catch {
       return 0;
     }
   }

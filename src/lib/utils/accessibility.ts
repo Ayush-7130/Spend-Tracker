@@ -397,7 +397,7 @@ export function clearErrorFromField(inputId: string): void {
 // EXPORT
 // ===========================================================================
 
-export default {
+const accessibilityUtils = {
   generateAriaId,
   createAriaLabel,
   FocusTrap,
@@ -417,3 +417,5 @@ export default {
   addErrorToField,
   clearErrorFromField,
 };
+
+export default accessibilityUtils;

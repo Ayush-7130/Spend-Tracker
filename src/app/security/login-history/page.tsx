@@ -5,7 +5,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import MainLayout from "@/components/MainLayout";
@@ -41,11 +41,7 @@ export default function LoginHistoryPage() {
 
   const ITEMS_PER_PAGE = 20;
 
-  useEffect(() => {
-    fetchHistory();
-  }, [filter, page]);
-
-  async function fetchHistory() {
+  const fetchHistory = useCallback(async () => {
     try {
       setLoading(true);
 
@@ -73,11 +69,16 @@ export default function LoginHistoryPage() {
       } else {
         setError(data.error || "Failed to fetch login history");
       }
-    } catch (err) {
-      setError("An error occurred while fetching login history");    } finally {
+    } catch {
+      setError("An error occurred while fetching login history");
+    } finally {
       setLoading(false);
     }
-  }
+  }, [filter, page, router]);
+
+  useEffect(() => {
+    fetchHistory();
+  }, [fetchHistory]);
 
   function formatDate(dateString: string): string {
     const date = new Date(dateString);
@@ -241,94 +242,8 @@ export default function LoginHistoryPage() {
 
             {/* History Items */}
             <div className="card">
-              <div className="card-body p-0">
-                <div className="table-responsive">
-                  <table className="table table-hover mb-0">
-                    <thead className="table-light">
-                      <tr>
-                        <th>Time</th>
-                        <th>Status</th>
-                        <th>Device</th>
-                        <th>Location</th>
-                        <th>Details</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {history.map((item, index) => (
-                        <tr key={`${item._id}-${index}`}>
-                          <td>
-                            <div className="small fw-medium">
-                              {formatDate(item.timestamp)}
-                            </div>
-                            <div
-                              className="small"
-                              style={{ color: "var(--text-secondary)" }}
-                            >
-                              {new Date(item.timestamp).toLocaleString()}
-                            </div>
-                          </td>
-                          <td>
-                            {item.success ? (
-                              <span className="badge bg-success">
-                                <i className="bi bi-check-circle me-1"></i>
-                                Success
-                              </span>
-                            ) : (
-                              <span className="badge bg-danger">
-                                <i className="bi bi-x-circle me-1"></i>
-                                Failed
-                              </span>
-                            )}
-                          </td>
-                          <td>
-                            <div className="d-flex align-items-center">
-                              <span className="me-2">
-                                {getDeviceIcon(item.deviceType)}
-                              </span>
-                              <div>
-                                <div className="small fw-medium">
-                                  {item.device}
-                                </div>
-                                <div
-                                  className="small"
-                                  style={{ color: "var(--text-secondary)" }}
-                                >
-                                  {item.browser} on {item.os}
-                                </div>
-                              </div>
-                            </div>
-                          </td>
-                          <td>
-                            <div className="small">
-                              {item.location && (
-                                <div>
-                                  <i className="bi bi-geo-alt me-1"></i>
-                                  {item.location}
-                                </div>
-                              )}
-                              <div style={{ color: "var(--text-secondary)" }}>
-                                <i className="bi bi-router me-1"></i>
-                                {item.ipAddress}
-                              </div>
-                            </div>
-                          </td>
-                          <td>
-                            {!item.success && item.failureReason && (
-                              <span
-                                className="badge bg-warning text-dark"
-                                title={item.failureReason}
-                              >
-                                {item.failureReason}
-                              </span>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                {history.length === 0 && (
+              <div className="card-body">
+                {history.length === 0 ? (
                   <div className="text-center py-5">
                     <i
                       className="bi bi-clock-history"
@@ -347,6 +262,98 @@ export default function LoginHistoryPage() {
                           ? "No successful logins found"
                           : "No failed login attempts found"}
                     </p>
+                  </div>
+                ) : (
+                  <div className="d-flex flex-column gap-3">
+                    {history.map((item, index) => (
+                      <div
+                        key={`${item._id}-${index}`}
+                        className="border rounded p-3"
+                        style={{
+                          backgroundColor: item.success
+                            ? "var(--bg-secondary, #f8f9fa)"
+                            : "var(--bg-danger-subtle, #f8d7da)",
+                        }}
+                      >
+                        <div className="d-flex justify-content-between align-items-start mb-2">
+                          <div className="flex-grow-1">
+                            <div className="d-flex align-items-center gap-2 mb-2 flex-wrap">
+                              {item.success ? (
+                                <span className="badge bg-success">
+                                  <i className="bi bi-check-circle me-1"></i>
+                                  Success
+                                </span>
+                              ) : (
+                                <span className="badge bg-danger">
+                                  <i className="bi bi-x-circle me-1"></i>
+                                  Failed
+                                </span>
+                              )}
+                              <span className="small fw-medium">
+                                {formatDate(item.timestamp)}
+                              </span>
+                            </div>
+                            <div
+                              className="small mb-1"
+                              style={{ color: "var(--text-secondary)" }}
+                            >
+                              {new Date(item.timestamp).toLocaleString()}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="row g-2 mt-2">
+                          <div className="col-12">
+                            <div className="d-flex align-items-start">
+                              <span
+                                className="me-2"
+                                style={{ fontSize: "1.2rem" }}
+                              >
+                                {getDeviceIcon(item.deviceType)}
+                              </span>
+                              <div className="flex-grow-1">
+                                <div className="small fw-medium">
+                                  {item.device}
+                                </div>
+                                <div
+                                  className="small"
+                                  style={{ color: "var(--text-secondary)" }}
+                                >
+                                  <i className="bi bi-browser-chrome me-1"></i>
+                                  {item.browser} on {item.os}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="col-12">
+                            <div className="small">
+                              {item.location && (
+                                <div className="mb-1">
+                                  <i className="bi bi-geo-alt me-1"></i>
+                                  <span className="fw-medium">
+                                    {item.location}
+                                  </span>
+                                </div>
+                              )}
+                              <div style={{ color: "var(--text-secondary)" }}>
+                                <i className="bi bi-router me-1"></i>
+                                {item.ipAddress}
+                              </div>
+                            </div>
+                          </div>
+
+                          {!item.success && item.failureReason && (
+                            <div className="col-12 mt-2">
+                              <span className="badge bg-warning text-dark">
+                                <i className="bi bi-exclamation-triangle me-1"></i>
+                                {item.failureReason}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>

@@ -108,7 +108,8 @@ export async function POST(request: NextRequest) {
       },
       { status: 200 }
     );
-  } catch (error) {    return NextResponse.json(
+  } catch {
+    return NextResponse.json(
       { success: false, error: "An error occurred while resetting password" },
       { status: 500 }
     );
@@ -151,7 +152,8 @@ export async function GET(request: NextRequest) {
       },
       { status: 200 }
     );
-  } catch (error) {    return NextResponse.json(
+  } catch {
+    return NextResponse.json(
       { success: false, error: "An error occurred" },
       { status: 500 }
     );

@@ -97,7 +97,7 @@ export const expensesTableCardConfig: TableCardConfig<any> =
         position: "footer",
         order: 0,
         hideInCard: false,
-        render: (item) => null, // Actions will be provided by parent component
+        render: () => null, // Actions will be provided by parent component
       }),
     ],
     cardBreakpoint: 768,
@@ -177,7 +177,7 @@ export const settlementsTableCardConfig: TableCardConfig<any> =
         position: "body",
         order: 3,
         icon: "bi-check-circle",
-        render: (item) => (
+        render: () => (
           <span className="badge bg-success">
             <i className="bi bi-check-circle me-1"></i>
             Completed
@@ -190,7 +190,7 @@ export const settlementsTableCardConfig: TableCardConfig<any> =
         position: "footer",
         order: 0,
         hideInCard: false,
-        render: (item) => null, // Actions will be provided by parent component
+        render: () => null, // Actions will be provided by parent component
       }),
     ],
     cardBreakpoint: 768,
@@ -260,7 +260,7 @@ export const categoriesTableCardConfig: TableCardConfig<any> =
         position: "footer",
         order: 0,
         hideInCard: false,
-        render: (item) => null, // Actions will be provided by parent component
+        render: () => null, // Actions will be provided by parent component
       }),
     ],
     cardBreakpoint: 768,

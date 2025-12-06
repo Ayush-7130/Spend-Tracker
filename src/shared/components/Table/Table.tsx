@@ -231,22 +231,20 @@ export default function Table<T = any>({
       }
       return getNestedValue(row, column.accessor || column.key);
     },
-    []
-  );  
+    [getNestedValue]
+  );
 
   // Render loading state
   if (config.loading) {
     return (
-      <div className={`card ${className}`}>
-        <div className="card-body text-center py-5">
-          <LoadingSpinner
-            config={{
-              text: config.loadingText || "Loading...",
-              size: "medium",
-              variant: "primary",
-            }}
-          />
-        </div>
+      <div className={`text-center py-5 ${className}`}>
+        <LoadingSpinner
+          config={{
+            text: config.loadingText || "Loading...",
+            size: "medium",
+            variant: "primary",
+          }}
+        />
       </div>
     );
   }
@@ -254,33 +252,24 @@ export default function Table<T = any>({
   // Render empty state
   if (processedData.length === 0) {
     return (
-      <div className={`card ${className} h-100`}>
-        <div className="card-body">
-          <EmptyState
-            icon={config.emptyIcon || "📊"}
-            title={config.emptyTitle || "No data found"}
-            description={config.emptyText || "There are no items to display."}
-            size="medium"
-            variant="default"
-            centered={true}
-          />
-        </div>
+      <div className={className}>
+        <EmptyState
+          icon={config.emptyIcon || "📊"}
+          title={config.emptyTitle || "No data found"}
+          description={config.emptyText || "There are no items to display."}
+          size="medium"
+          variant="default"
+          centered={true}
+        />
       </div>
     );
   }
 
   return (
-    <div
-      className={`card ${className}`}
-      style={{
-        backgroundColor: "var(--card-bg)",
-        borderColor: "var(--card-border)",
-        boxShadow: "var(--card-shadow)",
-      }}
-    >
+    <div className={className}>
       {/* Search and Filters */}
       {(config.searchable || config.filterable) && (
-        <div className="card-body border-bottom">
+        <div className="border-bottom pb-3 mb-3">
           <div className="row g-3">
             {config.searchable && (
               <div className="col-md-4">

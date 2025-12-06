@@ -41,7 +41,7 @@ export default function FilterPanel({
   const renderFilter = (filter: FilterConfig) => {
     const colSize = filter.colSize || defaultFilterConfig.colSize;
     // Handle decimal colSize values by converting to percentage (e.g., 1.5 -> 12.5%)
-    const colClass = colSize % 1 === 0 ? `col-md-${colSize}` : "";
+    const colClass = colSize % 1 === 0 ? `col-md-${colSize} col-12` : "col-12";
     const colStyle =
       colSize % 1 !== 0
         ? {
@@ -50,10 +50,13 @@ export default function FilterPanel({
           }
         : {};
 
+    // Add responsive styles for mobile
+    const mobileColStyle = window.innerWidth <= 768 ? {} : colStyle;
+
     switch (filter.type) {
       case "text":
         return (
-          <div key={filter.key} className={colClass} style={colStyle}>
+          <div key={filter.key} className={colClass} style={mobileColStyle}>
             <input
               type="text"
               className="form-control"
@@ -68,7 +71,7 @@ export default function FilterPanel({
 
       case "select":
         return (
-          <div key={filter.key} className={colClass} style={colStyle}>
+          <div key={filter.key} className={colClass} style={mobileColStyle}>
             <select
               className="form-select"
               value={values[filter.key] || ""}
@@ -90,7 +93,7 @@ export default function FilterPanel({
 
       case "date":
         return (
-          <div key={filter.key} className={colClass} style={colStyle}>
+          <div key={filter.key} className={colClass} style={mobileColStyle}>
             <input
               type="text"
               className="form-control date-text-input"
@@ -110,7 +113,7 @@ export default function FilterPanel({
       case "daterange":
         return (
           <React.Fragment key={filter.key}>
-            <div className={colClass} style={colStyle}>
+            <div className={colClass} style={mobileColStyle}>
               <input
                 type="text"
                 className="form-control date-text-input"
@@ -124,7 +127,7 @@ export default function FilterPanel({
                 disabled={filter.disabled || loading}
               />
             </div>
-            <div className={colClass} style={colStyle}>
+            <div className={colClass} style={mobileColStyle}>
               <input
                 type="text"
                 className="form-control date-text-input"
@@ -158,7 +161,7 @@ export default function FilterPanel({
         <div className="row g-3">
           {filters.map(renderFilter)}
 
-          <div className="col-md-1">
+          <div className="col-md-1 col-12">
             <button
               className={`btn btn-${clearButtonVariant} w-100`}
               onClick={onClear}

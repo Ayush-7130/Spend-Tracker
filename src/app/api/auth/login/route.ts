@@ -252,12 +252,13 @@ export async function POST(request: NextRequest) {
     const location = await getLocationFromIp(ipAddress);
 
     // IMPORTANT: Session management strategy
-    // Auto-cleanup old sessions from THE SAME device to prevent token conflicts
-    // Keep sessions from different devices/browsers active
-    // This prevents multiple tabs from fighting over tokens
+    // Strategy: Invalidate old sessions from the SAME device only
+    // This prevents token conflicts when multiple tabs are open on the same device
+    // BUT allows users to stay logged in on different devices
     const sessionId = new ObjectId();
-    
-    // Invalidate old sessions from the same browser/device
+
+    // Invalidate old sessions from the SAME browser/device combination
+    // This prevents multiple active sessions on the same device fighting over tokens
     if (deviceInfo?.browser && deviceInfo?.os) {
       await db.collection("sessions").updateMany(
         {
@@ -337,10 +338,12 @@ export async function POST(request: NextRequest) {
     );
 
     // Set cookie maxAge based on Remember Me
-    // IMPORTANT: Cookie maxAge should match the refresh token expiration, NOT access token
-    // The access token will be refreshed automatically, so its cookie should persist
-    const accessMaxAge = rememberMe ? 30 * 24 * 60 * 60 : 7 * 24 * 60 * 60; // Match refresh token expiration
-    const refreshMaxAge = rememberMe ? 30 * 24 * 60 * 60 : 7 * 24 * 60 * 60; // 30 days or 7 days
+    // UPDATED STRATEGY:
+    // - With Remember Me: 7 days (persists after browser close)
+    // - Without Remember Me: 1 day (session-based, cleared on browser close)
+    // Note: We use HTTP-only cookies (secure) but adjust expiry based on preference
+    const accessMaxAge = rememberMe ? 7 * 24 * 60 * 60 : 24 * 60 * 60; // 7 days or 1 day
+    const refreshMaxAge = rememberMe ? 7 * 24 * 60 * 60 : 24 * 60 * 60; // 7 days or 1 day
 
     const response = NextResponse.json(
       {
@@ -358,6 +361,7 @@ export async function POST(request: NextRequest) {
           session: {
             sessionId: sessionId.toString(),
             expiresAt: tokenPair.refreshTokenExpiresAt,
+            rememberMe, // Send Remember Me flag to client
           },
         },
       },
@@ -365,6 +369,8 @@ export async function POST(request: NextRequest) {
     );
 
     // Set cookies with appropriate expiration
+    // For "Remember Me": longer expiry (7 days) - persists after browser close
+    // Without "Remember Me": shorter expiry (1 day) - more secure, session-based
     response.cookies.set("accessToken", tokenPair.accessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
@@ -381,7 +387,7 @@ export async function POST(request: NextRequest) {
       path: "/",
     });
     return response;
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { success: false, error: "An error occurred during login" },
       { status: 500 }

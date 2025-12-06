@@ -17,18 +17,12 @@ export function WebVitalsReporter() {
     // Only run in browser
     if (typeof window === "undefined") return;
 
-    // Track page views
-    const startTime = performance.now();
-
     // Mark navigation
     if (performance.mark) {
       performance.mark(`page-${pathname}-start`);
     }
 
     return () => {
-      const endTime = performance.now();
-      const duration = endTime - startTime;
-
       // Mark navigation end
       if (performance.mark && performance.measure) {
         performance.mark(`page-${pathname}-end`);
@@ -38,7 +32,7 @@ export function WebVitalsReporter() {
             `page-${pathname}-start`,
             `page-${pathname}-end`
           );
-        } catch (e) {
+        } catch {
           // Ignore if marks don't exist
         }
       }
@@ -76,7 +70,7 @@ export function WebVitalsReporter() {
           reportMetric("INP", metric.value, metric.rating);
         });
       })
-      .catch((error) => {});
+      .catch(() => {});
   }, []);
 
   return null;

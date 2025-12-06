@@ -19,9 +19,8 @@ import {
 const handleExportSettlements = createApiRoute({
   methods: ["GET"],
   requireAuth: true,
-  handler: async (request: NextRequest, context) => {
+  handler: async (request: NextRequest) => {
     try {
-      const user = context.user!;
       const searchParams = request.nextUrl.searchParams;
 
       // Get filter parameters
@@ -82,7 +81,7 @@ const handleExportSettlements = createApiRoute({
           "Cache-Control": "no-cache",
         },
       }) as any;
-    } catch (error: any) {
+    } catch {
       return new NextResponse(
         JSON.stringify({
           success: false,

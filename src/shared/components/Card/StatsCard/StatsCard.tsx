@@ -23,8 +23,8 @@ export default function StatsCard({
   const colors = theme === "light" ? lightTheme : darkTheme;
 
   const sizeClasses = {
-    sm: "p-3",
-    md: "p-4",
+    sm: "p-1",
+    md: "p-3",
     lg: "p-5",
   };
 

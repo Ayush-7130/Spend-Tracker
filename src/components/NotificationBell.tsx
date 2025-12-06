@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { NotificationsDataSource, type Notification } from "@/datasource";
 import { useAuth } from "@/contexts/AuthContext";
-import { useTheme } from "@/contexts/ThemeContext";
 import { LoadingSpinner } from "@/shared/components";
 
 const NotificationBell: React.FC = () => {
@@ -14,7 +13,6 @@ const NotificationBell: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const { user } = useAuth();
-  const { theme } = useTheme();
   const bellRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const hasFetchedRef = useRef(false);
@@ -27,7 +25,8 @@ const NotificationBell: React.FC = () => {
       const response = await NotificationsDataSource.getNotifications(1, 100);
       setNotifications(response.notifications);
       setUnreadCount(response.unreadCount);
-    } catch (err) {      setError("Failed to load notifications");
+    } catch {
+      setError("Failed to load notifications");
     } finally {
       setLoading(false);
     }
@@ -110,7 +109,8 @@ const NotificationBell: React.FC = () => {
         )
       );
       setUnreadCount((prev) => Math.max(0, prev - 1));
-    } catch (err) {      // Show user-friendly error message
+    } catch {
+      // Show user-friendly error message
       setError("Failed to mark notification as read. Please try again.");
       // Clear error after 3 seconds
       setTimeout(() => {
@@ -126,7 +126,8 @@ const NotificationBell: React.FC = () => {
         prev.map((notif) => ({ ...notif, read: true }))
       );
       setUnreadCount(0);
-    } catch (err) {      // Show user-friendly error message
+    } catch {
+      // Show user-friendly error message
       setError("Failed to mark all notifications as read. Please try again.");
       // Clear error after 3 seconds
       setTimeout(() => {

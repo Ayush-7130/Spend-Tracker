@@ -470,7 +470,9 @@ export function useForm<TFormData extends Record<string, any>>(
 // EXPORTS
 // ===========================================================================
 
-export default {
+const formHooks = {
   useForm,
   validators,
 };
+
+export default formHooks;

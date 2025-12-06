@@ -114,7 +114,7 @@ export function measure(
       performance.measure(name, startMark, endMark);
       const measure = performance.getEntriesByName(name)[0] as PerformanceEntry;
       return measure.duration;
-    } catch (error) {
+    } catch {
       return null;
     }
   }
@@ -477,7 +477,7 @@ export function createSelector<T, R>(
 // EXPORT
 // ===========================================================================
 
-export default {
+const performanceUtils = {
   measurePerformance,
   mark,
   measure,
@@ -497,3 +497,5 @@ export default {
   shallowEqual,
   createSelector,
 };
+
+export default performanceUtils;

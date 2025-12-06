@@ -46,8 +46,9 @@ export default function ResetPasswordPage() {
           data.error || data.message || "Invalid or expired reset token"
         );
       }
-    } catch (err) {
-      setError("An error occurred while validating the token");    } finally {
+    } catch {
+      setError("An error occurred while validating the token");
+    } finally {
       setValidating(false);
     }
   }
@@ -108,8 +109,9 @@ export default function ResetPasswordPage() {
       } else {
         setError(data.error || "Failed to reset password");
       }
-    } catch (err) {
-      setError("An error occurred while resetting your password");    } finally {
+    } catch {
+      setError("An error occurred while resetting your password");
+    } finally {
       setLoading(false);
     }
   }

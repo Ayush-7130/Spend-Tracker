@@ -109,7 +109,8 @@ const handleMFAVerify = createApiRoute({
         success: true,
         message: "Two-factor authentication has been enabled successfully!",
       });
-    } catch (error) {      return NextResponse.json(
+    } catch {
+      return NextResponse.json(
         { success: false, error: "Failed to verify MFA token" },
         { status: 500 }
       );

@@ -86,7 +86,8 @@ const handleGetLoginHistory = createApiRoute({
           },
         },
       });
-    } catch (error) {      return NextResponse.json(
+    } catch {
+      return NextResponse.json(
         { success: false, error: "Failed to retrieve login history" },
         { status: 500 }
       );

@@ -5,7 +5,7 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
@@ -17,6 +17,37 @@ export default function VerifyEmailPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
+  const verifyEmail = useCallback(
+    async (token: string) => {
+      try {
+        const response = await fetch("/api/auth/verify-email", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token }),
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          setStatus("success");
+          setMessage("Your email has been verified successfully!");
+
+          // Redirect to login after 3 seconds
+          setTimeout(() => {
+            router.push("/login");
+          }, 3000);
+        } else {
+          setStatus("error");
+          setMessage(data.error || "Email verification failed");
+        }
+      } catch {
+        setStatus("error");
+        setMessage("An error occurred during verification");
+      }
+    },
+    [router]
+  );
+
   useEffect(() => {
     const token = searchParams.get("token");
 
@@ -27,34 +58,7 @@ export default function VerifyEmailPage() {
     }
 
     verifyEmail(token);
-  }, [searchParams]);
-
-  async function verifyEmail(token: string) {
-    try {
-      const response = await fetch("/api/auth/verify-email", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token }),
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        setStatus("success");
-        setMessage("Your email has been verified successfully!");
-
-        // Redirect to login after 3 seconds
-        setTimeout(() => {
-          router.push("/login");
-        }, 3000);
-      } else {
-        setStatus("error");
-        setMessage(data.error || "Email verification failed");
-      }
-    } catch (err) {
-      setStatus("error");
-      setMessage("An error occurred during verification");    }
-  }
+  }, [searchParams, verifyEmail]);
 
   return (
     <div className="container">

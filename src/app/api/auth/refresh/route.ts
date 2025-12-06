@@ -10,8 +10,6 @@ import { ObjectId } from "mongodb";
 
 export async function POST(request: NextRequest) {
   try {
-    const timestamp = new Date().toISOString();
-
     // Get refresh token from cookie first
     let refreshToken = request.cookies.get("refreshToken")?.value;
 
@@ -194,13 +192,14 @@ export async function POST(request: NextRequest) {
     );
 
     // Set cookies with appropriate expiration based on rememberMe
-    // When rememberMe is true: cookies persist for 30 days
-    // When rememberMe is false: cookies persist for 7 days
+    // UPDATED: Match the new token expiry times
+    // When rememberMe is true: cookies persist for 7 days
+    // When rememberMe is false: cookies persist for 1 day
     // IMPORTANT: Cookie maxAge should match the refresh token expiration, NOT access token
     // The access token will be refreshed automatically, so its cookie should persist
     const cookieMaxAge = rememberMe
-      ? 30 * 24 * 60 * 60 // 30 days in seconds
-      : 7 * 24 * 60 * 60; // 7 days in seconds
+      ? 7 * 24 * 60 * 60 // 7 days in seconds (matches REFRESH_TOKEN_EXPIRES_IN_REMEMBERED)
+      : 1 * 24 * 60 * 60; // 1 day in seconds (matches REFRESH_TOKEN_EXPIRES_IN)
 
     response.cookies.set("accessToken", newTokenPair.accessToken, {
       httpOnly: true,
@@ -219,7 +218,7 @@ export async function POST(request: NextRequest) {
     });
 
     return response;
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { success: false, error: "An error occurred while refreshing token" },
       { status: 500 }

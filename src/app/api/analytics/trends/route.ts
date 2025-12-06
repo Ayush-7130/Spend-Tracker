@@ -125,7 +125,7 @@ export async function GET(request: NextRequest) {
         period,
       },
     });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { success: false, error: "Failed to fetch trends analytics" },
       { status: 500 }

@@ -306,7 +306,7 @@
   .table-mobile-card-value {
     color: var(--text-primary);
     font-size: 0.875rem;
-    flex: 0 0 60%;
+    flex: 0 0 32%;
     text-align: right;
   }
 

@@ -517,7 +517,7 @@ export const LEGACY_COLORS = {
   oldSecondaryBorder: "#e2e3e5",
 } as const;
 
-export default {
+const colorUtils = {
   lightTheme,
   darkTheme,
   bootstrapColors,
@@ -529,3 +529,5 @@ export default {
   getUserColor,
   getStatusColor,
 };
+
+export default colorUtils;

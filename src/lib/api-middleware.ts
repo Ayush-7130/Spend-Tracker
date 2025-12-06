@@ -281,7 +281,7 @@ export async function validateBody<T>(
       valid: true,
       data: result.data,
     };
-  } catch (error) {
+  } catch {
     return {
       valid: false,
       errors: {
@@ -456,7 +456,7 @@ export function createApiRoute<T = any>(options: {
 // EXPORTS
 // ===========================================================================
 
-export default {
+const apiMiddleware = {
   // Response formatters
   successResponse,
   errorResponse,
@@ -483,3 +483,5 @@ export default {
   UnauthorizedError,
   ForbiddenError,
 };
+
+export default apiMiddleware;

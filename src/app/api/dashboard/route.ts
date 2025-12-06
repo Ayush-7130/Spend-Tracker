@@ -16,12 +16,6 @@ export async function GET(request: Request) {
         const client = await clientPromise;
         const db = client.db("spend-tracker");
 
-        // Build match condition based on user selection
-        let userMatch = {};
-        if (user !== "all") {
-          userMatch = { paidBy: user };
-        }
-
         // Get total expenses for the selected user(s)
         let totalExpenses = 0;
         let totalExpenseCount = 0;
@@ -359,7 +353,7 @@ export async function GET(request: Request) {
     );
 
     return response;
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { success: false, error: "Failed to fetch dashboard data" },
       { status: 500 }

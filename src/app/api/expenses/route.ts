@@ -135,7 +135,7 @@ export async function GET(request: NextRequest) {
     response.headers.set("CDN-Cache-Control", "public, s-maxage=120");
 
     return response;
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Fetch expenses error:", error);
     return NextResponse.json(
       { success: false, error: "Failed to fetch expenses" },
@@ -235,7 +235,7 @@ export async function POST(request: NextRequest) {
       success: true,
       data: createdExpense,
     });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Create expense error:", error);
     return NextResponse.json(
       { success: false, error: "Failed to create expense" },

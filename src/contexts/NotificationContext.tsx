@@ -155,35 +155,60 @@ export const useNotification = () => {
 export const useOperationNotification = () => {
   const { showSuccess, showError } = useNotification();
 
-  return {
-    notifySuccess: (operation: string, item?: string) => {
+  const notifySuccess = useCallback(
+    (operation: string, item?: string) => {
       const title = `${operation} Successful`;
       const message = item
         ? `${item} has been ${operation.toLowerCase()} successfully`
         : undefined;
       showSuccess(title, message);
     },
-    notifyError: (operation: string, error?: string, item?: string) => {
+    [showSuccess]
+  );
+
+  const notifyError = useCallback(
+    (operation: string, error?: string, item?: string) => {
       const title = `${operation} Failed`;
       const message =
         error ||
         (item ? `Failed to ${operation.toLowerCase()} ${item}` : undefined);
       showError(title, message);
     },
-    notifyDeleted: (item: string) => {
+    [showError]
+  );
+
+  const notifyDeleted = useCallback(
+    (item: string) => {
       showSuccess(
         "Deleted Successfully",
         `${item} has been deleted successfully`
       );
     },
-    notifyAdded: (item: string) => {
+    [showSuccess]
+  );
+
+  const notifyAdded = useCallback(
+    (item: string) => {
       showSuccess("Added Successfully", `${item} has been added successfully`);
     },
-    notifyUpdated: (item: string) => {
+    [showSuccess]
+  );
+
+  const notifyUpdated = useCallback(
+    (item: string) => {
       showSuccess(
         "Updated Successfully",
         `${item} has been updated successfully`
       );
     },
+    [showSuccess]
+  );
+
+  return {
+    notifySuccess,
+    notifyError,
+    notifyDeleted,
+    notifyAdded,
+    notifyUpdated,
   };
 };

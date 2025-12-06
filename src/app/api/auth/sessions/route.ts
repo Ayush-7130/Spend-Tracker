@@ -55,7 +55,7 @@ const handleGetSessions = createApiRoute({
           total: formattedSessions.length,
         },
       });
-    } catch (error) {
+    } catch {
       return NextResponse.json(
         { success: false, error: "Failed to retrieve sessions" },
         { status: 500 }
@@ -227,7 +227,7 @@ const handleRevokeSession = createApiRoute({
         success: true,
         message: "Session revoked successfully",
       });
-    } catch (error) {
+    } catch {
       return NextResponse.json(
         { success: false, error: "Failed to revoke session" },
         { status: 500 }

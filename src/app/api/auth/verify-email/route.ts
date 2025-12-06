@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
     );
 
     // Send welcome email (non-blocking)
-    sendWelcomeEmail(user.email, user.name).catch((error) => {    });
+    sendWelcomeEmail(user.email, user.name).catch(() => {});
 
     return NextResponse.json(
       {
@@ -75,7 +75,8 @@ export async function POST(request: NextRequest) {
       },
       { status: 200 }
     );
-  } catch (error) {    return NextResponse.json(
+  } catch {
+    return NextResponse.json(
       { success: false, error: "An error occurred during verification" },
       { status: 500 }
     );
@@ -118,7 +119,8 @@ export async function GET(request: NextRequest) {
       },
       { status: 200 }
     );
-  } catch (error) {    return NextResponse.json(
+  } catch {
+    return NextResponse.json(
       { success: false, error: "An error occurred" },
       { status: 500 }
     );

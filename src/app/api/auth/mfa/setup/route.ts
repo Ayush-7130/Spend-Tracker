@@ -71,7 +71,8 @@ const handleMFASetup = createApiRoute({
           backupCodes: displayBackupCodes, // Display codes for user to save
         },
       });
-    } catch (error) {      return NextResponse.json(
+    } catch {
+      return NextResponse.json(
         { success: false, error: "Failed to generate MFA setup" },
         { status: 500 }
       );
@@ -107,7 +108,8 @@ const handleGetMFAStatus = createApiRoute({
           backupCodesCount: userDoc.mfaBackupCodes?.length || 0,
         },
       });
-    } catch (error) {      return NextResponse.json(
+    } catch {
+      return NextResponse.json(
         { success: false, error: "Failed to get MFA status" },
         { status: 500 }
       );

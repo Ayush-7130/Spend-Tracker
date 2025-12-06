@@ -4,7 +4,7 @@ import { ObjectId } from "mongodb";
 import { getUserFromRequest } from "@/lib/auth";
 import { notificationService } from "@/lib/notifications";
 import { dbManager } from "@/lib/database";
-import { invalidateCache, cacheKeys } from "@/lib/cache";
+import { invalidateCache } from "@/lib/cache";
 
 export async function PUT(
   request: NextRequest,
@@ -128,7 +128,7 @@ export async function PUT(
       success: true,
       message: "Expense updated successfully",
     });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { success: false, error: "Failed to update expense" },
       { status: 500 }
@@ -212,7 +212,7 @@ export async function DELETE(
       success: true,
       message: "Expense deleted successfully",
     });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { success: false, error: "Failed to delete expense" },
       { status: 500 }

@@ -4,7 +4,6 @@
  * Functions for exporting data to CSV and Excel formats.
  */
 
-import { formatCurrency } from "./currency";
 import { formatDate } from "./date";
 
 // ===========================================================================

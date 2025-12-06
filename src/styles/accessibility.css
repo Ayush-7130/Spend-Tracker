@@ -128,15 +128,16 @@ textarea:focus-visible,
  */
 
 /* Minimum touch target size */
-@media (hover: none) and (pointer: coarse) {
-  button,
+@media (pointer: coarse), (max-width: 768px) {
+  /* button,
   a,
   input[type="button"],
   input[type="submit"],
   input[type="reset"],
   select {
-    padding: 8px 12px;
-  }
+    min-height: 44px;
+    min-width: 44px;
+  } */
 
   /* Checkboxes and radios - use transform instead of min-height/width to avoid layout issues */
   input[type="checkbox"],
@@ -158,14 +159,6 @@ textarea:focus-visible,
   .table input[type="radio"] {
     transform: scale(1.1);
     margin: 4px;
-  }
-
-  /* Increase spacing between interactive elements */
-  button + button,
-  a + a,
-  button + a,
-  a + button {
-    margin-left: 8px;
   }
 }
 

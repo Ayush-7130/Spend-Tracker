@@ -54,7 +54,7 @@ export default function CategoriesPage() {
       if (result.success) {
         setCategories(result.data);
       }
-    } catch (error) {
+    } catch {
       // Error handled by UI
     } finally {
       setLoading(false);

@@ -11,9 +11,8 @@
 
 import { useState, useEffect } from "react";
 import MainLayout from "@/components/MainLayout";
-import { useAuth } from "@/contexts/AuthContext";
 import { useOperationNotification } from "@/contexts/NotificationContext";
-import { LoadingSpinner } from "@/shared/components";
+import { LoadingSpinner, Modal } from "@/shared/components";
 
 interface ProfileData {
   id: string;
@@ -25,11 +24,10 @@ interface ProfileData {
 }
 
 export default function ProfilePage() {
-  const { user } = useAuth();
   const { notifySuccess, notifyError } = useOperationNotification();
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"profile" | "password">("profile");
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [activeSessions, setActiveSessions] = useState<number>(0);
   const [loadingStats, setLoadingStats] = useState(true);
 
@@ -67,7 +65,7 @@ export default function ProfilePage() {
         } else {
           notifyError("Load Profile", data.error);
         }
-      } catch (error) {
+      } catch {
         notifyError("Load Profile", "Failed to load profile");
       } finally {
         setLoading(false);
@@ -75,7 +73,8 @@ export default function ProfilePage() {
     }
 
     fetchProfile();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run once on mount
 
   // Fetch security stats (active sessions count)
   useEffect(() => {
@@ -87,7 +86,7 @@ export default function ProfilePage() {
         if (response.ok && data.success) {
           setActiveSessions(data.data.total || 0);
         }
-      } catch (error) {
+      } catch {
       } finally {
         setLoadingStats(false);
       }
@@ -144,7 +143,7 @@ export default function ProfilePage() {
 
       setProfile(data.data);
       notifySuccess("Update Profile", "profile");
-    } catch (error) {
+    } catch {
       notifyError("Update Profile", "Failed to update profile");
     } finally {
       setProfileSubmitting(false);
@@ -222,7 +221,8 @@ export default function ProfilePage() {
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
-    } catch (error) {
+      setShowPasswordModal(false);
+    } catch {
       notifyError("Change Password", "Failed to change password");
     } finally {
       setPasswordSubmitting(false);
@@ -262,280 +262,163 @@ export default function ProfilePage() {
         <div className="row">
           <div className="col-lg-8">
             <div className="card shadow-sm">
-              {/* Tabs */}
-              <div className="card-header border-bottom-0">
-                <ul className="nav nav-tabs card-header-tabs">
-                  <li className="nav-item">
-                    <button
-                      className={`nav-link ${activeTab === "profile" ? "active" : ""}`}
-                      onClick={() => setActiveTab("profile")}
-                    >
-                      <i className="bi bi-person me-2"></i>
-                      Profile Information
-                    </button>
-                  </li>
-                  <li className="nav-item">
-                    <button
-                      className={`nav-link ${activeTab === "password" ? "active" : ""}`}
-                      onClick={() => setActiveTab("password")}
-                    >
-                      <i className="bi bi-shield-lock me-2"></i>
-                      Change Password
-                    </button>
-                  </li>
-                </ul>
+              <div className="card-header">
+                <h5 className="mb-0">
+                  <i className="bi bi-person me-2"></i>
+                  Profile Information
+                </h5>
               </div>
 
               <div className="card-body">
-                {/* Profile Tab */}
-                {activeTab === "profile" && (
-                  <div>
-                    <h5 className="card-title mb-4">
-                      Update Profile Information
-                    </h5>
+                {profile && (
+                  <div className="row g-3 mb-4">
+                    <div className="col-md-4">
+                      <div className="border rounded p-3 h-100">
+                        <div
+                          className="small mb-1"
+                          style={{ color: "var(--text-secondary)" }}
+                        >
+                          <i className="bi bi-calendar-plus me-2"></i>
+                          Account Created
+                        </div>
+                        <div className="fw-semibold">
+                          {new Date(profile.createdAt).toLocaleDateString()}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="col-md-4">
+                      <div className="border rounded p-3 h-100">
+                        <div
+                          className="small mb-1"
+                          style={{ color: "var(--text-secondary)" }}
+                        >
+                          <i className="bi bi-clock-history me-2"></i>
+                          Last Updated
+                        </div>
+                        <div className="fw-semibold">
+                          {new Date(profile.updatedAt).toLocaleDateString()}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="col-md-4">
+                      <div className="border rounded p-3 h-100">
+                        <div
+                          className="small mb-1"
+                          style={{ color: "var(--text-secondary)" }}
+                        >
+                          <i className="bi bi-shield-check me-2"></i>
+                          Account Role
+                        </div>
+                        <div className="fw-semibold text-capitalize">
+                          {profile.role}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
-                    {profile && (
-                      <div className="row g-3 mb-4">
-                        <div className="col-md-4">
-                          <div className="border rounded p-3 h-100">
-                            <div
-                              className="small mb-1"
-                              style={{ color: "var(--text-secondary)" }}
-                            >
-                              <i className="bi bi-calendar-plus me-2"></i>
-                              Account Created
-                            </div>
-                            <div className="fw-semibold">
-                              {new Date(profile.createdAt).toLocaleDateString()}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="col-md-4">
-                          <div className="border rounded p-3 h-100">
-                            <div
-                              className="small mb-1"
-                              style={{ color: "var(--text-secondary)" }}
-                            >
-                              <i className="bi bi-clock-history me-2"></i>
-                              Last Updated
-                            </div>
-                            <div className="fw-semibold">
-                              {new Date(profile.updatedAt).toLocaleDateString()}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="col-md-4">
-                          <div className="border rounded p-3 h-100">
-                            <div
-                              className="small mb-1"
-                              style={{ color: "var(--text-secondary)" }}
-                            >
-                              <i className="bi bi-shield-check me-2"></i>
-                              Account Role
-                            </div>
-                            <div className="fw-semibold text-capitalize">
-                              {profile.role}
-                            </div>
-                          </div>
-                        </div>
+                <form onSubmit={handleProfileSubmit}>
+                  <div className="mb-3">
+                    <label htmlFor="name" className="form-label">
+                      <i className="bi bi-person me-2"></i>
+                      Name
+                    </label>
+                    <input
+                      type="text"
+                      className={`form-control ${profileErrors.name ? "is-invalid" : ""}`}
+                      id="name"
+                      value={profileName}
+                      onChange={(e) => setProfileName(e.target.value)}
+                      required
+                    />
+                    {profileErrors.name && (
+                      <div className="invalid-feedback">
+                        {profileErrors.name}
                       </div>
                     )}
-
-                    <form onSubmit={handleProfileSubmit}>
-                      <div className="mb-3">
-                        <label htmlFor="name" className="form-label">
-                          <i className="bi bi-person me-2"></i>
-                          Name
-                        </label>
-                        <input
-                          type="text"
-                          className={`form-control ${profileErrors.name ? "is-invalid" : ""}`}
-                          id="name"
-                          value={profileName}
-                          onChange={(e) => setProfileName(e.target.value)}
-                          required
-                        />
-                        {profileErrors.name && (
-                          <div className="invalid-feedback">
-                            {profileErrors.name}
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="mb-4">
-                        <label htmlFor="email" className="form-label">
-                          <i className="bi bi-envelope me-2"></i>
-                          Email
-                        </label>
-                        <input
-                          type="email"
-                          className={`form-control ${profileErrors.email ? "is-invalid" : ""}`}
-                          id="email"
-                          value={profileEmail}
-                          onChange={(e) => setProfileEmail(e.target.value)}
-                          required
-                        />
-                        {profileErrors.email && (
-                          <div className="invalid-feedback">
-                            {profileErrors.email}
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="d-flex gap-2">
-                        <button
-                          type="submit"
-                          className="btn btn-primary"
-                          disabled={profileSubmitting}
-                        >
-                          {profileSubmitting ? (
-                            <>
-                              <span className="spinner-border spinner-border-sm me-2"></span>
-                              Updating...
-                            </>
-                          ) : (
-                            <>
-                              <i className="bi bi-check-circle me-2"></i>
-                              Update Profile
-                            </>
-                          )}
-                        </button>
-
-                        <button
-                          type="button"
-                          className="btn btn-outline-secondary"
-                          onClick={() => {
-                            if (profile) {
-                              setProfileName(profile.name);
-                              setProfileEmail(profile.email);
-                              setProfileErrors({});
-                            }
-                          }}
-                        >
-                          <i className="bi bi-x-circle me-2"></i>
-                          Cancel
-                        </button>
-                      </div>
-                    </form>
                   </div>
-                )}
 
-                {/* Password Tab */}
-                {activeTab === "password" && (
-                  <div>
-                    <h5 className="card-title mb-4">Change Password</h5>
-
-                    <div className="alert alert-warning mb-4">
-                      <i className="bi bi-shield-exclamation me-2"></i>
-                      <small>
-                        <strong>Password Requirements:</strong>
-                        <br />
-                        • At least 8 characters long
-                        <br />
-                        • Contains uppercase and lowercase letters
-                        <br />
-                        • Contains at least one number
-                        <br />• Different from your current password
-                      </small>
-                    </div>
-
-                    <form onSubmit={handlePasswordSubmit}>
-                      <div className="mb-3">
-                        <label htmlFor="currentPassword" className="form-label">
-                          <i className="bi bi-lock me-2"></i>
-                          Current Password
-                        </label>
-                        <input
-                          type="password"
-                          className={`form-control ${passwordErrors.currentPassword ? "is-invalid" : ""}`}
-                          id="currentPassword"
-                          value={currentPassword}
-                          onChange={(e) => setCurrentPassword(e.target.value)}
-                          required
-                        />
-                        {passwordErrors.currentPassword && (
-                          <div className="invalid-feedback">
-                            {passwordErrors.currentPassword}
-                          </div>
-                        )}
+                  <div className="mb-4">
+                    <label htmlFor="email" className="form-label">
+                      <i className="bi bi-envelope me-2"></i>
+                      Email
+                    </label>
+                    <input
+                      type="email"
+                      className={`form-control ${profileErrors.email ? "is-invalid" : ""}`}
+                      id="email"
+                      value={profileEmail}
+                      onChange={(e) => setProfileEmail(e.target.value)}
+                      required
+                    />
+                    {profileErrors.email && (
+                      <div className="invalid-feedback">
+                        {profileErrors.email}
                       </div>
-
-                      <div className="mb-3">
-                        <label htmlFor="newPassword" className="form-label">
-                          <i className="bi bi-shield-lock me-2"></i>
-                          New Password
-                        </label>
-                        <input
-                          type="password"
-                          className={`form-control ${passwordErrors.newPassword ? "is-invalid" : ""}`}
-                          id="newPassword"
-                          value={newPassword}
-                          onChange={(e) => setNewPassword(e.target.value)}
-                          required
-                        />
-                        {passwordErrors.newPassword && (
-                          <div className="invalid-feedback">
-                            {passwordErrors.newPassword}
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="mb-4">
-                        <label htmlFor="confirmPassword" className="form-label">
-                          <i className="bi bi-shield-check me-2"></i>
-                          Confirm New Password
-                        </label>
-                        <input
-                          type="password"
-                          className={`form-control ${passwordErrors.confirmPassword ? "is-invalid" : ""}`}
-                          id="confirmPassword"
-                          value={confirmPassword}
-                          onChange={(e) => setConfirmPassword(e.target.value)}
-                          required
-                        />
-                        {passwordErrors.confirmPassword && (
-                          <div className="invalid-feedback">
-                            {passwordErrors.confirmPassword}
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="d-flex gap-2">
-                        <button
-                          type="submit"
-                          className="btn btn-primary"
-                          disabled={passwordSubmitting}
-                        >
-                          {passwordSubmitting ? (
-                            <>
-                              <span className="spinner-border spinner-border-sm me-2"></span>
-                              Changing Password...
-                            </>
-                          ) : (
-                            <>
-                              <i className="bi bi-shield-check me-2"></i>
-                              Change Password
-                            </>
-                          )}
-                        </button>
-
-                        <button
-                          type="button"
-                          className="btn btn-outline-secondary"
-                          onClick={() => {
-                            setCurrentPassword("");
-                            setNewPassword("");
-                            setConfirmPassword("");
-                            setPasswordErrors({});
-                          }}
-                        >
-                          <i className="bi bi-x-circle me-2"></i>
-                          Clear Form
-                        </button>
-                      </div>
-                    </form>
+                    )}
                   </div>
-                )}
+
+                  <div className="d-flex gap-2">
+                    <button
+                      type="submit"
+                      className="btn btn-primary"
+                      disabled={profileSubmitting}
+                    >
+                      {profileSubmitting ? (
+                        <>
+                          <span className="spinner-border spinner-border-sm me-2"></span>
+                          Updating...
+                        </>
+                      ) : (
+                        <>
+                          <i className="bi bi-check-circle me-2"></i>
+                          Update Profile
+                        </>
+                      )}
+                    </button>
+
+                    <button
+                      type="button"
+                      className="btn btn-outline-secondary"
+                      onClick={() => {
+                        if (profile) {
+                          setProfileName(profile.name);
+                          setProfileEmail(profile.email);
+                          setProfileErrors({});
+                        }
+                      }}
+                    >
+                      <i className="bi bi-x-circle me-2"></i>
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+
+            {/* Change Password Card - Moved Above Security & Privacy */}
+            <div className="card shadow-sm mt-4">
+              <div className="card-header">
+                <h5 className="mb-0">
+                  <i className="bi bi-shield-lock me-2"></i>
+                  Change Password
+                </h5>
+              </div>
+              <div className="card-body">
+                <p
+                  className="small mb-3"
+                  style={{ color: "var(--text-secondary)" }}
+                >
+                  Keep your account secure by regularly updating your password
+                </p>
+                <button
+                  type="button"
+                  className="btn btn-outline-primary w-100"
+                  onClick={() => setShowPasswordModal(true)}
+                >
+                  <i className="bi bi-key me-2"></i>
+                  Change Password
+                </button>
               </div>
             </div>
           </div>
@@ -594,6 +477,130 @@ export default function ProfilePage() {
             </div>
           </div>
         </div>
+
+        {/* Change Password Modal */}
+        <Modal
+          show={showPasswordModal}
+          onClose={() => {
+            setShowPasswordModal(false);
+            setCurrentPassword("");
+            setNewPassword("");
+            setConfirmPassword("");
+            setPasswordErrors({});
+          }}
+          title="Change Password"
+          size="md"
+          centered
+        >
+          <div className="alert alert-warning mb-4 d-flex flex-column flex-sm-row align-items-start">
+            <i className="bi bi-shield-exclamation me-2 mb-2 mb-sm-0 flex-shrink-0"></i>
+            <div className="small">
+              <strong className="d-block mb-2">Password Requirements:</strong>
+              <ul className="mb-0 ps-3">
+                <li>At least 8 characters long</li>
+                <li>Contains uppercase and lowercase letters</li>
+                <li>Contains at least one number</li>
+                <li>Different from your current password</li>
+              </ul>
+            </div>
+          </div>
+
+          <form onSubmit={handlePasswordSubmit}>
+            <div className="mb-3">
+              <label htmlFor="currentPassword" className="form-label">
+                <i className="bi bi-lock me-2"></i>
+                Current Password
+              </label>
+              <input
+                type="password"
+                className={`form-control ${passwordErrors.currentPassword ? "is-invalid" : ""}`}
+                id="currentPassword"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                required
+              />
+              {passwordErrors.currentPassword && (
+                <div className="invalid-feedback">
+                  {passwordErrors.currentPassword}
+                </div>
+              )}
+            </div>
+
+            <div className="mb-3">
+              <label htmlFor="newPassword" className="form-label">
+                <i className="bi bi-shield-lock me-2"></i>
+                New Password
+              </label>
+              <input
+                type="password"
+                className={`form-control ${passwordErrors.newPassword ? "is-invalid" : ""}`}
+                id="newPassword"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                required
+              />
+              {passwordErrors.newPassword && (
+                <div className="invalid-feedback">
+                  {passwordErrors.newPassword}
+                </div>
+              )}
+            </div>
+
+            <div className="mb-4">
+              <label htmlFor="confirmPassword" className="form-label">
+                <i className="bi bi-shield-check me-2"></i>
+                Confirm New Password
+              </label>
+              <input
+                type="password"
+                className={`form-control ${passwordErrors.confirmPassword ? "is-invalid" : ""}`}
+                id="confirmPassword"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+              />
+              {passwordErrors.confirmPassword && (
+                <div className="invalid-feedback">
+                  {passwordErrors.confirmPassword}
+                </div>
+              )}
+            </div>
+
+            <div className="d-flex flex-column flex-sm-row gap-2 justify-content-end">
+              <button
+                type="button"
+                className="btn btn-secondary order-2 order-sm-1"
+                onClick={() => {
+                  setShowPasswordModal(false);
+                  setCurrentPassword("");
+                  setNewPassword("");
+                  setConfirmPassword("");
+                  setPasswordErrors({});
+                }}
+              >
+                <i className="bi bi-x-circle me-2"></i>
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="btn btn-primary order-1 order-sm-2"
+                disabled={passwordSubmitting}
+              >
+                {passwordSubmitting ? (
+                  <>
+                    <span className="spinner-border spinner-border-sm me-2"></span>
+                    Changing...
+                  </>
+                ) : (
+                  <>
+                    <i className="bi bi-shield-check me-2"></i>
+                    Change Password
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
+        </Modal>
       </div>
     </MainLayout>
   );

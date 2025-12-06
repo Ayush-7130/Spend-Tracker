@@ -68,7 +68,7 @@ export const useFormState = <T extends Record<string, unknown>>(
         setIsSubmitting(true);
         try {
           await onSubmit(formData);
-        } catch (error) {
+        } catch {
         } finally {
           setIsSubmitting(false);
         }

@@ -7,7 +7,7 @@
  * PUT: Update user profile (name, email)
  */
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { dbManager } from "@/lib/database";
 import { createApiRoute } from "@/lib/api-middleware";
 import { isValidEmail } from "@/lib/auth";
@@ -41,7 +41,7 @@ const handleGetProfile = createApiRoute({
           updatedAt: userDoc.updatedAt,
         },
       });
-    } catch (error: any) {
+    } catch {
       return NextResponse.json(
         { success: false, error: "Failed to retrieve profile" },
         { status: 500 }
@@ -133,7 +133,7 @@ const handlePutProfile = createApiRoute({
           updatedAt: result.updatedAt,
         },
       });
-    } catch (error: any) {
+    } catch {
       return NextResponse.json(
         { success: false, error: "Failed to update profile" },
         { status: 500 }

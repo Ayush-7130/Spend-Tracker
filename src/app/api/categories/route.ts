@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import clientPromise from "@/lib/mongodb";
 import { getUserFromRequest } from "@/lib/auth";
+import { invalidateCache } from "@/lib/cache";
 
 interface Category {
   _id: string;
@@ -33,7 +34,7 @@ export async function GET(request: NextRequest) {
       success: true,
       data: categories,
     });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { success: false, error: "Failed to fetch categories" },
       { status: 500 }
@@ -81,11 +82,14 @@ export async function POST(request: NextRequest) {
 
     await db.collection<Category>("categories").insertOne(category);
 
+    // Invalidate category cache
+    invalidateCache.category();
+
     return NextResponse.json({
       success: true,
       data: category,
     });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { success: false, error: "Failed to create category" },
       { status: 500 }

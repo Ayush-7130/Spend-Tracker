@@ -5,7 +5,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -47,11 +47,7 @@ export default function SecuritySettingsPage() {
   const [success, setSuccess] = useState<string | null>(null);
   const router = useRouter();
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  async function fetchData() {
+  const fetchData = useCallback(async () => {
     try {
       setLoading(true);
 
@@ -84,10 +80,15 @@ export default function SecuritySettingsPage() {
           setLoginHistory(historyData.data.history);
         }
       }
-    } catch (err) {    } finally {
+    } catch {
+    } finally {
       setLoading(false);
     }
-  }
+  }, [router]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   async function setupMFA() {
     try {
@@ -107,8 +108,9 @@ export default function SecuritySettingsPage() {
       } else {
         setError(data.error || "Failed to setup MFA");
       }
-    } catch (err) {
-      setError("An error occurred");    } finally {
+    } catch {
+      setError("An error occurred");
+    } finally {
       setLoading(false);
     }
   }
@@ -137,8 +139,9 @@ export default function SecuritySettingsPage() {
       } else {
         setError(data.error || "Invalid code");
       }
-    } catch (err) {
-      setError("An error occurred");    } finally {
+    } catch {
+      setError("An error occurred");
+    } finally {
       setLoading(false);
     }
   }
@@ -177,8 +180,9 @@ export default function SecuritySettingsPage() {
       } else {
         setError(data.error || "Failed to disable MFA");
       }
-    } catch (err) {
-      setError("An error occurred");    } finally {
+    } catch {
+      setError("An error occurred");
+    } finally {
       setLoading(false);
     }
   }
@@ -380,51 +384,79 @@ export default function SecuritySettingsPage() {
                   </a>
                 </div>
 
-                <div className="table-responsive">
-                  <table className="table table-sm">
-                    <thead>
-                      <tr>
-                        <th>Date</th>
-                        <th>Status</th>
-                        <th>Location</th>
-                        <th>Device</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {loginHistory.map((item, index) => (
-                        <tr key={index}>
-                          <td className="small">
-                            {formatDate(item.timestamp)}
-                          </td>
-                          <td>
-                            {item.success ? (
-                              <span className="badge bg-success">Success</span>
-                            ) : (
-                              <span
-                                className="badge bg-danger"
-                                title={item.failureReason}
-                              >
-                                Failed
-                              </span>
-                            )}
-                          </td>
-                          <td className="small">
-                            {item.location || item.ipAddress}
-                          </td>
-                          <td className="small">{item.device}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                {loginHistory.length === 0 && (
+                {loginHistory.length === 0 ? (
                   <p
                     className="text-center py-3"
                     style={{ color: "var(--text-secondary)" }}
                   >
                     No login history available
                   </p>
+                ) : (
+                  <div className="d-flex flex-column gap-2">
+                    {loginHistory.map((item, index) => (
+                      <div
+                        key={index}
+                        className="border rounded p-3"
+                        style={{
+                          backgroundColor: item.success
+                            ? "var(--bg-secondary, #f8f9fa)"
+                            : "var(--bg-danger-subtle, #f8d7da)",
+                        }}
+                      >
+                        <div className="d-flex justify-content-between align-items-start mb-2">
+                          <div className="flex-grow-1">
+                            <div className="d-flex align-items-center gap-2 mb-1">
+                              {item.success ? (
+                                <span className="badge bg-success">
+                                  <i className="bi bi-check-circle me-1"></i>
+                                  Success
+                                </span>
+                              ) : (
+                                <span
+                                  className="badge bg-danger"
+                                  title={item.failureReason}
+                                >
+                                  <i className="bi bi-x-circle me-1"></i>
+                                  Failed
+                                </span>
+                              )}
+                              <span className="small fw-medium">
+                                {formatDate(item.timestamp)}
+                              </span>
+                            </div>
+                            <div
+                              className="small"
+                              style={{ color: "var(--text-secondary)" }}
+                            >
+                              <i className="bi bi-laptop me-1"></i>
+                              {item.device}
+                            </div>
+                            <div
+                              className="small"
+                              style={{ color: "var(--text-secondary)" }}
+                            >
+                              <i className="bi bi-browser-chrome me-1"></i>
+                              {item.browser} on {item.os}
+                            </div>
+                            <div
+                              className="small"
+                              style={{ color: "var(--text-secondary)" }}
+                            >
+                              <i className="bi bi-geo-alt me-1"></i>
+                              {item.location || item.ipAddress}
+                            </div>
+                          </div>
+                        </div>
+                        {!item.success && item.failureReason && (
+                          <div className="mt-2">
+                            <span className="badge bg-warning text-dark">
+                              {item.failureReason}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
             </div>

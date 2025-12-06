@@ -277,7 +277,7 @@ export async function GET(request: NextRequest) {
       success: true,
       data: overviewData,
     });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { success: false, error: "Failed to fetch overview data" },
       { status: 500 }

@@ -138,7 +138,7 @@ const handleChangePassword = createApiRoute({
         message:
           "Password changed successfully. All sessions have been logged out for security.",
       });
-    } catch (error: any) {
+    } catch {
       return NextResponse.json(
         { success: false, error: "Failed to change password" },
         { status: 500 }

@@ -46,6 +46,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Track in-flight refresh promises to prevent race conditions
   const refreshPromiseRef = useRef<Promise<boolean> | null>(null);
 
+  // Track if we're in the middle of logging out to prevent redirect loops
+  const loggingOutRef = useRef(false);
+
   // Check if user is authenticated on mount
   useEffect(() => {
     checkAuthStatus();
@@ -70,6 +73,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const refreshInterval = setInterval(
       async () => {
+        // Don't run auto-refresh if we're logging out
+        if (loggingOutRef.current) {
+          return;
+        }
         try {
           const refreshResponse = await fetch("/api/auth/refresh", {
             method: "POST",
@@ -82,8 +89,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               refreshResponse.status === 401 ||
               refreshResponse.status === 403
             ) {
-              // Genuine authentication error - logout user
-              await logout();
+              // Genuine authentication error - logout user (only if not already logging out)
+              if (!loggingOutRef.current) {
+                await logout();
+              }
             }
             // Server error (5xx) or other temporary issue - don't logout
             // Token refresh will be retried on next interval
@@ -104,7 +113,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (!meResponse.ok) {
             // Only logout on auth errors, not server errors
             if (meResponse.status === 401 || meResponse.status === 403) {
-              await logout();
+              if (!loggingOutRef.current) {
+                await logout();
+              }
             }
             return;
           }
@@ -114,12 +125,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (userData.success && userData.data?.user) {
             setUser(userData.data.user);
           } else {
-            await logout();
+            if (!loggingOutRef.current) {
+              await logout();
+            }
           }
         } catch (error) {
           // Network error or fetch failure - don't logout immediately
           // Could be temporary connection issue
           // Token refresh will be retried on next interval
+          console.error("[AuthContext] Auto-refresh error:", error);
         }
       },
       14 * 60 * 1000
@@ -129,7 +143,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       clearInterval(refreshInterval);
     };
-  }, [user]); // Re-run when user state changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]); // Re-run when user state changes (logout is stable)
 
   // Memoize callback functions to prevent unnecessary re-renders
   const login = useCallback(
@@ -203,16 +218,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const logout = useCallback(async () => {
+    // Prevent multiple simultaneous logout attempts
+    if (loggingOutRef.current) {
+      return;
+    }
+
+    loggingOutRef.current = true;
+
     try {
       await AuthDataSource.logout();
     } catch (error) {
       // Continue with logout even if API fails
+      console.error("[Logout] API call failed:", error);
     } finally {
       // Clear user state
       setUser(null);
 
-      // Force a full page reload to clear any cached state
-      window.location.href = "/login";
+      // Only redirect if we're not already on the login page
+      if (
+        typeof window !== "undefined" &&
+        !window.location.pathname.startsWith("/login")
+      ) {
+        // Force a full page reload to clear any cached state
+        window.location.href = "/login";
+      } else {
+        // Reset the flag if we're already on login page
+        loggingOutRef.current = false;
+      }
     }
   }, []);
 
@@ -284,7 +316,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         return false;
-      } catch (error) {
+      } catch {
         // Network error - don't logout, could be temporary
         return false;
       } finally {

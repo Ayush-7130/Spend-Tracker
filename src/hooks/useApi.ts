@@ -156,6 +156,7 @@ export function useList<TItem, TFilters = any>(
     } finally {
       setLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchFn, filters, ...dependencies]);
 
   useEffect(() => {
@@ -265,6 +266,7 @@ export function usePaginatedList<TItem, TFilters = any>(
     } finally {
       setLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchFn, filters, ...dependencies]);
 
   useEffect(() => {
@@ -454,7 +456,7 @@ export function useMutation<TData = any, TVariables = any>(
     async (variables: TVariables): Promise<TData | null> => {
       try {
         return await mutateAsync(variables);
-      } catch (err) {
+      } catch {
         return null;
       }
     },
@@ -521,10 +523,12 @@ export function useDataState<TData = any>(initialData: TData | null = null) {
 // EXPORTS
 // ===========================================================================
 
-export default {
+const useApiHooks = {
   useList,
   usePaginatedList,
   useDetail,
   useMutation,
   useDataState,
 };
+
+export default useApiHooks;

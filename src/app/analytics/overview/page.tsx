@@ -77,7 +77,7 @@ export default function AnalyticsOverview() {
       } else {
         setError(result.error || "Failed to fetch overview data");
       }
-    } catch (err) {
+    } catch {
       setError("Failed to load overview data");
     } finally {
       setLoading(false);

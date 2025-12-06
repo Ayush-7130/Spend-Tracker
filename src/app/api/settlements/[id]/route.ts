@@ -3,6 +3,7 @@ import clientPromise from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
 import { getUserFromRequest } from "@/lib/auth";
 import { NotificationService } from "@/lib/notifications";
+import { invalidateCache } from "@/lib/cache";
 
 export async function DELETE(
   request: NextRequest,
@@ -81,15 +82,18 @@ export async function DELETE(
           });
         }
       }
-    } catch (notificationError) {
+    } catch {
       // Continue without failing the deletion
     }
+
+    // Invalidate settlement cache
+    invalidateCache.settlement();
 
     return NextResponse.json({
       success: true,
       message: "Settlement deleted successfully",
     });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { success: false, error: "Internal server error" },
       { status: 500 }
@@ -181,15 +185,18 @@ export async function PUT(
           });
         }
       }
-    } catch (notificationError) {
+    } catch {
       // Continue without failing the update
     }
+
+    // Invalidate settlement cache
+    invalidateCache.settlement();
 
     return NextResponse.json({
       success: true,
       message: "Settlement updated successfully",
     });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { success: false, error: "Internal server error" },
       { status: 500 }

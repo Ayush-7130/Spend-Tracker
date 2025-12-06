@@ -121,7 +121,7 @@ export async function POST(request: NextRequest) {
     const userId = result.insertedId.toString();
 
     // Send verification email (non-blocking)
-    sendVerificationEmail(email, name, verificationToken).catch((error) => {    });
+    sendVerificationEmail(email, name, verificationToken).catch(() => {});
 
     // Return success response
     return NextResponse.json(
@@ -138,7 +138,8 @@ export async function POST(request: NextRequest) {
       },
       { status: 201 }
     );
-  } catch (error) {    return NextResponse.json(
+  } catch {
+    return NextResponse.json(
       { success: false, error: "An error occurred during signup" },
       { status: 500 }
     );

@@ -92,7 +92,8 @@ const handleMFADisable = createApiRoute({
         success: true,
         message: "Two-factor authentication has been disabled successfully.",
       });
-    } catch (error) {      return NextResponse.json(
+    } catch {
+      return NextResponse.json(
         { success: false, error: "Failed to disable MFA" },
         { status: 500 }
       );

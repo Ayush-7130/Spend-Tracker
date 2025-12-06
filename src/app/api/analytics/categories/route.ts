@@ -91,7 +91,7 @@ export async function GET(request: NextRequest) {
         personCategories: personCategoryAnalysis,
       },
     });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { success: false, error: "Failed to fetch category analytics" },
       { status: 500 }

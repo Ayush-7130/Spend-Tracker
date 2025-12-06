@@ -354,10 +354,10 @@ input:not(:-webkit-autofill) {
 .btn {
   padding: calc(0.375rem - 1px) !important;
 }
-
+/*
 .btn-sm {
   padding: calc(0.25rem - 1px) !important;
-}
+} */
 
 .btn-lg {
   padding: calc(0.5rem - 1px) !important;

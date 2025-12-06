@@ -11,7 +11,6 @@ export interface EmptyStateProps extends EmptyStateConfig {
 }
 
 export default function EmptyState({
-  icon: _icon = "📋",
   title = "No data available",
   description = "There is no data to display at this time.",
   actions = [],

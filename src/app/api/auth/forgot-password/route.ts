@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
         }
       })
       .catch((error) => {
-        console.error('Error sending password reset email:', error);
+        console.error("Error sending password reset email:", error);
       });
 
     return NextResponse.json(
@@ -105,7 +105,8 @@ export async function POST(request: NextRequest) {
       },
       { status: 200 }
     );
-  } catch (error) {    return NextResponse.json(
+  } catch {
+    return NextResponse.json(
       { success: false, error: "An error occurred processing your request" },
       { status: 500 }
     );

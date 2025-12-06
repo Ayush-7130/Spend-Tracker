@@ -46,6 +46,21 @@ export class AuthDataSource {
       api.post<ApiResponse<LoginResponse>>("/auth/login", credentials)
     );
     if (response.success && response.data) {
+      // Store Remember Me preference in appropriate storage
+      // This helps the client know which storage strategy to use
+      if (typeof window !== "undefined") {
+        const storage = credentials.rememberMe ? localStorage : sessionStorage;
+        storage.setItem(
+          "rememberMe",
+          credentials.rememberMe ? "true" : "false"
+        );
+
+        // Clear the other storage to avoid conflicts
+        const otherStorage = credentials.rememberMe
+          ? sessionStorage
+          : localStorage;
+        otherStorage.removeItem("rememberMe");
+      }
       return response.data;
     }
     throw new Error(response.error || "Login failed");
@@ -73,6 +88,13 @@ export class AuthDataSource {
         "/auth/logout"
       )
     );
+
+    // Clear Remember Me preference from both storages
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("rememberMe");
+      sessionStorage.removeItem("rememberMe");
+    }
+
     if (response.success) {
       return {
         success: true,

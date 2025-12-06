@@ -414,7 +414,7 @@ export async function GET(request: NextRequest) {
       success: true,
       data: timelineData,
     });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { success: false, error: "Failed to fetch timeline data" },
       { status: 500 }

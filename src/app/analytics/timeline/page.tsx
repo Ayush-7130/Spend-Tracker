@@ -90,7 +90,7 @@ export default function TimelineAnalysis() {
       } else {
         setError(result.error || "Failed to fetch timeline data");
       }
-    } catch (err) {
+    } catch {
       setError("Failed to load timeline data");
     } finally {
       setLoading(false);

@@ -13,16 +13,14 @@ import { createApiRoute } from "@/lib/api-middleware";
 import {
   exportExpensesToCSV,
   getExpenseExportFilename,
-  createCSVResponse,
 } from "@/lib/utils/export";
 
 // GET: Export expenses to CSV
 const handleExportExpenses = createApiRoute({
   methods: ["GET"],
   requireAuth: true,
-  handler: async (request: NextRequest, context) => {
+  handler: async (request: NextRequest) => {
     try {
-      const user = context.user!;
       const searchParams = request.nextUrl.searchParams;
 
       // Get filter parameters
@@ -99,7 +97,7 @@ const handleExportExpenses = createApiRoute({
           "Cache-Control": "no-cache",
         },
       }) as any;
-    } catch (error: any) {
+    } catch {
       return new NextResponse(
         JSON.stringify({ success: false, error: "Failed to export expenses" }),
         {

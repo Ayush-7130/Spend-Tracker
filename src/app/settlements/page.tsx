@@ -11,7 +11,6 @@ import {
   FilterPanel,
   StatusBadge,
   LoadingSpinner,
-  EmptyState,
   SelectField,
   InputField,
   DateField,
@@ -201,19 +200,19 @@ const SettlementsPage: React.FC = () => {
     setFilters((prev) => ({ ...prev, [key]: value }));
   };
 
-  const handleSort = (column: string) => {
-    const newOrder =
-      filters.sortBy === column && filters.sortOrder === "desc"
-        ? "asc"
-        : "desc";
-    setFilters((prev) => ({ ...prev, sortBy: column, sortOrder: newOrder }));
-  };
+  // Sort handlers - commented out for future use
+  // const handleSort = (column: string) => {
+  //   const newOrder =
+  //     filters.sortBy === column && filters.sortOrder === "desc"
+  //       ? "asc"
+  //       : "desc";
+  //   setFilters((prev) => ({ ...prev, sortBy: column, sortOrder: newOrder }));
+  // };
 
-  // Sort icon helper - currently not used but kept for future implementation
-  const _getSortIcon = (column: string) => {
-    if (filters.sortBy !== column) return "bi-arrow-down-up";
-    return filters.sortOrder === "asc" ? "bi-arrow-up" : "bi-arrow-down";
-  };
+  // const getSortIcon = (column: string) => {
+  //   if (filters.sortBy !== column) return "bi-arrow-down-up";
+  //   return filters.sortOrder === "asc" ? "bi-arrow-up" : "bi-arrow-down";
+  // };
 
   const fetchData = async () => {
     try {
@@ -257,7 +256,7 @@ const SettlementsPage: React.FC = () => {
       // Update state without loading indicators for smoother UX
       setSettlements(settlementsData);
       setBalances(balancesData);
-    } catch (error) {
+    } catch {
       // Fall back to full refresh if partial update fails
       await fetchData();
     }
@@ -417,7 +416,7 @@ const SettlementsPage: React.FC = () => {
         const errorData = await response.json();
         notifyError("Delete", errorData.error || "Failed to delete settlement");
       }
-    } catch (error) {
+    } catch {
       notifyError("Delete", "Failed to delete settlement");
     } finally {
       setOperationLoading(false);
@@ -580,14 +579,14 @@ const SettlementsPage: React.FC = () => {
 
             {/* Current Balances */}
             {balances && balances.balances.length > 0 && (
-              <div className="card mb-3">
-                <div className="card-header">
+              <div className="mb-3 outstanding-balances-section">
+                <div className="d-flex justify-content-between align-items-center mb-3">
                   <h5 className="mb-0">
                     <i className="bi bi-balance-scale me-2"></i>
                     Outstanding Balances
                   </h5>
                 </div>
-                <div className="card-body p-0">
+                <div className="outstanding-balances-table">
                   <TableCard<Balance>
                     data={balances.balances.filter(
                       (balance) => balance.status === "owes"
@@ -657,9 +656,7 @@ const SettlementsPage: React.FC = () => {
                         .slice(1)
                         .toLowerCase()} owes ${balance.toUser
                         .charAt(0)
-                        .toUpperCase()}${balance.toUser
-                        .slice(1)
-                        .toLowerCase()}`,
+                        .toUpperCase()}${balance.toUser.slice(1).toLowerCase()}`,
                       amount: `₹${balance.amount}`,
                     })}
                     emptyMessage="All settled up!"
@@ -761,8 +758,8 @@ const SettlementsPage: React.FC = () => {
             />
 
             {/* Full Settlement Table */}
-            <div className="card">
-              <div className="card-header d-flex justify-content-between align-items-center">
+            <div className="mb-3">
+              <div className="d-flex justify-content-between align-items-center mb-3">
                 <h5 className="mb-0">
                   <i className="bi bi-table me-2"></i>
                   All Settlements
@@ -776,188 +773,181 @@ const SettlementsPage: React.FC = () => {
                   size="sm"
                 />
               </div>
-              <div
-                className="card-body"
-                style={{ overflowX: "auto", overflowY: "visible" }}
-              >
-                <TableCard<Settlement>
-                  data={filteredSettlements}
-                  columns={[
-                    {
-                      key: "date",
-                      label: "Date",
-                      render: (settlement: Settlement) => (
-                        <span style={{ color: "var(--text-secondary)" }}>
-                          {formatDate(settlement.date)}
-                        </span>
-                      ),
-                    },
-                    {
-                      key: "fromUser",
-                      label: "From",
-                      render: (settlement: Settlement) => (
-                        <div className="d-flex align-items-center">
-                          <div
-                            className="avatar-xs bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2"
-                            style={{
-                              width: "24px",
-                              height: "24px",
-                              fontSize: "10px",
-                            }}
-                          >
-                            {settlement.fromUser.charAt(0).toUpperCase()}
-                          </div>
-                          <span>
-                            {settlement.fromUser.charAt(0).toUpperCase() +
-                              settlement.fromUser.slice(1).toLowerCase()}
-                          </span>
-                        </div>
-                      ),
-                    },
-                    {
-                      key: "toUser",
-                      label: "To",
-                      render: (settlement: Settlement) => (
-                        <div className="d-flex align-items-center">
-                          <div
-                            className="avatar-xs bg-success text-white rounded-circle d-flex align-items-center justify-content-center me-2"
-                            style={{
-                              width: "24px",
-                              height: "24px",
-                              fontSize: "10px",
-                            }}
-                          >
-                            {settlement.toUser.charAt(0).toUpperCase()}
-                          </div>
-                          <span>
-                            {settlement.toUser.charAt(0).toUpperCase() +
-                              settlement.toUser.slice(1).toLowerCase()}
-                          </span>
-                        </div>
-                      ),
-                    },
-                    {
-                      key: "amount",
-                      label: "Amount",
-                      render: (settlement: Settlement) => (
-                        <span
-                          className="fw-bold"
-                          style={{ color: "var(--status-success)" }}
+              <TableCard<Settlement>
+                data={filteredSettlements}
+                columns={[
+                  {
+                    key: "date",
+                    label: "Date",
+                    render: (settlement: Settlement) => (
+                      <span style={{ color: "var(--text-secondary)" }}>
+                        {formatDate(settlement.date)}
+                      </span>
+                    ),
+                  },
+                  {
+                    key: "fromUser",
+                    label: "From",
+                    render: (settlement: Settlement) => (
+                      <div className="d-flex align-items-center">
+                        <div
+                          className="avatar-xs bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2"
+                          style={{
+                            width: "24px",
+                            height: "24px",
+                            fontSize: "10px",
+                          }}
                         >
-                          ₹{settlement.amount}
+                          {settlement.fromUser.charAt(0).toUpperCase()}
+                        </div>
+                        <span>
+                          {settlement.fromUser.charAt(0).toUpperCase() +
+                            settlement.fromUser.slice(1).toLowerCase()}
                         </span>
-                      ),
-                    },
-                    {
-                      key: "description",
-                      label: "Description",
-                      render: (settlement: Settlement) => (
-                        <span style={{ color: "var(--text-secondary)" }}>
-                          {settlement.description || "Settlement payment"}
+                      </div>
+                    ),
+                  },
+                  {
+                    key: "toUser",
+                    label: "To",
+                    render: (settlement: Settlement) => (
+                      <div className="d-flex align-items-center">
+                        <div
+                          className="avatar-xs bg-success text-white rounded-circle d-flex align-items-center justify-content-center me-2"
+                          style={{
+                            width: "24px",
+                            height: "24px",
+                            fontSize: "10px",
+                          }}
+                        >
+                          {settlement.toUser.charAt(0).toUpperCase()}
+                        </div>
+                        <span>
+                          {settlement.toUser.charAt(0).toUpperCase() +
+                            settlement.toUser.slice(1).toLowerCase()}
                         </span>
-                      ),
-                    },
-                    {
-                      key: "status",
-                      label: "Status",
-                      render: (settlement: Settlement) => (
-                        <StatusBadge
-                          status={settlement.status || "settled"}
-                          type="settlement"
-                        />
-                      ),
-                    },
-                  ]}
-                  actions={[
-                    {
-                      label: "",
-                      icon: "bi-pencil",
-                      onClick: (settlement: Settlement) =>
-                        handleEditSettlement(settlement),
-                      variant: "secondary",
-                    },
-                    {
-                      label: "",
-                      icon: "bi-trash",
-                      onClick: (settlement: Settlement) =>
-                        handleDeleteSettlement(settlement._id),
-                      variant: "danger",
-                    },
-                  ]}
-                  mobileCardRender={(settlement: Settlement) => ({
-                    title: `${settlement.fromUser
-                      .charAt(0)
-                      .toUpperCase()}${settlement.fromUser
-                      .slice(1)
-                      .toLowerCase()} → ${settlement.toUser
-                      .charAt(0)
-                      .toUpperCase()}${settlement.toUser
-                      .slice(1)
-                      .toLowerCase()}`,
-                    subtitle: formatDate(settlement.date),
-                    amount: `₹${settlement.amount}`,
-                    meta: settlement.description || "Settlement payment",
-                    badge: (
+                      </div>
+                    ),
+                  },
+                  {
+                    key: "amount",
+                    label: "Amount",
+                    render: (settlement: Settlement) => (
+                      <span
+                        className="fw-bold"
+                        style={{ color: "var(--status-success)" }}
+                      >
+                        ₹{settlement.amount}
+                      </span>
+                    ),
+                  },
+                  {
+                    key: "description",
+                    label: "Description",
+                    render: (settlement: Settlement) => (
+                      <span style={{ color: "var(--text-secondary)" }}>
+                        {settlement.description || "Settlement payment"}
+                      </span>
+                    ),
+                  },
+                  {
+                    key: "status",
+                    label: "Status",
+                    render: (settlement: Settlement) => (
                       <StatusBadge
                         status={settlement.status || "settled"}
                         type="settlement"
                       />
                     ),
-                  })}
-                  emptyMessage="No settlements found"
-                  emptyAction={{
-                    label: "Record Settlement",
-                    onClick: () => setShowSettlementDialog(true),
-                  }}
-                  loading={loading}
-                />
+                  },
+                ]}
+                actions={[
+                  {
+                    label: "",
+                    icon: "bi-pencil",
+                    onClick: (settlement: Settlement) =>
+                      handleEditSettlement(settlement),
+                    variant: "secondary",
+                  },
+                  {
+                    label: "",
+                    icon: "bi-trash",
+                    onClick: (settlement: Settlement) =>
+                      handleDeleteSettlement(settlement._id),
+                    variant: "danger",
+                  },
+                ]}
+                mobileCardRender={(settlement: Settlement) => ({
+                  title: `${settlement.fromUser
+                    .charAt(0)
+                    .toUpperCase()}${settlement.fromUser
+                    .slice(1)
+                    .toLowerCase()} → ${settlement.toUser
+                    .charAt(0)
+                    .toUpperCase()}${settlement.toUser.slice(1).toLowerCase()}`,
+                  subtitle: formatDate(settlement.date),
+                  amount: `₹${settlement.amount}`,
+                  meta: settlement.description || "Settlement payment",
+                  badge: (
+                    <StatusBadge
+                      status={settlement.status || "settled"}
+                      type="settlement"
+                    />
+                  ),
+                })}
+                emptyMessage="No settlements found"
+                emptyAction={{
+                  label: "Record Settlement",
+                  onClick: () => setShowSettlementDialog(true),
+                }}
+                loading={loading}
+              />
 
-                {/* Pagination Controls */}
-                {filteredSettlements.length > 0 && pagination.pages > 1 && (
-                  <div className="pagination-controls d-flex justify-content-between align-items-center mt-3">
-                    <div
-                      className="pagination-info"
-                      style={{ color: "var(--text-secondary)" }}
-                    >
-                      Showing {(pagination.page - 1) * pagination.limit + 1} to{" "}
-                      {Math.min(
-                        pagination.page * pagination.limit,
-                        filteredSettlements.length
-                      )}{" "}
-                      of {filteredSettlements.length} settlements
-                    </div>
-                    <div className="pagination-buttons d-flex gap-2">
-                      <button
-                        className="btn btn-sm btn-outline-secondary"
-                        onClick={() =>
-                          setPagination((prev) => ({
-                            ...prev,
-                            page: prev.page - 1,
-                          }))
-                        }
-                        disabled={pagination.page === 1}
-                      >
-                        Previous
-                      </button>
-                      <span className="btn btn-sm btn-outline-secondary disabled">
-                        Page {pagination.page} of {pagination.pages}
-                      </span>
-                      <button
-                        className="btn btn-sm btn-outline-secondary"
-                        onClick={() =>
-                          setPagination((prev) => ({
-                            ...prev,
-                            page: prev.page + 1,
-                          }))
-                        }
-                        disabled={pagination.page === pagination.pages}
-                      >
-                        Next
-                      </button>
-                    </div>
+              {/* Pagination Controls */}
+              {filteredSettlements.length > 0 && pagination.pages > 1 && (
+                <div className="pagination-controls d-flex justify-content-between align-items-center mt-3">
+                  <div
+                    className="pagination-info"
+                    style={{ color: "var(--text-secondary)" }}
+                  >
+                    Showing {(pagination.page - 1) * pagination.limit + 1} to{" "}
+                    {Math.min(
+                      pagination.page * pagination.limit,
+                      filteredSettlements.length
+                    )}{" "}
+                    of {filteredSettlements.length} settlements
                   </div>
-                )}
-              </div>
+                  <div className="pagination-buttons d-flex gap-2">
+                    <button
+                      className="btn btn-sm btn-outline-secondary"
+                      onClick={() =>
+                        setPagination((prev) => ({
+                          ...prev,
+                          page: prev.page - 1,
+                        }))
+                      }
+                      disabled={pagination.page === 1}
+                    >
+                      Previous
+                    </button>
+                    <span className="btn btn-sm btn-outline-secondary disabled">
+                      Page {pagination.page} of {pagination.pages}
+                    </span>
+                    <button
+                      className="btn btn-sm btn-outline-secondary"
+                      onClick={() =>
+                        setPagination((prev) => ({
+                          ...prev,
+                          page: prev.page + 1,
+                        }))
+                      }
+                      disabled={pagination.page === pagination.pages}
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -1013,6 +1003,39 @@ const SettlementsPage: React.FC = () => {
           }
           .dropdown-toggle::after {
             display: none;
+          }
+
+          /* Mobile and Tablet styles for Outstanding Balances */
+          .outstanding-balances-section {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+          }
+
+          @media (max-width: 1024px) {
+            .outstanding-balances-table
+              :global(div[class*="cardHeader"]:first-child) {
+              padding: 0;
+            }
+          }
+
+          /* Mobile and Tablet styles for Filters */
+          @media (max-width: 768px) {
+            /* Make filter inputs stack properly on mobile */
+            :global(.card .card-body .row.g-3) > div {
+              flex: 0 0 100%;
+              max-width: 100%;
+            }
+
+            /* Ensure form controls take full width */
+            :global(.form-control),
+            :global(.form-select) {
+              width: 100%;
+            }
+
+            /* Adjust card padding on mobile */
+            :global(.card .card-body) {
+              padding: 1rem;
+            }
           }
         `}</style>
 

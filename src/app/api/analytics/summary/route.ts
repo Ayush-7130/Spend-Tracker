@@ -132,7 +132,7 @@ export async function GET(request: NextRequest) {
         settlement,
       },
     });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { success: false, error: "Failed to fetch analytics summary" },
       { status: 500 }

@@ -21,10 +21,11 @@ export interface EmailOptions {
  */
 export async function sendEmail(options: EmailOptions): Promise<boolean> {
   try {
-    if (!process.env.RESEND_API_KEY) {      return false;
+    if (!process.env.RESEND_API_KEY) {
+      return false;
     }
 
-    const { data, error } = await resend.emails.send({
+    const { error } = await resend.emails.send({
       from: FROM_EMAIL,
       to: options.to,
       subject: options.subject,
@@ -32,11 +33,13 @@ export async function sendEmail(options: EmailOptions): Promise<boolean> {
       text: options.text,
     });
 
-    if (error) {      return false;
+    if (error) {
+      return false;
     }
 
     return true;
-  } catch (error) {    return false;
+  } catch {
+    return false;
   }
 }
 

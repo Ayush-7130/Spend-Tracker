@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
             timestamp: new Date(),
           });
         }
-      } catch (dbError) {
+      } catch {
         // Continue with cookie clearing even if DB cleanup fails
       }
     }

@@ -3,7 +3,7 @@
 import React from "react";
 import { StatusBadgeProps, statusTypeConfig } from "./config";
 import { useTheme } from "../../../contexts/ThemeContext";
-import { lightTheme, darkTheme, semanticColors } from "../../../styles/colors";
+import { lightTheme, darkTheme } from "../../../styles/colors";
 
 export default function StatusBadge({
   status,

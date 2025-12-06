@@ -140,6 +140,7 @@ export async function getLocationFromIp(
 
     // Option 2: Return undefined for now
     return undefined;
-  } catch (error) {    return undefined;
+  } catch {
+    return undefined;
   }
 }

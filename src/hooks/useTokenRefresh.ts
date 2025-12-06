@@ -32,7 +32,7 @@ function parseJWT(token: string): { exp?: number } | null {
         .join("")
     );
     return JSON.parse(jsonPayload);
-  } catch (error) {
+  } catch {
     return null;
   }
 }
@@ -133,7 +133,7 @@ export function useTokenRefresh() {
           const newInterval = calculateRefreshInterval();
           intervalRef.current = setInterval(refresh, newInterval);
         }
-      } catch (error) {
+      } catch {
         // Network errors are temporary, don't logout
       }
     };
@@ -247,7 +247,7 @@ export function useTokenRefreshAdvanced(tokenLifetime: number = 15) {
           }
           // For server errors, don't logout
         }
-      } catch (error) {
+      } catch {
         // Network errors are temporary, don't logout
       }
     };

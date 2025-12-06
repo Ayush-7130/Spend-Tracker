@@ -29,11 +29,8 @@ import {
   formatCurrency,
   formatDate,
   fetchData,
-  bulkDelete,
   buildUrlWithParams,
   PaginationData,
-  createSortHandler,
-  SortConfig,
 } from "@/lib/utils";
 
 interface Expense {
@@ -76,7 +73,6 @@ function ExpensesContent() {
   });
   const [loading, setLoading] = useState(true);
   const [operationLoading, setOperationLoading] = useState(false);
-  const [selectedExpenses, setSelectedExpenses] = useState<string[]>([]);
   const [filters, setFilters] = useState({
     search: "",
     category: "",
@@ -111,20 +107,14 @@ function ExpensesContent() {
     { id: "ayush", name: "Ayush" },
   ];
 
-  const sortConfig: SortConfig = {
-    sortBy: filters.sortBy,
-    sortOrder: filters.sortOrder,
-  };
-
   // Sort handlers - currently not used but kept for future implementation
-  const { handleSort: _handleSort, getSortIcon: _getSortIcon } =
-    createSortHandler(sortConfig, (config) => {
-      setFilters((prev) => ({
-        ...prev,
-        sortBy: config.sortBy,
-        sortOrder: config.sortOrder,
-      }));
-    });
+  // const { handleSort, getSortIcon } = createSortHandler(sortConfig, (config) => {
+  //   setFilters((prev) => ({
+  //     ...prev,
+  //     sortBy: config.sortBy,
+  //     sortOrder: config.sortOrder,
+  //   }));
+  // });
 
   // Categories are now managed by CategoriesContext - no need to fetch here
 
@@ -135,7 +125,8 @@ function ExpensesContent() {
         notifyAdded("Expense");
       }, 100);
     }
-  }, [searchParams, notifyAdded]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]); // Only depend on searchParams
 
   const fetchExpenses = useCallback(async () => {
     setLoading(true);
@@ -183,36 +174,37 @@ function ExpensesContent() {
   };
 
   // Selection handlers - currently not used but kept for future implementation
-  const _handleSelectExpense = (expenseId: string) => {
-    setSelectedExpenses((prev) =>
-      prev.includes(expenseId)
-        ? prev.filter((id) => id !== expenseId)
-        : [...prev, expenseId]
-    );
-  };
+  // const handleSelectExpense = (expenseId: string) => {
+  //   setSelectedExpenses((prev) =>
+  //     prev.includes(expenseId)
+  //       ? prev.filter((id) => id !== expenseId)
+  //       : [...prev, expenseId]
+  //   );
+  // };
 
-  const _handleSelectAll = () => {
-    setSelectedExpenses(
-      selectedExpenses.length === expenses.length
-        ? []
-        : expenses.map((exp) => exp._id)
-    );
-  };
+  // const handleSelectAll = () => {
+  //   setSelectedExpenses(
+  //     selectedExpenses.length === expenses.length
+  //       ? []
+  //       : expenses.map((exp) => exp._id)
+  //   );
+  // };
 
-  const handleBulkDelete = async () => {
-    const result = await bulkDelete(
-      selectedExpenses,
-      "/api/expenses",
-      "expenses"
-    );
-    if (result.success) {
-      setSelectedExpenses([]);
-      fetchExpenses();
-      notifyDeleted(`${selectedExpenses.length} expense(s)`);
-    } else if (result.error && result.error !== "Cancelled by user") {
-      notifyError("Delete", result.error);
-    }
-  };
+  // Bulk delete handler - commented out for future use
+  // const handleBulkDelete = async () => {
+  //   const result = await bulkDelete(
+  //     selectedExpenses,
+  //     "/api/expenses",
+  //     "expenses"
+  //   );
+  //   if (result.success) {
+  //     setSelectedExpenses([]);
+  //     fetchExpenses();
+  //     notifyDeleted(`${selectedExpenses.length} expense(s)`);
+  //   } else if (result.error && result.error !== "Cancelled by user") {
+  //     notifyError("Delete", result.error);
+  //   }
+  // };
 
   const handleDeleteExpense = async (expenseId: string) => {
     const confirmed = await confirmation.confirm({
@@ -474,8 +466,8 @@ function ExpensesContent() {
           />
 
           {/* Expenses Table */}
-          <div className="card">
-            <div className="card-header d-flex justify-content-between align-items-center">
+          <div className="mb-3">
+            <div className="d-flex justify-content-between align-items-center mb-3">
               <h5 className="mb-0">
                 <i className="bi bi-table me-2"></i>
                 Expense List
@@ -489,9 +481,9 @@ function ExpensesContent() {
                 size="sm"
               />
             </div>
-            <div className="card-body">
-              {loading ? (
-                <div className="text-center py-4">
+            {loading ? (
+              <div className="card">
+                <div className="card-body text-center py-4">
                   <LoadingSpinner
                     config={{
                       size: "medium",
@@ -502,199 +494,217 @@ function ExpensesContent() {
                     }}
                   />
                 </div>
-              ) : expenses.length === 0 ? (
-                <EmptyState
-                  icon="📋"
-                  title="No expenses found"
-                  description="Create your first expense to start tracking your spending."
-                  size="medium"
-                  actions={[
-                    {
-                      label: "Add Expense",
-                      onClick: () => {
-                        setEditingExpense(null);
-                        setNewExpense({
-                          name: "",
-                          amount: "",
-                          description: "",
-                          date: new Date().toISOString().split("T")[0],
-                          category: "",
-                          subcategory: "",
-                          paidBy: "",
-                          splitBetween: [],
-                          isSplit: false,
-                          saketAmount: "",
-                          ayushAmount: "",
-                        });
-                        setShowAddExpenseDialog(true);
-                      },
-                      variant: "primary",
-                      icon: "plus",
-                    },
-                  ]}
-                />
-              ) : (
-                <>
-                  <TableCard<Expense>
-                    data={expenses}
-                    columns={[
-                      {
-                        key: "date",
-                        label: "Date",
-                        render: (expense: Expense) => (
-                          <span style={{ color: "var(--text-secondary)" }}>
-                            {formatDate(expense.date)}
-                          </span>
-                        ),
-                      },
-                      {
-                        key: "description",
-                        label: "Description",
-                        render: (expense: Expense) => (
-                          <div>
-                            <strong>{expense.description}</strong>
-                            {expense.subcategory && (
-                              <small
-                                className="d-block"
-                                style={{ color: "var(--text-secondary)" }}
-                              >
-                                {expense.subcategory}
-                              </small>
-                            )}
-                          </div>
-                        ),
-                      },
-                      {
-                        key: "category",
-                        label: "Category",
-                        render: (expense: Expense) => (
-                          <Badge variant="secondary">
-                            {expense.categoryDetails?.[0]?.name ||
-                              expense.category}
-                          </Badge>
-                        ),
-                      },
-                      {
-                        key: "amount",
-                        label: "Amount",
-                        render: (expense: Expense) => (
-                          <div>
-                            <strong>{formatCurrency(expense.amount)}</strong>
-                            {expense.isSplit && (
-                              <small
-                                className="d-block"
-                                style={{ color: "var(--text-secondary)" }}
-                              >
-                                Split: S₹{expense.splitDetails?.saketAmount} /
-                                A₹{expense.splitDetails?.ayushAmount}
-                              </small>
-                            )}
-                          </div>
-                        ),
-                      },
-                      {
-                        key: "paidBy",
-                        label: "Paid By",
-                        render: (expense: Expense) => (
-                          <UserBadge
-                            user={expense.paidBy as "saket" | "ayush"}
-                          />
-                        ),
-                      },
-                      {
-                        key: "split",
-                        label: "Split",
-                        render: (expense: Expense) => (
-                          <StatusBadge
-                            status={expense.isSplit ? "split" : "personal"}
-                            type="split"
-                          />
-                        ),
-                      },
-                    ]}
+              </div>
+            ) : expenses.length === 0 ? (
+              <div className="card">
+                <div className="card-body">
+                  <EmptyState
+                    icon="📋"
+                    title="No expenses found"
+                    description="Create your first expense to start tracking your spending."
+                    size="medium"
                     actions={[
                       {
-                        label: "",
-                        icon: "bi-pencil",
-                        onClick: (expense: Expense) =>
-                          handleEditExpense(expense),
-                        variant: "secondary",
-                      },
-                      {
-                        label: "",
-                        icon: "bi-trash",
-                        onClick: (expense: Expense) =>
-                          handleDeleteExpense(expense._id),
-                        variant: "danger",
+                        label: "Add Expense",
+                        onClick: () => {
+                          setEditingExpense(null);
+                          setNewExpense({
+                            name: "",
+                            amount: "",
+                            description: "",
+                            date: new Date().toISOString().split("T")[0],
+                            category: "",
+                            subcategory: "",
+                            paidBy: "",
+                            splitBetween: [],
+                            isSplit: false,
+                            saketAmount: "",
+                            ayushAmount: "",
+                          });
+                          setShowAddExpenseDialog(true);
+                        },
+                        variant: "primary",
+                        icon: "plus",
                       },
                     ]}
-                    mobileCardRender={(expense: Expense) => ({
-                      title: expense.description,
-                      subtitle: formatDate(expense.date),
-                      amount: formatCurrency(expense.amount),
-                      meta:
-                        expense.categoryDetails?.[0]?.name || expense.category,
-                      badge: (
-                        <div style={{ display: "flex", gap: "0.5rem" }}>
-                          <UserBadge
-                            user={expense.paidBy as "saket" | "ayush"}
-                          />
-                          {expense.isSplit && (
-                            <StatusBadge status="split" type="split" />
+                  />
+                </div>
+              </div>
+            ) : (
+              <>
+                <TableCard<Expense>
+                  data={expenses}
+                  columns={[
+                    {
+                      key: "date",
+                      label: "Date",
+                      render: (expense: Expense) => (
+                        <span style={{ color: "var(--text-secondary)" }}>
+                          {formatDate(expense.date)}
+                        </span>
+                      ),
+                    },
+                    {
+                      key: "description",
+                      label: "Description",
+                      render: (expense: Expense) => (
+                        <div>
+                          <strong>{expense.description}</strong>
+                          {expense.subcategory && (
+                            <small
+                              className="d-block"
+                              style={{ color: "var(--text-secondary)" }}
+                            >
+                              {expense.subcategory}
+                            </small>
                           )}
                         </div>
                       ),
-                    })}
-                    emptyMessage="No expenses found"
-                    loading={loading}
-                  />
-
-                  {/* Pagination Controls */}
-                  {pagination.pages > 1 && (
-                    <div className="pagination-controls d-flex justify-content-between align-items-center mt-3">
-                      <div className="pagination-info text-muted">
-                        Showing {(pagination.page - 1) * pagination.limit + 1}{" "}
-                        to{" "}
-                        {Math.min(
-                          pagination.page * pagination.limit,
-                          pagination.total
-                        )}{" "}
-                        of {pagination.total} expenses
+                    },
+                    {
+                      key: "category",
+                      label: "Category",
+                      render: (expense: Expense) => (
+                        <Badge variant="secondary">
+                          {expense.categoryDetails?.[0]?.name ||
+                            expense.category}
+                        </Badge>
+                      ),
+                    },
+                    {
+                      key: "amount",
+                      label: "Amount",
+                      render: (expense: Expense) => (
+                        <div>
+                          <strong>{formatCurrency(expense.amount)}</strong>
+                          {expense.isSplit && (
+                            <small
+                              className="d-block"
+                              style={{ color: "var(--text-secondary)" }}
+                            >
+                              Split: S₹{expense.splitDetails?.saketAmount} / A₹
+                              {expense.splitDetails?.ayushAmount}
+                            </small>
+                          )}
+                        </div>
+                      ),
+                    },
+                    {
+                      key: "paidBy",
+                      label: "Paid By",
+                      render: (expense: Expense) => (
+                        <UserBadge user={expense.paidBy as "saket" | "ayush"} />
+                      ),
+                    },
+                    {
+                      key: "split",
+                      label: "Split",
+                      render: (expense: Expense) => (
+                        <StatusBadge
+                          status={expense.isSplit ? "split" : "personal"}
+                          type="split"
+                        />
+                      ),
+                    },
+                  ]}
+                  actions={[
+                    {
+                      label: "",
+                      icon: "bi-pencil",
+                      onClick: (expense: Expense) => handleEditExpense(expense),
+                      variant: "secondary",
+                    },
+                    {
+                      label: "",
+                      icon: "bi-trash",
+                      onClick: (expense: Expense) =>
+                        handleDeleteExpense(expense._id),
+                      variant: "danger",
+                    },
+                  ]}
+                  mobileCardRender={(expense: Expense) => ({
+                    title: expense.description,
+                    subtitle: formatDate(expense.date),
+                    amount: formatCurrency(expense.amount),
+                    meta:
+                      expense.categoryDetails?.[0]?.name || expense.category,
+                    badge: (
+                      <div style={{ display: "flex", gap: "0.5rem" }}>
+                        <UserBadge user={expense.paidBy as "saket" | "ayush"} />
+                        {expense.isSplit && (
+                          <StatusBadge status="split" type="split" />
+                        )}
                       </div>
-                      <div className="pagination-buttons d-flex gap-2">
-                        <button
-                          className="btn btn-sm btn-outline-secondary"
-                          onClick={() =>
-                            setPagination((prev) => ({
-                              ...prev,
-                              page: prev.page - 1,
-                            }))
-                          }
-                          disabled={pagination.page === 1}
-                        >
-                          Previous
-                        </button>
-                        <span className="btn btn-sm btn-outline-secondary disabled">
-                          Page {pagination.page} of {pagination.pages}
+                    ),
+                    splitInfo: expense.isSplit ? (
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                        }}
+                      >
+                        <span>
+                          <i className="bi bi-person-circle me-1"></i>
+                          <strong>Saket:</strong> ₹
+                          {expense.splitDetails?.saketAmount}
                         </span>
-                        <button
-                          className="btn btn-sm btn-outline-secondary"
-                          onClick={() =>
-                            setPagination((prev) => ({
-                              ...prev,
-                              page: prev.page + 1,
-                            }))
-                          }
-                          disabled={pagination.page === pagination.pages}
-                        >
-                          Next
-                        </button>
+                        <span>
+                          <i className="bi bi-person-circle me-1"></i>
+                          <strong>Ayush:</strong> ₹
+                          {expense.splitDetails?.ayushAmount}
+                        </span>
                       </div>
+                    ) : undefined,
+                  })}
+                  emptyMessage="No expenses found"
+                  loading={loading}
+                />
+
+                {/* Pagination Controls */}
+                {pagination.pages > 1 && (
+                  <div className="pagination-controls d-flex justify-content-between align-items-center mt-3">
+                    <div className="pagination-info text-muted">
+                      Showing {(pagination.page - 1) * pagination.limit + 1} to{" "}
+                      {Math.min(
+                        pagination.page * pagination.limit,
+                        pagination.total
+                      )}{" "}
+                      of {pagination.total} expenses
                     </div>
-                  )}
-                </>
-              )}
-            </div>
+                    <div className="pagination-buttons d-flex gap-2">
+                      <button
+                        className="btn btn-sm btn-outline-secondary"
+                        onClick={() =>
+                          setPagination((prev) => ({
+                            ...prev,
+                            page: prev.page - 1,
+                          }))
+                        }
+                        disabled={pagination.page === 1}
+                      >
+                        Previous
+                      </button>
+                      <span className="btn btn-sm btn-outline-secondary disabled">
+                        Page {pagination.page} of {pagination.pages}
+                      </span>
+                      <button
+                        className="btn btn-sm btn-outline-secondary"
+                        onClick={() =>
+                          setPagination((prev) => ({
+                            ...prev,
+                            page: prev.page + 1,
+                          }))
+                        }
+                        disabled={pagination.page === pagination.pages}
+                      >
+                        Next
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
           </div>
         </div>
       </div>

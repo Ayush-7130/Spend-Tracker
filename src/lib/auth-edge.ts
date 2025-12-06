@@ -45,7 +45,8 @@ export async function verifyToken(token: string): Promise<JWTPayload | null> {
       iat: payload.iat,
       exp: payload.exp,
     };
-  } catch (error) {    return null;
+  } catch {
+    return null;
   }
 }
 
@@ -73,7 +74,8 @@ export async function verifyRefreshToken(
       iat: payload.iat,
       exp: payload.exp,
     };
-  } catch (error) {    return null;
+  } catch {
+    return null;
   }
 }
 

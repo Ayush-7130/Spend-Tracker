@@ -13,7 +13,7 @@ export async function GET() {
         .collection("expenses")
         .find({ isSplit: true })
         .toArray();
-    } catch (expenseError) {
+    } catch {
       splitExpenses = [];
     }
 
@@ -21,7 +21,7 @@ export async function GET() {
     let settlements: any[] = [];
     try {
       settlements = await db.collection("settlements").find({}).toArray();
-    } catch (settlementError) {
+    } catch {
       settlements = [];
     }
 
@@ -113,7 +113,7 @@ export async function GET() {
       totalOwed = userBalances
         .filter((b) => b.status === "owes")
         .reduce((sum, b) => sum + (Number(b.amount) || 0), 0);
-    } catch (summaryError) {
+    } catch {
       totalOwed = 0;
     }
 
@@ -122,7 +122,7 @@ export async function GET() {
         (sum, s) => sum + (Number(s.amount) || 0),
         0
       );
-    } catch (settlementSumError) {
+    } catch {
       totalSettled = 0;
     }
 
@@ -135,7 +135,7 @@ export async function GET() {
         activeBalances: userBalances.filter((b) => b.status === "owes").length,
       },
     });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: "Failed to calculate balances" },
       { status: 500 }

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNotification } from "@/contexts/NotificationContext";
 import ThemeToggle from "@/components/ThemeToggle";
-import { LoadingSpinner, InputField, CheckboxField } from "@/shared/components";
+import { LoadingSpinner, InputField } from "@/shared/components";
 
 export default function SignupPage() {
   const { signup, isAuthenticated, loading } = useAuth();
@@ -19,8 +19,6 @@ export default function SignupPage() {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // Redirect if already authenticated
   useEffect(() => {

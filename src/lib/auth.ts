@@ -11,12 +11,13 @@ const JWT_REFRESH_SECRET =
   "your-super-secret-refresh-key-change-in-production";
 
 // Token expiration times
-// When rememberMe is FALSE (default):
+// UPDATED STRATEGY: Remember Me affects storage AND token TTL
+// Without Remember Me (sessionStorage - cleared on browser close):
 const ACCESS_TOKEN_EXPIRES_IN = "15m"; // 15 minutes
-const REFRESH_TOKEN_EXPIRES_IN = "7d"; // 7 days
-// When rememberMe is TRUE:
-const ACCESS_TOKEN_EXPIRES_IN_REMEMBERED = "7d"; // 7 days (changed from 1h as per requirements)
-const REFRESH_TOKEN_EXPIRES_IN_REMEMBERED = "30d"; // 30 days
+const REFRESH_TOKEN_EXPIRES_IN = "1d"; // 1 day (reduced from 7 days)
+// With Remember Me (localStorage - persists after browser close):
+const ACCESS_TOKEN_EXPIRES_IN_REMEMBERED = "15m"; // 15 minutes (same as without)
+const REFRESH_TOKEN_EXPIRES_IN_REMEMBERED = "7d"; // 7 days (reduced from 30 days)
 
 // User interface (using database User interface)
 export interface User {
@@ -94,15 +95,14 @@ export function generateTokenPair(
   );
 
   // Calculate expiration dates
-  // When rememberMe is true: access token = 7 days, refresh token = 30 days
-  // When rememberMe is false: access token = 15 minutes, refresh token = 7 days
-  const accessTokenExpiresAt = rememberMe
-    ? new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000) // 7 days
-    : new Date(now.getTime() + 15 * 60 * 1000); // 15 minutes
+  // UPDATED: Remember Me affects token TTL and storage location
+  // Without Remember Me: access = 15min, refresh = 1 day (sessionStorage)
+  // With Remember Me: access = 15min, refresh = 7 days (localStorage)
+  const accessTokenExpiresAt = new Date(now.getTime() + 15 * 60 * 1000); // Always 15 minutes
 
   const refreshTokenExpiresAt = rememberMe
-    ? new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000) // 30 days
-    : new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000); // 7 days
+    ? new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000) // 7 days
+    : new Date(now.getTime() + 1 * 24 * 60 * 60 * 1000); // 1 day
 
   return {
     accessToken,
@@ -135,7 +135,7 @@ export function verifyToken(token: string): JWTPayload | null {
       clockTolerance: 60, // 60 seconds tolerance
     }) as JWTPayload;
     return decoded;
-  } catch (error) {
+  } catch {
     return null;
   }
 }
@@ -188,7 +188,7 @@ export function verifyRefreshToken(token: string): JWTPayload | null {
     }
 
     return decoded;
-  } catch (error) {
+  } catch {
     return null;
   }
 }
@@ -345,16 +345,16 @@ export async function getUserFromRequest(
             { _id: session._id },
             { $set: { lastActivityAt: new Date() } }
           )
-          .catch((err) => {});
+          .catch(() => {});
       }
 
       return payload;
-    } catch (dbError) {
+    } catch {
       // If database is unavailable, fall back to JWT validation only
       // This prevents total outage if DB is temporarily down
       return payload;
     }
-  } catch (error) {
+  } catch {
     return null;
   }
 }

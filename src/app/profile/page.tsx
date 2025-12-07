@@ -395,9 +395,12 @@ export default function ProfilePage() {
                 </form>
               </div>
             </div>
+          </div>
 
+          {/* Sidebar */}
+          <div className="col-lg-4 mt-4 mt-lg-0">
             {/* Change Password Card - Moved Above Security & Privacy */}
-            <div className="card shadow-sm mt-4">
+            <div className="card shadow-sm">
               <div className="card-header">
                 <h5 className="mb-0">
                   <i className="bi bi-shield-lock me-2"></i>
@@ -409,7 +412,7 @@ export default function ProfilePage() {
                   className="small mb-3"
                   style={{ color: "var(--text-secondary)" }}
                 >
-                  Keep your account secure by regularly updating your password
+                  Keep your account secure by updating your password
                 </p>
                 <button
                   type="button"
@@ -421,12 +424,8 @@ export default function ProfilePage() {
                 </button>
               </div>
             </div>
-          </div>
-
-          {/* Sidebar */}
-          <div className="col-lg-4 mt-4 mt-lg-0">
             {/* Security Actions */}
-            <div className="card shadow-sm mb-3">
+            <div className="card shadow-sm mb-3 mt-2">
               <div className="card-body">
                 <h6 className="card-title mb-2">
                   <i className="bi bi-shield-lock me-2"></i>
@@ -436,8 +435,7 @@ export default function ProfilePage() {
                   className="small mb-3"
                   style={{ color: "var(--text-secondary)" }}
                 >
-                  Manage your account security settings, monitor active
-                  sessions, and review login activity to keep your account safe.
+                  Manage your account security settings.
                 </p>
                 <div className="d-grid gap-2">
                   <a

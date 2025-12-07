@@ -217,9 +217,18 @@ const SettlementsPage: React.FC = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
+      // Add cache busting
+      const fetchOptions = {
+        cache: "no-store" as RequestCache,
+        headers: {
+          "Cache-Control": "no-cache, no-store, must-revalidate",
+          Pragma: "no-cache",
+        },
+      };
+
       const [settlementsRes, balancesRes] = await Promise.all([
-        fetch("/api/settlements"),
-        fetch("/api/settlements/balance"),
+        fetch("/api/settlements", fetchOptions),
+        fetch("/api/settlements/balance", fetchOptions),
       ]);
 
       if (!settlementsRes.ok || !balancesRes.ok) {
@@ -241,9 +250,18 @@ const SettlementsPage: React.FC = () => {
   // Optimized refresh for partial updates after CRUD operations
   const refreshSettlements = async () => {
     try {
+      // Add cache busting
+      const fetchOptions = {
+        cache: "no-store" as RequestCache,
+        headers: {
+          "Cache-Control": "no-cache, no-store, must-revalidate",
+          Pragma: "no-cache",
+        },
+      };
+
       const [settlementsRes, balancesRes] = await Promise.all([
-        fetch("/api/settlements"),
-        fetch("/api/settlements/balance"),
+        fetch("/api/settlements", fetchOptions),
+        fetch("/api/settlements/balance", fetchOptions),
       ]);
 
       if (!settlementsRes.ok || !balancesRes.ok) {

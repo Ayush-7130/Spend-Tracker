@@ -24,6 +24,24 @@ const handleChangePassword = createApiRoute({
       const body = await request.json();
       const { currentPassword, newPassword, confirmPassword } = body;
 
+      // SECURITY: Check if session has been active for at least 24 hours
+      // This prevents immediate malicious password changes from newly compromised accounts
+      const accessToken = request.cookies.get("accessToken")?.value;
+      const { checkSessionAge } = await import("@/lib/auth");
+      const sessionAgeCheck = await checkSessionAge(user.id, accessToken, 24);
+
+      if (!sessionAgeCheck.isValid) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: sessionAgeCheck.message || "Session age requirement not met",
+            sessionAge: sessionAgeCheck.sessionAge,
+            requiredAge: sessionAgeCheck.requiredAge,
+          } as any,
+          { status: 403 } // Forbidden
+        );
+      }
+
       // Validation
       const errors: Record<string, string> = {};
 
@@ -99,13 +117,13 @@ const handleChangePassword = createApiRoute({
         }
       );
 
-      // Revoke ALL active sessions (force re-login everywhere)
-      await db
-        .collection("sessions")
-        .updateMany(
-          { userId: user.id, isActive: true },
-          { $set: { isActive: false } }
-        );
+      // SECURITY: Revoke ALL other active sessions (force re-login everywhere except current device)
+      // This ensures that if someone else has access to the account, they're logged out
+      const { revokeAllSessions } = await import("@/lib/auth");
+      const sessionsRevoked = await revokeAllSessions(
+        user.id,
+        "password_change"
+      );
 
       // Get device info for notification
       const userAgent = request.headers.get("user-agent") || "Unknown";
@@ -135,8 +153,10 @@ const handleChangePassword = createApiRoute({
 
       return NextResponse.json({
         success: true,
-        message:
-          "Password changed successfully. All sessions have been logged out for security.",
+        message: `Password changed successfully. ${sessionsRevoked} other session(s) have been logged out for security.`,
+        data: {
+          sessionsRevoked,
+        },
       });
     } catch {
       return NextResponse.json(

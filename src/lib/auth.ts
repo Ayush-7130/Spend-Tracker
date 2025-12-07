@@ -11,13 +11,14 @@ const JWT_REFRESH_SECRET =
   "your-super-secret-refresh-key-change-in-production";
 
 // Token expiration times
-// UPDATED STRATEGY: Remember Me affects storage AND token TTL
-// Without Remember Me (sessionStorage - cleared on browser close):
-const ACCESS_TOKEN_EXPIRES_IN = "15m"; // 15 minutes
-const REFRESH_TOKEN_EXPIRES_IN = "1d"; // 1 day (reduced from 7 days)
-// With Remember Me (localStorage - persists after browser close):
+// STRATEGY: Remember Me affects token TTL, cookie maxAge, and session expiry
+// All three (JWT expiry, cookie maxAge, session expiresAt) MUST match to prevent early logout
+// Without Remember Me:
+const ACCESS_TOKEN_EXPIRES_IN = "15m"; // 15 minutes (always short-lived for security)
+const REFRESH_TOKEN_EXPIRES_IN = "1d"; // 1 day (session persists for 1 day across browser restarts)
+// With Remember Me:
 const ACCESS_TOKEN_EXPIRES_IN_REMEMBERED = "15m"; // 15 minutes (same as without)
-const REFRESH_TOKEN_EXPIRES_IN_REMEMBERED = "7d"; // 7 days (reduced from 30 days)
+const REFRESH_TOKEN_EXPIRES_IN_REMEMBERED = "7d"; // 7 days (longer session for convenience)
 
 // User interface (using database User interface)
 export interface User {
@@ -95,9 +96,9 @@ export function generateTokenPair(
   );
 
   // Calculate expiration dates
-  // UPDATED: Remember Me affects token TTL and storage location
-  // Without Remember Me: access = 15min, refresh = 1 day (sessionStorage)
-  // With Remember Me: access = 15min, refresh = 7 days (localStorage)
+  // CRITICAL: These dates MUST match cookie maxAge and session expiresAt
+  // Without Remember Me: access = 15min, refresh = 1 day
+  // With Remember Me: access = 15min, refresh = 7 days
   const accessTokenExpiresAt = new Date(now.getTime() + 15 * 60 * 1000); // Always 15 minutes
 
   const refreshTokenExpiresAt = rememberMe
@@ -263,6 +264,209 @@ export function clearSessionCache(accessToken?: string) {
   } else {
     // Clear all cache
     sessionValidationCache.clear();
+  }
+}
+
+/**
+ * Check if a session has been active for the required duration
+ *
+ * This is a security feature that requires sessions to be active for a minimum
+ * duration before allowing sensitive operations (password change, email change, etc.)
+ * This prevents immediate malicious actions from newly compromised accounts.
+ *
+ * @param userId - The user ID to check
+ * @param accessToken - (Optional) The access token to identify the session
+ * @param requiredHours - Minimum hours the session must be active (default: 24)
+ * @returns Object with isValid boolean and details
+ */
+export async function checkSessionAge(
+  userId: string,
+  accessToken?: string,
+  requiredHours: number = 24
+): Promise<{
+  isValid: boolean;
+  sessionAge: number; // in hours
+  requiredAge: number; // in hours
+  createdAt?: Date;
+  message?: string;
+}> {
+  try {
+    const { dbManager } = await import("@/lib/database");
+    const db = await dbManager.getDatabase();
+
+    // Find the current active session
+    const query: any = {
+      userId,
+      isActive: true,
+    };
+
+    // If accessToken is provided, use it to find the specific session
+    if (accessToken) {
+      query.accessToken = accessToken;
+    }
+
+    const session = await db
+      .collection("sessions")
+      .findOne(query, { sort: { createdAt: -1 } }); // Get most recent session
+
+    if (!session) {
+      return {
+        isValid: false,
+        sessionAge: 0,
+        requiredAge: requiredHours,
+        message: "No active session found",
+      };
+    }
+
+    // Calculate session age in hours
+    const now = new Date();
+    const sessionCreatedAt = new Date(session.createdAt);
+    const sessionAgeMs = now.getTime() - sessionCreatedAt.getTime();
+    const sessionAgeHours = sessionAgeMs / (1000 * 60 * 60);
+
+    // Check if session meets minimum age requirement
+    const isValid = sessionAgeHours >= requiredHours;
+
+    return {
+      isValid,
+      sessionAge: Math.floor(sessionAgeHours * 10) / 10, // Round to 1 decimal
+      requiredAge: requiredHours,
+      createdAt: sessionCreatedAt,
+      message: isValid
+        ? "Session age requirement met"
+        : `Session must be active for ${requiredHours} hours. Current: ${Math.floor(sessionAgeHours)} hours`,
+    };
+  } catch (error) {
+    console.error("[checkSessionAge] Error:", error);
+    return {
+      isValid: false,
+      sessionAge: 0,
+      requiredAge: requiredHours,
+      message: "Error checking session age",
+    };
+  }
+}
+
+/**
+ * Revoke all other active sessions for a user (except the current one)
+ *
+ * This is useful for security-sensitive operations like:
+ * - Password changes
+ * - Email changes
+ * - Profile security updates
+ * - Enabling/disabling MFA
+ *
+ * @param userId - The user ID whose sessions should be revoked
+ * @param currentSessionId - (Optional) The current session ID to keep active
+ * @param reason - (Optional) Reason for revocation (for logging)
+ * @returns Number of sessions revoked
+ */
+export async function revokeOtherSessions(
+  userId: string,
+  currentSessionId?: string,
+  reason: string = "security_action"
+): Promise<number> {
+  try {
+    const { dbManager } = await import("@/lib/database");
+    const db = await dbManager.getDatabase();
+
+    // Build query to revoke all sessions except the current one
+    const query: any = {
+      userId,
+      isActive: true,
+    };
+
+    // If currentSessionId is provided, exclude it from revocation
+    if (currentSessionId) {
+      query._id = { $ne: currentSessionId };
+    }
+
+    // Update all matching sessions to inactive
+    const result = await db.collection("sessions").updateMany(query, {
+      $set: {
+        isActive: false,
+        revokedAt: new Date(),
+        revokedReason: reason,
+      },
+    });
+
+    // Clear session cache for affected sessions
+    clearSessionCache();
+
+    // Log the revocation for audit
+    await db.collection("securityLogs").insertOne({
+      userId,
+      eventType: "sessions_revoked",
+      description: `Revoked ${result.modifiedCount} other session(s)`,
+      metadata: {
+        sessionsRevoked: result.modifiedCount,
+        currentSessionPreserved: !!currentSessionId,
+        reason,
+      },
+      timestamp: new Date(),
+    });
+
+    return result.modifiedCount;
+  } catch (error) {
+    console.error("[revokeOtherSessions] Error:", error);
+    return 0;
+  }
+}
+
+/**
+ * Revoke ALL active sessions for a user (including current)
+ *
+ * This is useful for:
+ * - Account compromise
+ * - Forced logout from admin
+ * - Account deletion
+ *
+ * @param userId - The user ID whose sessions should be revoked
+ * @param reason - (Optional) Reason for revocation (for logging)
+ * @returns Number of sessions revoked
+ */
+export async function revokeAllSessions(
+  userId: string,
+  reason: string = "security_action"
+): Promise<number> {
+  try {
+    const { dbManager } = await import("@/lib/database");
+    const db = await dbManager.getDatabase();
+
+    // Revoke ALL active sessions for this user
+    const result = await db.collection("sessions").updateMany(
+      {
+        userId,
+        isActive: true,
+      },
+      {
+        $set: {
+          isActive: false,
+          revokedAt: new Date(),
+          revokedReason: reason,
+        },
+      }
+    );
+
+    // Clear session cache
+    clearSessionCache();
+
+    // Log the revocation for audit
+    await db.collection("securityLogs").insertOne({
+      userId,
+      eventType: "all_sessions_revoked",
+      description: `Revoked all ${result.modifiedCount} active session(s)`,
+      metadata: {
+        sessionsRevoked: result.modifiedCount,
+        reason,
+      },
+      timestamp: new Date(),
+    });
+
+    return result.modifiedCount;
+  } catch (error) {
+    console.error("[revokeAllSessions] Error:", error);
+    return 0;
   }
 }
 

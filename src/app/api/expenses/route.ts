@@ -3,7 +3,11 @@ import clientPromise from "@/lib/mongodb";
 import { getUserFromRequest } from "@/lib/auth";
 import { notificationService } from "@/lib/notifications";
 import { dbManager } from "@/lib/database";
-import { withCache, cacheKeys, invalidateCache } from "@/lib/cache";
+import { invalidateCache } from "@/lib/cache";
+
+// Disable Next.js caching for this route
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export async function GET(request: NextRequest) {
   try {
@@ -18,121 +22,103 @@ export async function GET(request: NextRequest) {
     const sortBy = searchParams.get("sortBy") || "date";
     const sortOrder = searchParams.get("sortOrder") || "desc";
 
-    // Create cache key from query parameters
-    const filterStr = JSON.stringify({
-      category,
-      paidBy,
-      search,
-      startDate,
-      endDate,
-      sortBy,
-      sortOrder,
-    });
-    const cacheKey = cacheKeys.expenses(page, limit, filterStr);
+    const client = await clientPromise;
+    const db = client.db("spend-tracker");
 
-    // Try to get from cache (TTL: 2 minutes for list data)
-    const cachedData = await withCache(
-      cacheKey,
-      async () => {
-        const client = await clientPromise;
-        const db = client.db("spend-tracker");
+    // Build filter object
+    interface FilterType {
+      category?: string;
+      paidBy?: string;
+      description?: { $regex: string; $options: string };
+      date?: { $gte?: Date; $lte?: Date };
+    }
+    const filter: FilterType = {};
 
-        // Build filter object
-        interface FilterType {
-          category?: string;
-          paidBy?: string;
-          description?: { $regex: string; $options: string };
-          date?: { $gte?: Date; $lte?: Date };
-        }
-        const filter: FilterType = {};
+    if (category) filter.category = category;
+    if (paidBy) filter.paidBy = paidBy;
+    if (search) {
+      filter.description = { $regex: search, $options: "i" };
+    }
+    if (startDate || endDate) {
+      filter.date = {};
+      if (startDate) filter.date.$gte = new Date(startDate);
+      if (endDate) filter.date.$lte = new Date(endDate);
+    }
 
-        if (category) filter.category = category;
-        if (paidBy) filter.paidBy = paidBy;
-        if (search) {
-          filter.description = { $regex: search, $options: "i" };
-        }
-        if (startDate || endDate) {
-          filter.date = {};
-          if (startDate) filter.date.$gte = new Date(startDate);
-          if (endDate) filter.date.$lte = new Date(endDate);
-        }
+    // Build sort object
+    const sort: Record<string, 1 | -1> = {};
+    sort[sortBy] = sortOrder === "asc" ? 1 : -1;
 
-        // Build sort object
-        const sort: Record<string, 1 | -1> = {};
-        sort[sortBy] = sortOrder === "asc" ? 1 : -1;
+    const skip = (page - 1) * limit;
 
-        const skip = (page - 1) * limit;
-
-        // Optimized aggregation pipeline with projection
-        const [expenses, total] = await Promise.all([
-          db
-            .collection("expenses")
-            .aggregate([
-              { $match: filter },
-              // Project only necessary fields to reduce memory usage
-              {
-                $project: {
-                  _id: 1,
-                  amount: 1,
-                  description: 1,
-                  date: 1,
-                  category: 1,
-                  subcategory: 1,
-                  paidBy: 1,
-                  isSplit: 1,
-                  splitDetails: 1,
-                  createdAt: 1,
-                },
-              },
-              {
-                $lookup: {
-                  from: "categories",
-                  localField: "category",
-                  foreignField: "_id",
-                  as: "categoryDetails",
-                  // Only fetch category name, not the entire document
-                  pipeline: [{ $project: { name: 1, _id: 1 } }],
-                },
-              },
-              { $sort: sort },
-              { $skip: skip },
-              { $limit: limit },
-            ])
-            .toArray(),
-          db.collection("expenses").countDocuments(filter),
-        ]);
-
-        // Ensure _id is converted to string
-        const serializedExpenses = expenses.map((exp) => ({
-          ...exp,
-          _id: exp._id.toString(),
-        }));
-
-        return {
-          expenses: serializedExpenses,
-          pagination: {
-            page,
-            limit,
-            total,
-            pages: Math.ceil(total / limit),
+    // Optimized aggregation pipeline with projection
+    const [expenses, total] = await Promise.all([
+      db
+        .collection("expenses")
+        .aggregate([
+          { $match: filter },
+          // Project only necessary fields to reduce memory usage
+          {
+            $project: {
+              _id: 1,
+              amount: 1,
+              description: 1,
+              date: 1,
+              category: 1,
+              subcategory: 1,
+              paidBy: 1,
+              isSplit: 1,
+              splitDetails: 1,
+              createdAt: 1,
+            },
           },
-        };
-      },
-      2 * 60 * 1000 // 2 minutes cache
-    );
+          {
+            $lookup: {
+              from: "categories",
+              localField: "category",
+              foreignField: "_id",
+              as: "categoryDetails",
+              // Only fetch category name, not the entire document
+              pipeline: [{ $project: { name: 1, _id: 1 } }],
+            },
+          },
+          { $sort: sort },
+          { $skip: skip },
+          { $limit: limit },
+        ])
+        .toArray(),
+      db.collection("expenses").countDocuments(filter),
+    ]);
 
-    // Add cache headers for client-side caching
+    // Ensure _id is converted to string
+    const serializedExpenses = expenses.map((exp) => ({
+      ...exp,
+      _id: exp._id.toString(),
+    }));
+
+    const responseData = {
+      expenses: serializedExpenses,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit),
+      },
+    };
+
+    // Return with no-cache headers to prevent stale data
     const response = NextResponse.json({
       success: true,
-      data: cachedData,
+      data: responseData,
     });
 
-    // Set cache control headers
+    // Prevent any caching
     response.headers.set(
       "Cache-Control",
-      "public, s-maxage=120, stale-while-revalidate=60"
+      "no-store, no-cache, must-revalidate, max-age=0"
     );
-    response.headers.set("CDN-Cache-Control", "public, s-maxage=120");
+    response.headers.set("Pragma", "no-cache");
+    response.headers.set("Expires", "0");
 
     return response;
   } catch (error: unknown) {

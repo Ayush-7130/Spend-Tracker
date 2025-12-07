@@ -5,6 +5,10 @@ import { NotificationService } from "@/lib/notifications";
 import clientPromise from "@/lib/mongodb";
 import { invalidateCache } from "@/lib/cache";
 
+// Disable Next.js caching for this route
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export async function GET() {
   try {
     const client = await clientPromise;
@@ -17,7 +21,17 @@ export async function GET() {
       .sort({ date: -1 })
       .toArray();
 
-    return NextResponse.json(settlements);
+    const response = NextResponse.json(settlements);
+
+    // Prevent any caching
+    response.headers.set(
+      "Cache-Control",
+      "no-store, no-cache, must-revalidate, max-age=0"
+    );
+    response.headers.set("Pragma", "no-cache");
+    response.headers.set("Expires", "0");
+
+    return response;
   } catch {
     return NextResponse.json(
       { error: "Failed to fetch settlements" },

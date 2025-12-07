@@ -60,6 +60,29 @@ const handlePutProfile = createApiRoute({
       const body = await request.json();
       const { name, email } = body;
 
+      // SECURITY: If email is being changed, check if session has been active for at least 24 hours
+      // This prevents immediate malicious email changes from newly compromised accounts
+      const emailChangeAttempt =
+        email !== undefined && email.trim() !== user.email;
+
+      if (emailChangeAttempt) {
+        const accessToken = request.cookies.get("accessToken")?.value;
+        const { checkSessionAge } = await import("@/lib/auth");
+        const sessionAgeCheck = await checkSessionAge(user.id, accessToken, 24);
+
+        if (!sessionAgeCheck.isValid) {
+          return NextResponse.json(
+            {
+              success: false,
+              error: `Cannot change email: ${sessionAgeCheck.message}`,
+              sessionAge: sessionAgeCheck.sessionAge,
+              requiredAge: sessionAgeCheck.requiredAge,
+            } as any,
+            { status: 403 } // Forbidden
+          );
+        }
+      }
+
       // Validation
       const errors: Record<string, string> = {};
 
@@ -101,7 +124,8 @@ const handlePutProfile = createApiRoute({
         updateData.name = name.trim();
       }
 
-      if (email !== undefined) {
+      const emailChanged = email !== undefined && email.trim() !== user.email;
+      if (emailChanged) {
         updateData.email = email.trim();
       }
 
@@ -121,9 +145,32 @@ const handlePutProfile = createApiRoute({
         );
       }
 
+      // SECURITY: If email changed, revoke all other sessions
+      // This prevents unauthorized access if email was compromised
+      let sessionsRevoked = 0;
+      if (emailChanged) {
+        const { revokeAllSessions } = await import("@/lib/auth");
+        sessionsRevoked = await revokeAllSessions(user.id, "email_change");
+
+        // Log security event
+        await db.collection("securityLogs").insertOne({
+          userId: user.id,
+          eventType: "email_change",
+          description: `Email changed from ${user.email} to ${email.trim()}`,
+          metadata: {
+            oldEmail: user.email,
+            newEmail: email.trim(),
+            sessionsRevoked,
+          },
+          timestamp: new Date(),
+        });
+      }
+
       return NextResponse.json({
         success: true,
-        message: "Profile updated successfully",
+        message: emailChanged
+          ? `Profile updated successfully. ${sessionsRevoked} session(s) logged out for security.`
+          : "Profile updated successfully",
         data: {
           id: result._id.toString(),
           name: result.name,
@@ -131,6 +178,7 @@ const handlePutProfile = createApiRoute({
           role: result.role || "user",
           createdAt: result.createdAt,
           updatedAt: result.updatedAt,
+          sessionsRevoked: emailChanged ? sessionsRevoked : 0,
         },
       });
     } catch {

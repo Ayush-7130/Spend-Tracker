@@ -278,6 +278,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Create NEW session (no IP address stored)
+    // IMPORTANT: Store the ORIGINAL expiry time (fixed session duration)
+    // This ensures session expires exactly 1 day (or 7 days) after login
+    // and does NOT extend on refresh (Option B: Fixed Session)
     const session = {
       _id: sessionId,
       userId,
@@ -287,7 +290,8 @@ export async function POST(request: NextRequest) {
       location,
       isActive: true,
       rememberMe, // Store Remember Me preference
-      expiresAt: tokenPair.refreshTokenExpiresAt,
+      expiresAt: tokenPair.refreshTokenExpiresAt, // FIXED expiry from original login
+      originalExpiresAt: tokenPair.refreshTokenExpiresAt, // Store original expiry for validation
       createdAt: new Date(),
       lastActivityAt: new Date(),
     };
@@ -337,14 +341,6 @@ export async function POST(request: NextRequest) {
       sessionId.toString() // Exclude current session
     );
 
-    // Set cookie maxAge based on Remember Me
-    // UPDATED STRATEGY:
-    // - With Remember Me: 7 days (persists after browser close)
-    // - Without Remember Me: 1 day (session-based, cleared on browser close)
-    // Note: We use HTTP-only cookies (secure) but adjust expiry based on preference
-    const accessMaxAge = rememberMe ? 7 * 24 * 60 * 60 : 24 * 60 * 60; // 7 days or 1 day
-    const refreshMaxAge = rememberMe ? 7 * 24 * 60 * 60 : 24 * 60 * 60; // 7 days or 1 day
-
     const response = NextResponse.json(
       {
         success: true,
@@ -368,14 +364,19 @@ export async function POST(request: NextRequest) {
       { status: 200 }
     );
 
-    // Set cookies with appropriate expiration
-    // For "Remember Me": longer expiry (7 days) - persists after browser close
-    // Without "Remember Me": shorter expiry (1 day) - more secure, session-based
+    // CRITICAL FIX: Set cookie maxAge to match refresh token expiry
+    // This ensures cookies persist as long as the refresh token is valid
+    // With Remember Me: 7 days (long-lived session)
+    // Without Remember Me: 1 day (shorter session but still persists across browser restarts)
+    const cookieMaxAge = rememberMe
+      ? 7 * 24 * 60 * 60 // 7 days in seconds
+      : 1 * 24 * 60 * 60; // 1 day in seconds
+
     response.cookies.set("accessToken", tokenPair.accessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
-      maxAge: accessMaxAge,
+      maxAge: cookieMaxAge,
       path: "/",
     });
 
@@ -383,7 +384,7 @@ export async function POST(request: NextRequest) {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
-      maxAge: refreshMaxAge,
+      maxAge: cookieMaxAge,
       path: "/",
     });
     return response;

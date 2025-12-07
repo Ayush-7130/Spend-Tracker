@@ -143,23 +143,47 @@ export async function POST(request: NextRequest) {
       rememberMe
     );
 
-    // Calculate new session expiration based on rememberMe
-    // CRITICAL: Always extend from NOW, not from original expiry
-    // This ensures the session stays alive as long as it's being refreshed
-    // When rememberMe is true: 30 days from now, otherwise 7 days from now
-    const newExpiresAt = rememberMe
-      ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days from now
-      : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days from now
+    // OPTION B: FIXED SESSION DURATION
+    // Session expires at the ORIGINAL login time + duration
+    // Refreshing tokens does NOT extend the session expiry
+    // This ensures sessions expire exactly 1 day (or 7 days) after login
+
+    // Use the original expiry time if it exists (for fixed session)
+    // For backward compatibility, if originalExpiresAt doesn't exist, calculate it
+    const originalExpiresAt = session.originalExpiresAt
+      ? new Date(session.originalExpiresAt)
+      : new Date(
+          session.createdAt.getTime() +
+            (rememberMe ? 7 : 1) * 24 * 60 * 60 * 1000
+        );
+
+    // CRITICAL CHECK: Verify session hasn't exceeded original expiry
+    // Reuse the 'now' variable from above
+    if (now > originalExpiresAt) {
+      // Session has exceeded its original lifetime - reject refresh
+      await db
+        .collection("sessions")
+        .updateOne({ _id: session._id }, { $set: { isActive: false } });
+
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Session has expired. Please login again.",
+          reason: "session_expired",
+        },
+        { status: 401 }
+      );
+    }
 
     // Update the existing session (don't delete and recreate)
-    // This prevents data loss if the response fails or is interrupted
+    // IMPORTANT: Keep the ORIGINAL expiresAt - do NOT extend it
     const updateResult = await db.collection("sessions").updateOne(
       { _id: session._id },
       {
         $set: {
           accessToken: newTokenPair.accessToken,
           refreshToken: newTokenPair.refreshToken,
-          expiresAt: newExpiresAt, // CRITICAL: Extend session expiration from NOW
+          // expiresAt stays the SAME (original expiry time) - not extended!
           lastActivityAt: new Date(), // Update last activity timestamp
           // Preserve rememberMe flag (already exists, but explicitly set for clarity)
           rememberMe: rememberMe,
@@ -167,6 +191,7 @@ export async function POST(request: NextRequest) {
         $setOnInsert: {
           // For backward compatibility - initialize these if they don't exist
           createdAt: session.createdAt || new Date(),
+          originalExpiresAt: originalExpiresAt, // Store original expiry
         },
       }
     );
@@ -191,15 +216,13 @@ export async function POST(request: NextRequest) {
       { status: 200 }
     );
 
-    // Set cookies with appropriate expiration based on rememberMe
-    // UPDATED: Match the new token expiry times
-    // When rememberMe is true: cookies persist for 7 days
-    // When rememberMe is false: cookies persist for 1 day
-    // IMPORTANT: Cookie maxAge should match the refresh token expiration, NOT access token
-    // The access token will be refreshed automatically, so its cookie should persist
+    // CRITICAL FIX: Set cookie maxAge to match refresh token expiry (same as login)
+    // This ensures cookies persist as long as the refresh token is valid
+    // With Remember Me: 7 days (long-lived session)
+    // Without Remember Me: 1 day (shorter session but still persists across browser restarts)
     const cookieMaxAge = rememberMe
-      ? 7 * 24 * 60 * 60 // 7 days in seconds (matches REFRESH_TOKEN_EXPIRES_IN_REMEMBERED)
-      : 1 * 24 * 60 * 60; // 1 day in seconds (matches REFRESH_TOKEN_EXPIRES_IN)
+      ? 7 * 24 * 60 * 60 // 7 days in seconds
+      : 1 * 24 * 60 * 60; // 1 day in seconds
 
     response.cookies.set("accessToken", newTokenPair.accessToken, {
       httpOnly: true,

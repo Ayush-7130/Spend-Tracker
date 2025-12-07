@@ -194,7 +194,7 @@ export default function LoginPage() {
                         }}
                       >
                         Stay signed in for{" "}
-                        {formData.rememberMe ? "30 days" : "7 days"}
+                        {formData.rememberMe ? "7 days" : "1 day"}
                       </small>
                     </div>
 

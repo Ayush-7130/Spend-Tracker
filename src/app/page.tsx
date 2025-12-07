@@ -112,6 +112,7 @@ export default function Home() {
     saketAmount: "",
     ayushAmount: "",
   });
+  const [manualSplitEdit, setManualSplitEdit] = useState(false);
 
   const [newSettlement, setNewSettlement] = useState({
     from: "",
@@ -298,6 +299,7 @@ export default function Home() {
           saketAmount: "",
           ayushAmount: "",
         });
+        setManualSplitEdit(false);
         fetchDashboardData(selectedUser);
         if (selectedUser === "all") {
           fetchSettlementData();
@@ -989,7 +991,10 @@ export default function Home() {
       {/* Add Expense Dialog */}
       <Modal
         show={showAddExpenseDialog}
-        onClose={() => setShowAddExpenseDialog(false)}
+        onClose={() => {
+          setShowAddExpenseDialog(false);
+          setManualSplitEdit(false);
+        }}
         title="Add New Expense"
         size="md"
         footer={
@@ -997,7 +1002,10 @@ export default function Home() {
             <button
               type="button"
               className="btn btn-secondary"
-              onClick={() => setShowAddExpenseDialog(false)}
+              onClick={() => {
+                setShowAddExpenseDialog(false);
+                setManualSplitEdit(false);
+              }}
               disabled={operationLoading}
             >
               Cancel
@@ -1043,18 +1051,19 @@ export default function Home() {
               value={newExpense.amount}
               onChange={(value) => {
                 const amount = value as string;
-                const splitAmount = parseFloat(amount) / 2;
-                setNewExpense({
+                const updates: any = {
                   ...newExpense,
                   amount,
-                  // Auto-update split amounts if split is enabled
-                  saketAmount: newExpense.isSplit
-                    ? splitAmount.toString()
-                    : newExpense.saketAmount,
-                  ayushAmount: newExpense.isSplit
-                    ? splitAmount.toString()
-                    : newExpense.ayushAmount,
-                });
+                };
+
+                // Only auto-split if split is enabled and user hasn't manually edited
+                if (newExpense.isSplit && !manualSplitEdit && amount) {
+                  const halfAmount = (parseFloat(amount) / 2).toFixed(2);
+                  updates.saketAmount = halfAmount;
+                  updates.ayushAmount = halfAmount;
+                }
+
+                setNewExpense(updates);
               }}
               required
               placeholder="0.00"
@@ -1150,6 +1159,8 @@ export default function Home() {
                         ? (parseFloat(newExpense.amount) / 2).toString()
                         : "",
                     });
+                    // Reset manual edit flag when toggling split
+                    setManualSplitEdit(false);
                   }}
                 />
                 <label className="form-check-label" htmlFor="expense-split">
@@ -1185,6 +1196,8 @@ export default function Home() {
                           ayushAmount:
                             ayushAmount >= 0 ? ayushAmount.toFixed(2) : "0",
                         });
+                        // Mark that user has manually edited split amounts
+                        setManualSplitEdit(true);
                       }}
                       placeholder="0.00"
                     />
@@ -1212,6 +1225,8 @@ export default function Home() {
                           saketAmount:
                             saketAmount >= 0 ? saketAmount.toFixed(2) : "0",
                         });
+                        // Mark that user has manually edited split amounts
+                        setManualSplitEdit(true);
                       }}
                       placeholder="0.00"
                     />

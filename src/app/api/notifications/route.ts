@@ -4,6 +4,10 @@ import { notificationService } from "@/lib/notifications";
 import { ObjectId } from "mongodb";
 import clientPromise from "@/lib/mongodb";
 
+// Disable Next.js caching for this route
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 // GET - Get user notifications
 export async function GET(request: NextRequest) {
   try {
@@ -50,10 +54,20 @@ export async function GET(request: NextRequest) {
       sessionId
     );
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       data: result,
     });
+
+    // Prevent any caching for notifications
+    response.headers.set(
+      "Cache-Control",
+      "no-store, no-cache, must-revalidate, max-age=0"
+    );
+    response.headers.set("Pragma", "no-cache");
+    response.headers.set("Expires", "0");
+
+    return response;
   } catch {
     return NextResponse.json(
       { success: false, error: "Failed to get notifications" },

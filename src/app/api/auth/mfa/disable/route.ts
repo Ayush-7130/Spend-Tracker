@@ -27,6 +27,24 @@ const handleMFADisable = createApiRoute({
         );
       }
 
+      // SECURITY: Check if session has been active for at least 24 hours
+      // This prevents immediate malicious MFA disabling from newly compromised accounts
+      const accessToken = request.cookies.get("accessToken")?.value;
+      const { checkSessionAge } = await import("@/lib/auth");
+      const sessionAgeCheck = await checkSessionAge(user.id, accessToken, 24);
+
+      if (!sessionAgeCheck.isValid) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: `Cannot disable MFA: ${sessionAgeCheck.message}`,
+            sessionAge: sessionAgeCheck.sessionAge,
+            requiredAge: sessionAgeCheck.requiredAge,
+          } as any,
+          { status: 403 } // Forbidden
+        );
+      }
+
       const db = await dbManager.getDatabase();
 
       // Get user from database
@@ -77,6 +95,11 @@ const handleMFADisable = createApiRoute({
         }
       );
 
+      // SECURITY: Revoke all other sessions when MFA is disabled
+      // This ensures that if someone disabled MFA maliciously, other sessions are terminated
+      const { revokeAllSessions } = await import("@/lib/auth");
+      const sessionsRevoked = await revokeAllSessions(user.id, "mfa_disabled");
+
       // Send notification
       await notificationService.notifyMFADisabled(user.id);
 
@@ -85,12 +108,18 @@ const handleMFADisable = createApiRoute({
         userId: user.id,
         eventType: "mfa_disabled",
         description: "Two-factor authentication disabled",
+        metadata: {
+          sessionsRevoked,
+        },
         timestamp: new Date(),
       });
 
       return NextResponse.json({
         success: true,
-        message: "Two-factor authentication has been disabled successfully.",
+        message: `Two-factor authentication has been disabled. ${sessionsRevoked} session(s) logged out for security.`,
+        data: {
+          sessionsRevoked,
+        },
       });
     } catch {
       return NextResponse.json(

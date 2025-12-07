@@ -177,22 +177,26 @@ export async function POST(request: NextRequest) {
     // GENERATE TOKENS AND CREATE SESSION
     // ========================================================================
 
-    // Generate token pair (default 15min access, 7 days refresh)
+    // Generate token pair (rememberMe is false for new signups)
+    // This gives: 15min access token, 1 day refresh token
+    const rememberMe = false;
     const tokenPair = generateTokenPair(
       {
         userId,
         email: userDoc.email,
         role: userDoc.role,
       },
-      false // rememberMe is false for new signups
+      rememberMe
     );
 
     // Get device info
     const userAgent = request.headers.get("user-agent") || "Unknown";
     const deviceInfo = parseUserAgent(userAgent);
 
-    // Create session in database
-    const sessionExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+    // CRITICAL FIX: Session expiry must match refresh token expiry
+    // Since rememberMe = false, use 1 day (not 7 days)
+    // OPTION B: Store FIXED expiry time (does not extend on refresh)
+    const sessionExpiresAt = new Date(Date.now() + 1 * 24 * 60 * 60 * 1000); // 1 day
 
     await db.collection("sessions").insertOne({
       userId,
@@ -204,7 +208,8 @@ export async function POST(request: NextRequest) {
       },
       isActive: true,
       rememberMe: false,
-      expiresAt: sessionExpiresAt,
+      expiresAt: sessionExpiresAt, // FIXED expiry from original signup
+      originalExpiresAt: sessionExpiresAt, // Store original expiry for validation
       createdAt: now,
       lastActivityAt: now,
     });
@@ -249,8 +254,9 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
 
-    // Set cookies (7 days for new signups)
-    const cookieMaxAge = 7 * 24 * 60 * 60; // 7 days in seconds
+    // CRITICAL FIX: Set cookies to match refresh token expiry (1 day for new signups)
+    // This ensures cookie, JWT, and session all expire at the same time
+    const cookieMaxAge = 1 * 24 * 60 * 60; // 1 day in seconds (matches rememberMe = false)
 
     response.cookies.set("accessToken", tokenPair.accessToken, {
       httpOnly: true,

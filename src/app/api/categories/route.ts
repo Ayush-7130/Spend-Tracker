@@ -3,6 +3,10 @@ import clientPromise from "@/lib/mongodb";
 import { getUserFromRequest } from "@/lib/auth";
 import { invalidateCache } from "@/lib/cache";
 
+// Disable Next.js caching for this route
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 interface Category {
   _id: string;
   name: string;
@@ -30,10 +34,20 @@ export async function GET(request: NextRequest) {
       .find({})
       .toArray();
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       data: categories,
     });
+
+    // Prevent any caching
+    response.headers.set(
+      "Cache-Control",
+      "no-store, no-cache, must-revalidate, max-age=0"
+    );
+    response.headers.set("Pragma", "no-cache");
+    response.headers.set("Expires", "0");
+
+    return response;
   } catch {
     return NextResponse.json(
       { success: false, error: "Failed to fetch categories" },

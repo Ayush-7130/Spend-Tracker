@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import clientPromise from "@/lib/mongodb";
 
+// Disable Next.js caching for this route
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export async function GET() {
   try {
     const client = await clientPromise;
@@ -126,7 +130,7 @@ export async function GET() {
       totalSettled = 0;
     }
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       balances: userBalances,
       summary: {
         totalOwed: Math.round(totalOwed * 100) / 100,
@@ -135,6 +139,16 @@ export async function GET() {
         activeBalances: userBalances.filter((b) => b.status === "owes").length,
       },
     });
+
+    // Prevent any caching
+    response.headers.set(
+      "Cache-Control",
+      "no-store, no-cache, must-revalidate, max-age=0"
+    );
+    response.headers.set("Pragma", "no-cache");
+    response.headers.set("Expires", "0");
+
+    return response;
   } catch {
     return NextResponse.json(
       { error: "Failed to calculate balances" },

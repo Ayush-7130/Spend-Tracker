@@ -10,7 +10,18 @@ export const fetchData = async <T>(
   options?: RequestInit
 ): Promise<{ success: boolean; data?: T; error?: string }> => {
   try {
-    const response = await fetch(url, options);
+    // Add cache busting and no-cache headers
+    const defaultOptions: RequestInit = {
+      cache: "no-store",
+      headers: {
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+        Pragma: "no-cache",
+        Expires: "0",
+        ...(options?.headers || {}),
+      },
+    };
+
+    const response = await fetch(url, { ...defaultOptions, ...options });
     const result = await response.json();
 
     if (!response.ok) {

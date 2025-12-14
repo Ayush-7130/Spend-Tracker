@@ -2,7 +2,6 @@
 
 import Navigation from "./Navigation";
 import { useState, useEffect } from "react";
-import { useTokenRefresh } from "@/hooks/useTokenRefresh";
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -10,9 +9,6 @@ interface MainLayoutProps {
 
 export default function MainLayout({ children }: MainLayoutProps) {
   const [isNotificationPanelOpen, setIsNotificationPanelOpen] = useState(false);
-
-  // Automatically refresh tokens in the background only when authenticated
-  useTokenRefresh();
 
   // Listen for notification panel state changes
   useEffect(() => {

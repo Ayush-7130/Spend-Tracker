@@ -45,7 +45,7 @@ export default function AuthGuard({ children }: AuthGuardProps) {
 
     // Redirect authenticated users away from public auth pages
     if (isPublicRoute && isAuthenticated) {
-      window.location.href = "/expenses";
+      window.location.href = "/";
       return;
     }
 

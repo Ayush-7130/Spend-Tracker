@@ -66,10 +66,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // Auto-refresh access token every 14 minutes (1 minute before expiry)
+  // Auto-refresh access token every 13 minutes (1 minute before expiry)
   useEffect(() => {
     // Only run auto-refresh when user is logged in
-    if (!user) return;
+    if (!user) {
+      return;
+    }
 
     const refreshInterval = setInterval(
       async () => {
@@ -136,15 +138,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           console.error("[AuthContext] Auto-refresh error:", error);
         }
       },
-      14 * 60 * 1000
-    ); // 14 minutes (840,000ms)
+      13 * 60 * 1000
+    ); // 13 minutes (780,000ms)
 
     // Cleanup interval on unmount or when user changes
     return () => {
       clearInterval(refreshInterval);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]); // Re-run when user state changes (logout is stable)
+  }, [!!user]); // Re-run when user state changes (logout is stable)
 
   // Memoize callback functions to prevent unnecessary re-renders
   const login = useCallback(

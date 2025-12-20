@@ -30,45 +30,7 @@ export enum HttpMethod {
   PATCH = "PATCH",
 }
 
-// Track if we're currently refreshing to prevent race conditions
-let isRefreshing = false;
-let refreshPromise: Promise<boolean> | null = null;
-
-/**
- * Refresh access token using refresh token
- * Prevents multiple simultaneous refresh calls
- */
-async function refreshAccessToken(): Promise<boolean> {
-  // If already refreshing, wait for that to complete
-  if (isRefreshing && refreshPromise) {
-    return refreshPromise;
-  }
-
-  isRefreshing = true;
-  refreshPromise = (async () => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
-        method: "POST",
-        credentials: "include", // CRITICAL: Include cookies
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-
-      return response.ok;
-    } catch (error) {
-      console.error("Error refreshing access token:", error);
-      return false;
-    } finally {
-      isRefreshing = false;
-      refreshPromise = null;
-    }
-  })();
-
-  return refreshPromise;
-}
-
-// Base fetch wrapper with error handling and token refresh
+// Base fetch wrapper with error handling
 export async function apiRequest<T = any>(
   endpoint: string,
   options: RequestInit = {}
@@ -86,15 +48,14 @@ export async function apiRequest<T = any>(
   const mergedOptions = { ...defaultOptions, ...options };
 
   try {
-    let response = await fetch(url, mergedOptions);
+    const response = await fetch(url, mergedOptions);
 
-    // Handle 401 - Token expired
+    // Handle 401 - Token expired, redirect to login
     if (response.status === 401) {
-      // Check if we have cookies before attempting refresh
+      // Check if we have cookies before redirecting
       const hasCookies =
         typeof document !== "undefined" &&
-        (document.cookie.includes("accessToken") ||
-          document.cookie.includes("refreshToken"));
+        document.cookie.includes("refreshToken");
 
       if (!hasCookies) {
         // Public routes that should not redirect to login
@@ -118,43 +79,14 @@ export async function apiRequest<T = any>(
         throw new ApiError("Authentication required", 401);
       }
 
-      // Don't try to refresh on these endpoints to prevent loops
-      const noRefreshEndpoints = [
-        "/auth/refresh",
-        "/auth/login",
-        "/auth/signup",
-      ];
-
-      // For /auth/me, only skip refresh if we're on the login page
-      // This allows the initial auth check to fail gracefully
-      if (endpoint === "/auth/me") {
-        if (
-          typeof window !== "undefined" &&
-          window.location.pathname.startsWith("/login")
-        ) {
-          throw new ApiError("Authentication required", 401);
-        }
+      // Token expired - redirect to login
+      if (
+        typeof window !== "undefined" &&
+        !window.location.pathname.startsWith("/login")
+      ) {
+        window.location.href = "/login";
       }
-
-      if (noRefreshEndpoints.some((e) => endpoint.includes(e))) {
-        throw new ApiError("Authentication required", 401);
-      }
-
-      const refreshed = await refreshAccessToken();
-
-      if (refreshed) {
-        // Retry the original request with new token
-        response = await fetch(url, mergedOptions);
-      } else {
-        // Refresh failed - redirect to login only if we're in the browser and not already on login
-        if (
-          typeof window !== "undefined" &&
-          !window.location.pathname.startsWith("/login")
-        ) {
-          window.location.href = "/login";
-        }
-        throw new ApiError("Session expired. Please login again.", 401);
-      }
+      throw new ApiError("Session expired. Please login again.", 401);
     }
 
     if (!response.ok) {

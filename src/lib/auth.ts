@@ -4,20 +4,18 @@ import { NextRequest } from "next/server";
 import * as crypto from "crypto";
 
 // JWT Secrets (should be in environment variables)
-const JWT_SECRET =
-  process.env.JWT_SECRET || "your-super-secret-jwt-key-change-in-production";
+// Note: JWT_SECRET kept for backward compatibility but not used in single-token system
 const JWT_REFRESH_SECRET =
   process.env.JWT_REFRESH_SECRET ||
+  process.env.JWT_SECRET ||
   "your-super-secret-refresh-key-change-in-production";
 
 // Token expiration times
 // STRATEGY: Remember Me affects token TTL, cookie maxAge, and session expiry
 // All three (JWT expiry, cookie maxAge, session expiresAt) MUST match to prevent early logout
-// Without Remember Me:
-const ACCESS_TOKEN_EXPIRES_IN = "15m"; // 15 minutes (always short-lived for security)
+// Single refresh token approach:
 const REFRESH_TOKEN_EXPIRES_IN = "1d"; // 1 day (session persists for 1 day across browser restarts)
 // With Remember Me:
-const ACCESS_TOKEN_EXPIRES_IN_REMEMBERED = "15m"; // 15 minutes (same as without)
 const REFRESH_TOKEN_EXPIRES_IN_REMEMBERED = "7d"; // 7 days (longer session for convenience)
 
 // User interface (using database User interface)
@@ -46,12 +44,10 @@ export interface JWTPayload {
   exp?: number;
 }
 
-// Token pair interface
-export interface TokenPair {
-  accessToken: string;
-  refreshToken: string;
-  accessTokenExpiresAt: Date;
-  refreshTokenExpiresAt: Date;
+// Token info interface
+export interface TokenInfo {
+  token: string;
+  expiresAt: Date;
 }
 
 // Hash password utility
@@ -68,56 +64,35 @@ export async function verifyPassword(
   return await bcrypt.compare(password, hashedPassword);
 }
 
-// Generate access and refresh tokens
-export function generateTokenPair(
+// Generate refresh token
+export function generateRefreshToken(
   payload: Omit<JWTPayload, "iat" | "exp">,
   rememberMe: boolean = false
-): TokenPair {
+): TokenInfo {
   const now = new Date();
 
-  // Choose expiration times based on rememberMe setting
-  const accessTokenExpiry = rememberMe
-    ? ACCESS_TOKEN_EXPIRES_IN_REMEMBERED
-    : ACCESS_TOKEN_EXPIRES_IN;
+  // Choose expiration time based on rememberMe setting
   const refreshTokenExpiry = rememberMe
     ? REFRESH_TOKEN_EXPIRES_IN_REMEMBERED
     : REFRESH_TOKEN_EXPIRES_IN;
 
-  // Generate access token (short-lived or medium-lived if remembered)
-  const accessToken = jwt.sign(payload, JWT_SECRET, {
-    expiresIn: accessTokenExpiry,
+  // Generate refresh token (long-lived or extra-long if remembered)
+  const token = jwt.sign({ ...payload, type: "refresh" }, JWT_REFRESH_SECRET, {
+    expiresIn: refreshTokenExpiry,
   });
 
-  // Generate refresh token (long-lived or extra-long if remembered)
-  const refreshToken = jwt.sign(
-    { ...payload, type: "refresh" },
-    JWT_REFRESH_SECRET,
-    { expiresIn: refreshTokenExpiry }
-  );
-
-  // Calculate expiration dates
-  // CRITICAL: These dates MUST match cookie maxAge and session expiresAt
-  // Without Remember Me: access = 15min, refresh = 1 day
-  // With Remember Me: access = 15min, refresh = 7 days
-  const accessTokenExpiresAt = new Date(now.getTime() + 15 * 60 * 1000); // Always 15 minutes
-
-  const refreshTokenExpiresAt = rememberMe
+  // Calculate expiration date
+  // CRITICAL: This date MUST match cookie maxAge and session expiresAt
+  // Without Remember Me: 1 day
+  // With Remember Me: 7 days
+  const expiresAt = rememberMe
     ? new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000) // 7 days
     : new Date(now.getTime() + 1 * 24 * 60 * 60 * 1000); // 1 day
 
   return {
-    accessToken,
-    refreshToken,
-    accessTokenExpiresAt,
-    refreshTokenExpiresAt,
+    token,
+    expiresAt,
   };
-}
-
-// Generate JWT token (legacy - for backwards compatibility)
-export function generateToken(
-  payload: Omit<JWTPayload, "iat" | "exp">
-): string {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: ACCESS_TOKEN_EXPIRES_IN });
 }
 
 // Token verification result interface
@@ -126,53 +101,6 @@ export interface TokenVerificationResult {
   valid: boolean;
   expired: boolean;
   error?: string;
-}
-
-// Verify access token with clock tolerance
-export function verifyToken(token: string): JWTPayload | null {
-  try {
-    // Add 60-second clock tolerance to account for clock skew between servers
-    const decoded = jwt.verify(token, JWT_SECRET, {
-      clockTolerance: 60, // 60 seconds tolerance
-    }) as JWTPayload;
-    return decoded;
-  } catch {
-    return null;
-  }
-}
-
-// Enhanced token verification with detailed error information
-export function verifyAccessToken(token: string): TokenVerificationResult {
-  try {
-    // Add 60-second clock tolerance to account for clock skew between servers
-    const decoded = jwt.verify(token, JWT_SECRET, {
-      clockTolerance: 60, // 60 seconds tolerance
-    }) as JWTPayload;
-
-    return {
-      payload: decoded,
-      valid: true,
-      expired: false,
-    };
-  } catch (error: any) {
-    // Check if token is expired
-    if (error.name === "TokenExpiredError") {
-      return {
-        payload: null,
-        valid: false,
-        expired: true,
-        error: "Token has expired",
-      };
-    }
-
-    // Other JWT errors (invalid signature, malformed, etc.)
-    return {
-      payload: null,
-      valid: false,
-      expired: false,
-      error: error.message || "Token is invalid",
-    };
-  }
 }
 
 // Verify refresh token with clock tolerance
@@ -258,9 +186,9 @@ const sessionValidationCache = new Map<
 const SESSION_CACHE_TTL = 10000; // 10 seconds
 
 // Clear session from cache (used when session is revoked)
-export function clearSessionCache(accessToken?: string) {
-  if (accessToken) {
-    sessionValidationCache.delete(accessToken);
+export function clearSessionCache(token?: string) {
+  if (token) {
+    sessionValidationCache.delete(token);
   } else {
     // Clear all cache
     sessionValidationCache.clear();
@@ -275,13 +203,13 @@ export function clearSessionCache(accessToken?: string) {
  * This prevents immediate malicious actions from newly compromised accounts.
  *
  * @param userId - The user ID to check
- * @param accessToken - (Optional) The access token to identify the session
+ * @param token - (Optional) The refresh token to identify the session
  * @param requiredHours - Minimum hours the session must be active (default: 24)
  * @returns Object with isValid boolean and details
  */
 export async function checkSessionAge(
   userId: string,
-  accessToken?: string,
+  token?: string,
   requiredHours: number = 24
 ): Promise<{
   isValid: boolean;
@@ -300,9 +228,9 @@ export async function checkSessionAge(
       isActive: true,
     };
 
-    // If accessToken is provided, use it to find the specific session
-    if (accessToken) {
-      query.accessToken = accessToken;
+    // If token is provided, use it to find the specific session
+    if (token) {
+      query.token = token;
     }
 
     const session = await db
@@ -482,15 +410,15 @@ export async function getUserFromRequest(
     if (authHeader && authHeader.startsWith("Bearer ")) {
       token = authHeader.substring(7);
     } else {
-      // Fallback to cookies - use accessToken (standard cookie name)
-      token = request.cookies.get("accessToken")?.value;
+      // Fallback to cookies - use refreshToken (single token approach)
+      token = request.cookies.get("refreshToken")?.value;
     }
 
     if (!token) {
       return null;
     }
 
-    const payload = verifyToken(token);
+    const payload = verifyRefreshToken(token);
 
     if (!payload) {
       return null;
@@ -510,7 +438,7 @@ export async function getUserFromRequest(
 
       const session = await db.collection("sessions").findOne(
         {
-          accessToken: token,
+          token: token,
           isActive: true,
         },
         {

@@ -25,7 +25,7 @@ import {
   getUserColor,
   createLineDataset,
 } from "@/lib/utils";
-import { Table, LoadingSpinner, EmptyState } from "@/shared/components";
+import { LoadingSpinner, EmptyState } from "@/shared/components";
 import { useTheme } from "@/contexts/ThemeContext";
 
 ChartJS.register(
@@ -82,6 +82,23 @@ export default function UserAnalyticsPage() {
   const [data, setData] = useState<UserAnalysisData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [categoryView, setCategoryView] = useState<"overall" | "monthly">(
+    "overall"
+  );
+  const [selectedMonth, setSelectedMonth] = useState<string>("");
+  const [monthlyCategoryData, setMonthlyCategoryData] = useState<{
+    labels: string[];
+    amounts: number[];
+  } | null>(null);
+
+  // Get current month in format "MMM 'YY"
+  const getCurrentMonth = () => {
+    const now = new Date();
+    return now.toLocaleDateString("en-IN", {
+      month: "short",
+      year: "2-digit",
+    });
+  };
 
   const fetchUserData = useCallback(async () => {
     try {
@@ -122,14 +139,74 @@ export default function UserAnalyticsPage() {
     }
   }, [userName, fetchUserData]);
 
+  // Fetch monthly category data when month is selected
+  const fetchMonthlyCategoryData = useCallback(
+    async (month: string) => {
+      try {
+        console.log(`Fetching monthly data for ${month}...`);
+        const response = await fetch(
+          `/api/analytics/user/${userName}?month=${month}`
+        );
+        if (!response.ok) {
+          throw new Error("Failed to fetch monthly data");
+        }
+        const result = await response.json();
+        console.log("Monthly data result:", result);
+        if (result.success && result.data) {
+          console.log(
+            "Category distribution:",
+            result.data.categoryDistribution
+          );
+          setMonthlyCategoryData(result.data.categoryDistribution);
+        } else {
+          // Set empty data if no results
+          setMonthlyCategoryData({ labels: [], amounts: [] });
+        }
+      } catch (err) {
+        console.error("Error fetching monthly category data:", err);
+        setMonthlyCategoryData({ labels: [], amounts: [] });
+      }
+    },
+    [userName]
+  );
+
+  // Set default month to current month when data is loaded
+  useEffect(() => {
+    if (data && data.monthlyTrends.months.length > 0 && !selectedMonth) {
+      const currentMonth = getCurrentMonth();
+      // Check if current month exists in the data, otherwise use latest
+      const monthToUse = data.monthlyTrends.months.includes(currentMonth)
+        ? currentMonth
+        : data.monthlyTrends.months[data.monthlyTrends.months.length - 1];
+      setSelectedMonth(monthToUse);
+    }
+  }, [data, selectedMonth]);
+
+  // Fetch monthly data when month changes and view is monthly
+  useEffect(() => {
+    if (categoryView === "monthly" && selectedMonth) {
+      fetchMonthlyCategoryData(selectedMonth);
+    }
+  }, [categoryView, selectedMonth, fetchMonthlyCategoryData]);
+
   const categoryPieData = data
     ? {
-        labels: data.categoryDistribution.labels,
+        labels:
+          categoryView === "overall"
+            ? data.categoryDistribution.labels
+            : monthlyCategoryData?.labels || data.categoryDistribution.labels,
         datasets: [
           {
-            data: data.categoryDistribution.amounts,
+            data:
+              categoryView === "overall"
+                ? data.categoryDistribution.amounts
+                : monthlyCategoryData?.amounts ||
+                  data.categoryDistribution.amounts,
             backgroundColor: getChartColors(
-              data.categoryDistribution.labels.length,
+              categoryView === "overall"
+                ? data.categoryDistribution.labels.length
+                : monthlyCategoryData?.labels.length ||
+                    data.categoryDistribution.labels.length,
               theme
             ),
             borderWidth: 2,
@@ -297,26 +374,77 @@ export default function UserAnalyticsPage() {
               <div className="col-12 col-lg-6 mb-4">
                 <div className="card h-100">
                   <div className="card-header">
-                    <h5 className="mb-0">
-                      <i className="bi bi-pie-chart me-2"></i>
-                      Expense by Category
-                    </h5>
+                    <div className="d-flex justify-content-between align-items-center gap-2">
+                      <h5 className="mb-0 chart-title">
+                        <i className="bi bi-pie-chart me-2"></i>
+                        <span className="d-none d-sm-inline">
+                          Expense by Category
+                        </span>
+                        <span className="d-inline d-sm-none">By Category</span>
+                      </h5>
+                      <div className="d-flex gap-1 gap-sm-2 align-items-center">
+                        <select
+                          className="form-select form-select-sm chart-select"
+                          value={categoryView}
+                          onChange={(e) => {
+                            const value = e.target.value as
+                              | "overall"
+                              | "monthly";
+                            setCategoryView(value);
+                          }}
+                        >
+                          <option value="overall">Overall</option>
+                          <option value="monthly">Monthly</option>
+                        </select>
+                        {categoryView === "monthly" && data && (
+                          <select
+                            className="form-select form-select-sm chart-select"
+                            value={selectedMonth}
+                            onChange={(e) => setSelectedMonth(e.target.value)}
+                          >
+                            {data.monthlyTrends.months.map((month) => (
+                              <option key={month} value={month}>
+                                {month}
+                              </option>
+                            ))}
+                          </select>
+                        )}
+                      </div>
+                    </div>
                   </div>
                   <div className="card-body">
                     <div
                       style={{ height: "300px" }}
                       className="d-none d-sm-block"
                     >
-                      {categoryPieData && (
+                      {categoryPieData && categoryPieData.labels.length > 0 ? (
                         <Pie data={categoryPieData} options={pieChartOptions} />
+                      ) : (
+                        <div className="d-flex align-items-center justify-content-center h-100">
+                          <p
+                            className="text-muted mb-0"
+                            style={{ fontSize: "0.875rem" }}
+                          >
+                            No expenses for this period
+                          </p>
+                        </div>
                       )}
                     </div>
                     <div
                       style={{ height: "200px" }}
                       className="d-block d-sm-none"
                     >
-                      {categoryPieData && (
+                      {categoryPieData && categoryPieData.labels.length > 0 ? (
                         <Pie data={categoryPieData} options={pieChartOptions} />
+                      ) : (
+                        <div className="d-flex align-items-center justify-content-center h-100">
+                          <p
+                            className="text-muted mb-0"
+                            style={{ fontSize: "0.75rem" }}
+                          >
+                            No expenses
+                          </p>
+                        </div>
                       )}
                     </div>
                   </div>
@@ -359,312 +487,27 @@ export default function UserAnalyticsPage() {
                 </div>
               </div>
             </div>
-
-            {/* Tables Row */}
-            <div className="row g-2">
-              {/* Category Breakdown */}
-              <div className="col-12 col-lg-6 mb-4">
-                <div className="card h-100">
-                  <div className="card-header">
-                    <h5 className="mb-0">
-                      <i className="bi bi-list-ul me-2"></i>
-                      Category Breakdown
-                    </h5>
-                  </div>
-                  <div
-                    className="card-body p-0"
-                    style={{
-                      height: "calc(100% - 50px)",
-                      maxHeight: "280px",
-                      overflowY: "auto",
-                    }}
-                  >
-                    <Table
-                      config={{
-                        columns: [
-                          {
-                            key: "category",
-                            header: "Category",
-                            accessor: "category",
-                            headerClassName: "sticky-top",
-                            render: (value) => (
-                              <span style={{ fontSize: "0.75rem" }}>
-                                {value}
-                              </span>
-                            ),
-                          },
-                          {
-                            key: "amount",
-                            header: "Amount",
-                            accessor: "amount",
-                            headerClassName: "sticky-top",
-                            render: (value) => (
-                              <span style={{ fontSize: "0.75rem" }}>
-                                {formatCurrency(value)}
-                              </span>
-                            ),
-                          },
-                          {
-                            key: "count",
-                            header: "Count",
-                            accessor: "count",
-                            headerClassName: "sticky-top",
-                            render: (value) => (
-                              <span style={{ fontSize: "0.75rem" }}>
-                                {value}
-                              </span>
-                            ),
-                          },
-                          {
-                            key: "percentage",
-                            header: "%",
-                            accessor: "percentage",
-                            headerClassName: "sticky-top",
-                            render: (value) => (
-                              <span style={{ fontSize: "0.75rem" }}>
-                                {value}%
-                              </span>
-                            ),
-                          },
-                        ],
-                        data: data.categoryBreakdown,
-                        keyExtractor: (category) => category.category,
-                        responsive: true,
-                        size: "small",
-                      }}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Balance & Settlement */}
-              <div className="col-12 col-lg-6 mb-4">
-                <div className="card h-100">
-                  <div className="card-header">
-                    <h5 className="mb-0 fs-6 fs-sm-5">
-                      <i className="bi bi-balance-scale me-2"></i>
-                      Balance & Settlement
-                    </h5>
-                  </div>
-                  <div className="card-body p-2 p-sm-3">
-                    <div className="row">
-                      <div className="col-12 mb-1">
-                        <div className="d-flex justify-content-between align-items-center">
-                          <span
-                            style={{
-                              fontSize: "0.75rem",
-                              color: "var(--text-secondary)",
-                            }}
-                          >
-                            <i className="bi bi-credit-card me-1"></i>Total
-                            Paid:
-                          </span>
-                          <span
-                            className="fw-bold"
-                            style={{
-                              fontSize: "0.8rem",
-                              color: "var(--status-success)",
-                            }}
-                          >
-                            {formatCurrency(data.balance.totalPaid)}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="col-12 mb-1">
-                        <div className="d-flex justify-content-between align-items-center">
-                          <span
-                            style={{
-                              fontSize: "0.75rem",
-                              color: "var(--text-secondary)",
-                            }}
-                          >
-                            <i className="bi bi-arrow-down-circle me-1"></i>
-                            Total Owed (to me):
-                          </span>
-                          <span
-                            className="fw-bold text-info"
-                            style={{ fontSize: "0.8rem" }}
-                          >
-                            {formatCurrency(data.balance.totalOwed)}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="col-12 mb-1">
-                        <div className="d-flex justify-content-between align-items-center">
-                          <span
-                            style={{
-                              fontSize: "0.75rem",
-                              color: "var(--text-secondary)",
-                            }}
-                          >
-                            <i className="bi bi-arrow-up-circle me-1"></i>Total
-                            Owing (by me):
-                          </span>
-                          <span
-                            className="fw-bold"
-                            style={{
-                              fontSize: "0.8rem",
-                              color: "var(--status-warning)",
-                            }}
-                          >
-                            {formatCurrency(data.balance.totalOwing)}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="col-12 mb-1">
-                        <div className="d-flex justify-content-between align-items-center">
-                          <span
-                            style={{
-                              fontSize: "0.75rem",
-                              color: "var(--text-secondary)",
-                            }}
-                          >
-                            <i className="bi bi-graph-up me-1"></i>Expense
-                            Share:
-                          </span>
-                          <span
-                            className="fw-bold text-primary"
-                            style={{ fontSize: "0.8rem" }}
-                          >
-                            {formatCurrency(
-                              data.balance.totalPaid + data.balance.totalOwing
-                            )}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="col-12 mb-1">
-                        <div className="d-flex justify-content-between align-items-center">
-                          <span
-                            style={{
-                              fontSize: "0.75rem",
-                              color: "var(--text-secondary)",
-                            }}
-                          >
-                            <i className="bi bi-percent me-1"></i>Payment Ratio:
-                          </span>
-                          <span
-                            className="fw-bold"
-                            style={{ fontSize: "0.8rem" }}
-                          >
-                            {(
-                              (data.balance.totalPaid /
-                                (data.balance.totalPaid +
-                                  data.balance.totalOwing || 1)) *
-                              100
-                            ).toFixed(1)}
-                            %
-                          </span>
-                        </div>
-                      </div>
-                      {Object.entries(data.balance.balances).map(
-                        ([user, amount]) => (
-                          <div key={user} className="col-12 mb-1">
-                            <div className="d-flex justify-content-between align-items-center">
-                              <span
-                                style={{
-                                  fontSize: "0.75rem",
-                                  color: "var(--text-secondary)",
-                                }}
-                              >
-                                <i className="bi bi-person me-1"></i>Balance
-                                with {user}:
-                              </span>
-                              <span
-                                className="fw-bold"
-                                style={{
-                                  fontSize: "0.8rem",
-                                  color:
-                                    amount > 0
-                                      ? "var(--status-success)"
-                                      : amount < 0
-                                        ? "var(--status-error)"
-                                        : "var(--text-secondary)",
-                                }}
-                              >
-                                {amount > 0 ? "+" : ""}
-                                {formatCurrency(amount)}
-                              </span>
-                            </div>
-                          </div>
-                        )
-                      )}
-                      <div className="col-12 mt-4">
-                        <hr className="my-2" />
-                        <div className="d-flex justify-content-between align-items-center">
-                          <span
-                            className="fw-medium"
-                            style={{ fontSize: "0.8rem" }}
-                          >
-                            <i className="bi bi-balance-scale me-1"></i>Net
-                            Balance:
-                          </span>
-                          <span
-                            className="fw-bold"
-                            style={{
-                              fontSize: "0.9rem",
-                              color:
-                                data.balance.netBalance > 0
-                                  ? "var(--status-success)"
-                                  : data.balance.netBalance < 0
-                                    ? "var(--status-error)"
-                                    : "var(--text-secondary)",
-                            }}
-                          >
-                            {data.balance.netBalance > 0 ? "+" : ""}
-                            {formatCurrency(data.balance.netBalance)}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="col-12 mt-2">
-                        <div
-                          className={`alert p-2 mb-0 ${
-                            data.balance.netBalance > 0
-                              ? "alert-success"
-                              : data.balance.netBalance < 0
-                                ? "alert-danger"
-                                : "alert-secondary"
-                          }`}
-                          style={{
-                            fontSize: "0.7rem",
-                          }}
-                        >
-                          <i
-                            className={`bi ${
-                              data.balance.netBalance > 0
-                                ? "bi-arrow-up-circle"
-                                : data.balance.netBalance < 0
-                                  ? "bi-arrow-down-circle"
-                                  : "bi-check-circle"
-                            } me-1`}
-                          ></i>
-                          {data.balance.netBalance > 0
-                            ? `${
-                                userName.charAt(0).toUpperCase() +
-                                userName.slice(1)
-                              } is owed ${formatCurrency(
-                                data.balance.netBalance
-                              )}`
-                            : data.balance.netBalance < 0
-                              ? `${
-                                  userName.charAt(0).toUpperCase() +
-                                  userName.slice(1)
-                                } owes ${formatCurrency(
-                                  Math.abs(data.balance.netBalance)
-                                )}`
-                              : "All settled!"}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </div>
 
       {/* Custom Styles */}
       <style jsx>{`
+        /* Chart controls styling */
+        .chart-title {
+          font-size: 1rem;
+        }
+
+        .chart-select {
+          min-width: 80px;
+          font-size: 0.875rem;
+          padding: 0.25rem 0.5rem;
+        }
+
+        .card-header {
+          padding: 0.75rem 1rem;
+        }
+
         .table-responsive,
         .position-relative {
           scrollbar-width: thin;
@@ -720,6 +563,25 @@ export default function UserAnalyticsPage() {
             overflow-x: hidden !important;
           }
 
+          .card-header {
+            padding: 0.375rem 0.5rem !important;
+          }
+
+          .chart-title {
+            font-size: 0.7rem !important;
+          }
+
+          .chart-title i {
+            font-size: 0.7rem !important;
+          }
+
+          .chart-select {
+            min-width: 60px !important;
+            font-size: 0.625rem !important;
+            padding: 0.125rem 0.25rem !important;
+            height: auto !important;
+          }
+
           .h4,
           h1 {
             font-size: 0.9rem !important;
@@ -763,6 +625,10 @@ export default function UserAnalyticsPage() {
             min-height: 65px !important;
           }
 
+          .gap-1 {
+            gap: 0.0625rem !important;
+          }
+
           .gap-2 {
             gap: 0.125rem !important;
           }
@@ -781,6 +647,20 @@ export default function UserAnalyticsPage() {
             overflow-x: hidden !important;
             padding-left: 0.25rem !important;
             padding-right: 0.25rem !important;
+          }
+
+          .card-header {
+            padding: 0.5rem 0.75rem !important;
+          }
+
+          .chart-title {
+            font-size: 0.85rem !important;
+          }
+
+          .chart-select {
+            min-width: 70px !important;
+            font-size: 0.75rem !important;
+            padding: 0.2rem 0.35rem !important;
           }
 
           .row {

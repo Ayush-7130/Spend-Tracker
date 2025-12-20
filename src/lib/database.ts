@@ -42,8 +42,7 @@ export interface User {
 export interface Session {
   _id: string;
   userId: string;
-  accessToken: string;
-  refreshToken: string;
+  token: string; // Single refresh token
   deviceInfo: {
     userAgent: string;
     browser?: string;

@@ -31,7 +31,7 @@ const handleGetSessions = createApiRoute({
         .toArray();
 
       // Get current session token
-      const currentAccessToken = request.cookies.get("accessToken")?.value;
+      const currentToken = request.cookies.get("refreshToken")?.value;
 
       const formattedSessions = sessions.map((session) => ({
         id: session._id.toString(),
@@ -39,13 +39,14 @@ const handleGetSessions = createApiRoute({
         browser: session.deviceInfo.browser,
         os: session.deviceInfo.os,
         deviceType: session.deviceInfo.device,
+        ipAddress: session.ipAddress || "Unknown",
         location: session.location
           ? `${session.location.city || "Unknown"}, ${session.location.country || "Unknown"}`
           : undefined,
         createdAt: session.createdAt,
         lastActivityAt: session.lastActivityAt,
         expiresAt: session.expiresAt,
-        isCurrent: session.accessToken === currentAccessToken,
+        isCurrent: session.token === currentToken,
       }));
 
       return NextResponse.json({
@@ -76,7 +77,7 @@ const handleRevokeSession = createApiRoute({
       const revokeAll = searchParams.get("revokeAll") === "true";
 
       const db = await dbManager.getDatabase();
-      const currentAccessToken = request.cookies.get("accessToken")?.value;
+      const currentToken = request.cookies.get("refreshToken")?.value;
 
       // Security: Apply 24-hour restriction when revoking sessions
       // This prevents a newly compromised session from immediately revoking all legitimate sessions
@@ -84,7 +85,7 @@ const handleRevokeSession = createApiRoute({
         // Get current session to check its age
         const currentSession = await db.collection("sessions").findOne({
           userId: user.id,
-          accessToken: currentAccessToken,
+          token: currentToken,
           isActive: true,
         });
 
@@ -113,7 +114,7 @@ const handleRevokeSession = createApiRoute({
           {
             userId: user.id,
             isActive: true,
-            accessToken: { $ne: currentAccessToken },
+            token: { $ne: currentToken },
           },
           { $set: { isActive: false } }
         );
@@ -146,7 +147,7 @@ const handleRevokeSession = createApiRoute({
       // Get current session to check its age
       const currentSession = await db.collection("sessions").findOne({
         userId: user.id,
-        accessToken: currentAccessToken,
+        token: currentToken,
         isActive: true,
       });
 
@@ -185,7 +186,7 @@ const handleRevokeSession = createApiRoute({
       }
 
       // Prevent revoking the current session
-      if (session.accessToken === currentAccessToken) {
+      if (session.token === currentToken) {
         return NextResponse.json(
           {
             success: false,
@@ -205,7 +206,7 @@ const handleRevokeSession = createApiRoute({
 
       // Clear session from validation cache
       const { clearSessionCache } = await import("@/lib/auth");
-      clearSessionCache(session.accessToken);
+      clearSessionCache(session.token);
 
       // Send notification - DISABLED per user request
       const deviceDescription = getDeviceDescription(session.deviceInfo);

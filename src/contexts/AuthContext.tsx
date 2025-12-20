@@ -31,7 +31,6 @@ interface AuthContextType {
   ) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
-  refreshToken: () => Promise<boolean>;
   isAuthenticated: boolean;
 }
 
@@ -42,9 +41,6 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-
-  // Track in-flight refresh promises to prevent race conditions
-  const refreshPromiseRef = useRef<Promise<boolean> | null>(null);
 
   // Track if we're in the middle of logging out to prevent redirect loops
   const loggingOutRef = useRef(false);
@@ -65,88 +61,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false);
     }
   };
-
-  // Auto-refresh access token every 13 minutes (1 minute before expiry)
-  useEffect(() => {
-    // Only run auto-refresh when user is logged in
-    if (!user) {
-      return;
-    }
-
-    const refreshInterval = setInterval(
-      async () => {
-        // Don't run auto-refresh if we're logging out
-        if (loggingOutRef.current) {
-          return;
-        }
-        try {
-          const refreshResponse = await fetch("/api/auth/refresh", {
-            method: "POST",
-            credentials: "include", // Important: send HTTP-only cookies
-          });
-
-          if (!refreshResponse.ok) {
-            // Differentiate between auth errors and other errors
-            if (
-              refreshResponse.status === 401 ||
-              refreshResponse.status === 403
-            ) {
-              // Genuine authentication error - logout user (only if not already logging out)
-              if (!loggingOutRef.current) {
-                await logout();
-              }
-            }
-            // Server error (5xx) or other temporary issue - don't logout
-            // Token refresh will be retried on next interval
-            return;
-          }
-
-          // CRITICAL: Verify the new token by fetching user data
-          // This ensures the new token is valid and updates the auth state
-          const meResponse = await fetch("/api/auth/me", {
-            method: "GET",
-            credentials: "include",
-            headers: {
-              "Cache-Control": "no-cache",
-              Pragma: "no-cache",
-            },
-          });
-
-          if (!meResponse.ok) {
-            // Only logout on auth errors, not server errors
-            if (meResponse.status === 401 || meResponse.status === 403) {
-              if (!loggingOutRef.current) {
-                await logout();
-              }
-            }
-            return;
-          }
-
-          const userData = await meResponse.json();
-
-          if (userData.success && userData.data?.user) {
-            setUser(userData.data.user);
-          } else {
-            if (!loggingOutRef.current) {
-              await logout();
-            }
-          }
-        } catch (error) {
-          // Network error or fetch failure - don't logout immediately
-          // Could be temporary connection issue
-          // Token refresh will be retried on next interval
-          console.error("[AuthContext] Auto-refresh error:", error);
-        }
-      },
-      13 * 60 * 1000
-    ); // 13 minutes (780,000ms)
-
-    // Cleanup interval on unmount or when user changes
-    return () => {
-      clearInterval(refreshInterval);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [!!user]); // Re-run when user state changes (logout is stable)
 
   // Memoize callback functions to prevent unnecessary re-renders
   const login = useCallback(
@@ -254,85 +168,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await checkAuthStatus();
   }, []);
 
-  /**
-   * Manual token refresh function with race condition prevention
-   * Can be called before making critical API calls
-   * Returns true if refresh succeeded, false otherwise
-   *
-   * IMPORTANT: Uses a promise reference to prevent multiple concurrent refresh attempts
-   */
-  const refreshToken = useCallback(async (): Promise<boolean> => {
-    // If a refresh is already in progress, return that promise
-    // This prevents race conditions when multiple API calls trigger refresh simultaneously
-    if (refreshPromiseRef.current) {
-      return refreshPromiseRef.current;
-    }
-
-    // Create new refresh promise and store it
-    const refreshPromise = (async () => {
-      try {
-        // Step 1: Refresh the token
-        const refreshResponse = await fetch("/api/auth/refresh", {
-          method: "POST",
-          credentials: "include",
-        });
-
-        if (!refreshResponse.ok) {
-          // Differentiate between auth errors and network/server errors
-          if (
-            refreshResponse.status === 401 ||
-            refreshResponse.status === 403
-          ) {
-            // Genuine auth error - logout
-            await logout();
-            return false;
-          }
-
-          // Server error or temporary issue - don't logout
-          return false;
-        }
-
-        // Step 2: Verify the new token by fetching user data
-        const meResponse = await fetch("/api/auth/me", {
-          method: "GET",
-          credentials: "include",
-          headers: {
-            "Cache-Control": "no-cache",
-            Pragma: "no-cache",
-          },
-        });
-
-        if (!meResponse.ok) {
-          // Only logout on auth errors
-          if (meResponse.status === 401 || meResponse.status === 403) {
-            await logout();
-          }
-          return false;
-        }
-
-        const userData = await meResponse.json();
-
-        if (userData.success && userData.data?.user) {
-          setUser(userData.data.user);
-          return true;
-        }
-
-        return false;
-      } catch {
-        // Network error - don't logout, could be temporary
-        return false;
-      } finally {
-        // Clear the promise reference when done
-        refreshPromiseRef.current = null;
-      }
-    })();
-
-    // Store the promise to prevent concurrent refreshes
-    refreshPromiseRef.current = refreshPromise;
-
-    return refreshPromise;
-  }, [logout]);
-
   // Memoize the context value to prevent unnecessary re-renders
   const value: AuthContextType = useMemo(
     () => ({
@@ -342,10 +177,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signup,
       logout,
       refreshUser,
-      refreshToken,
       isAuthenticated: !!user,
     }),
-    [user, loading, login, signup, logout, refreshUser, refreshToken]
+    [user, loading, login, signup, logout, refreshUser]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

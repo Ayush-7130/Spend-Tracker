@@ -2,6 +2,8 @@
 
 import Navigation from "./Navigation";
 import { useState, useEffect } from "react";
+// Removed useTokenRefresh import - token refresh is now handled by AuthContext
+// import { useTokenRefresh } from "@/hooks/useTokenRefresh";
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -9,6 +11,10 @@ interface MainLayoutProps {
 
 export default function MainLayout({ children }: MainLayoutProps) {
   const [isNotificationPanelOpen, setIsNotificationPanelOpen] = useState(false);
+
+  // Token refresh is now handled by AuthContext auto-refresh
+  // No need to call useTokenRefresh() here to avoid conflicts
+  // useTokenRefresh();
 
   // Listen for notification panel state changes
   useEffect(() => {

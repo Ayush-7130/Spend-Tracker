@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { verifyPassword, generateTokenPair, isValidEmail } from "@/lib/auth";
+import { verifyPassword, generateRefreshToken, isValidEmail } from "@/lib/auth";
 import { dbManager } from "@/lib/database";
 import { RateLimiter } from "@/lib/utils/security";
 import {
@@ -67,10 +67,11 @@ export async function POST(request: NextRequest) {
     });
 
     if (!user) {
-      // Log failed login attempt (no user found) - no IP address stored
+      // Log failed login attempt (no user found) - IP address stored for display
       await db.collection("loginHistory").insertOne({
         email: email.toLowerCase(),
         success: false,
+        ipAddress,
         deviceInfo,
         failureReason: "Invalid credentials",
         timestamp: new Date(),
@@ -95,6 +96,7 @@ export async function POST(request: NextRequest) {
           userId,
           email: user.email,
           success: false,
+          ipAddress,
           deviceInfo,
           failureReason: "Account locked",
           timestamp: new Date(),
@@ -154,11 +156,12 @@ export async function POST(request: NextRequest) {
         .collection("users")
         .updateOne({ _id: user._id }, { $set: updateData });
 
-      // Log failed login (no IP address stored)
+      // Log failed login (IP address stored for display)
       await db.collection("loginHistory").insertOne({
         userId,
         email: user.email,
         success: false,
+        ipAddress,
         deviceInfo,
         failureReason: "Invalid password",
         timestamp: new Date(),
@@ -212,6 +215,7 @@ export async function POST(request: NextRequest) {
           userId,
           email: user.email,
           success: false,
+          ipAddress,
           deviceInfo,
           failureReason: "Invalid MFA token",
           timestamp: new Date(),
@@ -238,8 +242,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Generate tokens with Remember Me support
-    const tokenPair = generateTokenPair(
+    // Generate refresh token with Remember Me support
+    const tokenInfo = generateRefreshToken(
       {
         userId,
         email: user.email,
@@ -277,21 +281,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create NEW session (no IP address stored)
+    // Create NEW session (IP address stored for display purposes only)
     // IMPORTANT: Store the ORIGINAL expiry time (fixed session duration)
     // This ensures session expires exactly 1 day (or 7 days) after login
-    // and does NOT extend on refresh (Option B: Fixed Session)
     const session = {
       _id: sessionId,
       userId,
-      accessToken: tokenPair.accessToken,
-      refreshToken: tokenPair.refreshToken,
+      token: tokenInfo.token, // Single refresh token
       deviceInfo,
+      ipAddress, // Store IP address for display in sessions list
       location,
       isActive: true,
       rememberMe, // Store Remember Me preference
-      expiresAt: tokenPair.refreshTokenExpiresAt, // FIXED expiry from original login
-      originalExpiresAt: tokenPair.refreshTokenExpiresAt, // Store original expiry for validation
+      expiresAt: tokenInfo.expiresAt, // FIXED expiry from original login
+      originalExpiresAt: tokenInfo.expiresAt, // Store original expiry for validation
       createdAt: new Date(),
       lastActivityAt: new Date(),
     };
@@ -310,11 +313,12 @@ export async function POST(request: NextRequest) {
       }
     );
 
-    // Log successful login (no IP address stored)
+    // Log successful login (IP address stored for display purposes)
     await db.collection("loginHistory").insertOne({
       userId,
       email: user.email,
       success: true,
+      ipAddress,
       deviceInfo,
       location,
       timestamp: new Date(),
@@ -356,7 +360,7 @@ export async function POST(request: NextRequest) {
           },
           session: {
             sessionId: sessionId.toString(),
-            expiresAt: tokenPair.refreshTokenExpiresAt,
+            expiresAt: tokenInfo.expiresAt,
             rememberMe, // Send Remember Me flag to client
           },
         },
@@ -364,7 +368,7 @@ export async function POST(request: NextRequest) {
       { status: 200 }
     );
 
-    // CRITICAL FIX: Set cookie maxAge to match refresh token expiry
+    // CRITICAL: Set cookie maxAge to match refresh token expiry
     // This ensures cookies persist as long as the refresh token is valid
     // With Remember Me: 7 days (long-lived session)
     // Without Remember Me: 1 day (shorter session but still persists across browser restarts)
@@ -372,7 +376,17 @@ export async function POST(request: NextRequest) {
       ? 7 * 24 * 60 * 60 // 7 days in seconds
       : 1 * 24 * 60 * 60; // 1 day in seconds
 
-    response.cookies.set("accessToken", tokenPair.accessToken, {
+    // Clear any legacy accessToken cookie from old sessions
+    response.cookies.set("accessToken", "", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 0,
+      path: "/",
+    });
+
+    // Set the new refreshToken cookie
+    response.cookies.set("refreshToken", tokenInfo.token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
@@ -380,13 +394,6 @@ export async function POST(request: NextRequest) {
       path: "/",
     });
 
-    response.cookies.set("refreshToken", tokenPair.refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: cookieMaxAge,
-      path: "/",
-    });
     return response;
   } catch {
     return NextResponse.json(

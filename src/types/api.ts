@@ -112,7 +112,7 @@ export interface SignupRequest {
  */
 export interface SignupResponse {
   user: User;
-  accessToken: string;
+  token: string;
   expiresAt: Date;
 }
 

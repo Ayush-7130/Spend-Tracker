@@ -1,12 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
-import { hashPassword, generateTokenPair, isValidEmail } from "@/lib/auth";
+import { hashPassword, generateRefreshToken, isValidEmail } from "@/lib/auth";
 import { dbManager } from "@/lib/database";
 import {
   RateLimiter,
   isValidPassword,
   generateSecureToken,
 } from "@/lib/utils/security";
-import { parseUserAgent } from "@/lib/device-info";
+import {
+  parseUserAgent,
+  getLocationFromIp,
+  getIpAddress,
+} from "@/lib/device-info";
 
 // Rate limiter: 5 signup attempts per hour per IP
 const signupRateLimiter = new RateLimiter(5, 60 * 60 * 1000);
@@ -177,10 +181,10 @@ export async function POST(request: NextRequest) {
     // GENERATE TOKENS AND CREATE SESSION
     // ========================================================================
 
-    // Generate token pair (rememberMe is false for new signups)
-    // This gives: 15min access token, 1 day refresh token
+    // Generate refresh token (rememberMe is false for new signups)
+    // This gives: 1 day refresh token
     const rememberMe = false;
-    const tokenPair = generateTokenPair(
+    const tokenInfo = generateRefreshToken(
       {
         userId,
         email: userDoc.email,
@@ -193,6 +197,12 @@ export async function POST(request: NextRequest) {
     const userAgent = request.headers.get("user-agent") || "Unknown";
     const deviceInfo = parseUserAgent(userAgent);
 
+    // Get IP address
+    const ipAddress = getIpAddress(request.headers);
+
+    // Get location info (optional)
+    const location = await getLocationFromIp(ipAddress);
+
     // CRITICAL FIX: Session expiry must match refresh token expiry
     // Since rememberMe = false, use 1 day (not 7 days)
     // OPTION B: Store FIXED expiry time (does not extend on refresh)
@@ -200,12 +210,10 @@ export async function POST(request: NextRequest) {
 
     await db.collection("sessions").insertOne({
       userId,
-      accessToken: tokenPair.accessToken,
-      refreshToken: tokenPair.refreshToken,
+      token: tokenInfo.token,
       deviceInfo,
-      location: {
-        ip: clientIp,
-      },
+      ipAddress,
+      location,
       isActive: true,
       rememberMe: false,
       expiresAt: sessionExpiresAt, // FIXED expiry from original signup
@@ -219,10 +227,9 @@ export async function POST(request: NextRequest) {
       userId,
       email: userDoc.email,
       success: true,
+      ipAddress,
       deviceInfo,
-      location: {
-        ip: clientIp,
-      },
+      location,
       timestamp: now,
     });
 
@@ -247,26 +254,28 @@ export async function POST(request: NextRequest) {
             _id: userId,
             ...userResponse,
           },
-          accessToken: tokenPair.accessToken,
-          expiresAt: tokenPair.accessTokenExpiresAt,
+          token: tokenInfo.token,
+          expiresAt: tokenInfo.expiresAt,
         },
       },
       { status: 201 }
     );
 
-    // CRITICAL FIX: Set cookies to match refresh token expiry (1 day for new signups)
+    // CRITICAL FIX: Set cookie to match refresh token expiry (1 day for new signups)
     // This ensures cookie, JWT, and session all expire at the same time
     const cookieMaxAge = 1 * 24 * 60 * 60; // 1 day in seconds (matches rememberMe = false)
 
-    response.cookies.set("accessToken", tokenPair.accessToken, {
+    // Clear any legacy accessToken cookie from old sessions
+    response.cookies.set("accessToken", "", {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
-      maxAge: cookieMaxAge,
+      maxAge: 0,
       path: "/",
     });
 
-    response.cookies.set("refreshToken", tokenPair.refreshToken, {
+    // Set the new refreshToken cookie
+    response.cookies.set("refreshToken", tokenInfo.token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",

@@ -45,7 +45,7 @@ export default function LoginHistoryPage() {
     try {
       setLoading(true);
 
-      let url = `/api/security/login-history?limit=${ITEMS_PER_PAGE}&skip=${(page - 1) * ITEMS_PER_PAGE}`;
+      let url = `/api/security/login-history?limit=${ITEMS_PER_PAGE}&page=${page}`;
 
       if (filter !== "all") {
         url += `&filter=${filter}`;

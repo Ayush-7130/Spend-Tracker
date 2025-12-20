@@ -54,10 +54,11 @@ See [PERFORMANCE-IMPLEMENTATION-SUMMARY.md](PERFORMANCE-IMPLEMENTATION-SUMMARY.m
   - Focus indicators
   - Touch target optimization (44x44px)
 - **📱 Responsive Design**: Mobile-first approach with tablet and desktop optimizations
-- **🔒 Security** (Enhanced Nov 2025):
+- **🔒 Security** (Enhanced Dec 2025):
   - **HTTPS Enforcement**: Production-grade TLS/SSL with HSTS
   - **Security Headers**: OWASP-compliant headers (CSP, X-Frame-Options, etc.)
-  - **JWT Authentication**: Access & refresh tokens with secure cookies
+  - **JWT Authentication**: Single refresh token with httpOnly secure cookies
+  - **Token Management**: 1-day (default) or 7-day (Remember Me) token lifespan
   - **Password Security**: bcrypt with 12 rounds, strong password policy
   - **Rate Limiting**: Protection against brute force attacks
   - **Session Management**: Multi-device support with revocation
@@ -99,6 +100,18 @@ See [PERFORMANCE-IMPLEMENTATION-SUMMARY.md](PERFORMANCE-IMPLEMENTATION-SUMMARY.m
 - **MongoDB**: Atlas account ([Sign up free](https://www.mongodb.com/cloud/atlas/register))
 - **Git**: For version control ([Download](https://git-scm.com/))
 
+### Authentication System
+
+This application uses a **single refresh token** authentication system (migrated Dec 2025):
+
+- **Single Token**: One httpOnly JWT refresh token (no separate access token)
+- **Token Lifespan**: 1 day (default) or 7 days (with "Remember Me")
+- **Storage**: Secure httpOnly cookie named `refreshToken`
+- **Security**: httpOnly, secure (production), sameSite: "lax"
+- **No Auto-Refresh**: Token validated on each request (no background renewal)
+
+**Migration Note:** If upgrading from an older version, see `MIGRATION_VERIFICATION.md` for details on the token system migration.
+
 ### Installation
 
 1. **Clone the repository**:
@@ -122,8 +135,9 @@ See [PERFORMANCE-IMPLEMENTATION-SUMMARY.md](PERFORMANCE-IMPLEMENTATION-SUMMARY.m
    # MongoDB Connection
    MONGODB_URI="mongodb+srv://<username>:<password>@cluster.mongodb.net/spend-tracker?retryWrites=true&w=majority"
 
-   # JWT Secret (generate a random string)
+   # JWT Secret (generate a random string for production)
    JWT_SECRET="your-super-secret-jwt-key-change-this-in-production"
+   JWT_REFRESH_SECRET="your-super-secret-refresh-key-change-this-in-production"
 
    # Environment
    NODE_ENV="development"
@@ -154,13 +168,22 @@ See [PERFORMANCE-IMPLEMENTATION-SUMMARY.md](PERFORMANCE-IMPLEMENTATION-SUMMARY.m
 
    Navigate to [http://localhost:3000](http://localhost:3000)
 
-7. **Start the development server**:
+### Default Users
+
+After initialization, you can log in with:
+
+- **Email**: `saket@example.com` | **Password**: `password123`
+- **Email**: `ayush@example.com` | **Password**: `password123`
+
+⚠️ **Change these passwords immediately in production!**
+
+4. **Start the development server**:
 
    ```bash
    npm run dev
    ```
 
-8. **Open your browser and navigate to**:
+5. **Open your browser and navigate to**:
    ```
    http://localhost:3000
    ```
@@ -250,6 +273,9 @@ spend-tracker/
 │       └── accessibility.css     # Accessibility styles
 ├── scripts/                      # Utility scripts
 │   ├── unified-database-setup.js # Complete database setup (recommended)
+│   ├── migrate-to-single-token.js # Migration script for token system
+│   ├── verify-migration.js       # Verify migration status
+│   └── cleanup-old-indexes.js    # Clean up old indexes
 ├── public/                       # Static assets
 ├── .env.local                    # Environment variables (not in Git)
 ├── next.config.ts                # Next.js configuration
@@ -294,14 +320,17 @@ Create a new user account.
   "success": true,
   "data": {
     "user": { "_id": "...", "email": "...", "name": "..." },
-    "token": "jwt-token-here"
-  }
+    "token": "jwt-refresh-token"
+  },
+  "message": "Signup successful"
 }
 ```
 
+**Note:** Token is automatically set as an httpOnly cookie named `refreshToken`
+
 #### POST `/api/auth/login`
 
-Authenticate user and get JWT token.
+Authenticate user and get JWT refresh token.
 
 **Rate Limit:** 5 attempts per minute per IP
 
@@ -311,19 +340,73 @@ Authenticate user and get JWT token.
 {
   "email": "user@example.com",
   "password": "SecurePassword123",
-  "rememberMe": false
+  "rememberMe": false,
+  "totpCode": "123456"
 }
 ```
 
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "user": { "_id": "...", "email": "...", "name": "..." },
+    "requiresMFA": false
+  },
+  "message": "Login successful"
+}
+```
+
+**Token Storage:**
+
+- Token automatically set as httpOnly cookie: `refreshToken`
+- Default expiry: 1 day
+- With rememberMe: 7 days
+- Secure flag enabled in production (HTTPS only)
+
 #### GET `/api/auth/me`
 
-Get current authenticated user.
+Get current authenticated user info.
 
-**Headers:** `Authorization: Bearer <token>`
+**Authentication:** Automatic via `refreshToken` cookie
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "user": {
+      "_id": "...",
+      "email": "user@example.com",
+      "name": "John Doe",
+      "createdAt": "2025-01-01T00:00:00Z"
+    }
+  }
+}
+```
 
 #### POST `/api/auth/logout`
 
-Logout current user (client-side token removal).
+Logout current user and invalidate session.
+
+**Authentication:** Automatic via `refreshToken` cookie
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "message": "Logged out successfully"
+}
+```
+
+**Actions:**
+
+- Marks session as inactive in database
+- Clears `refreshToken` cookie
+- Logs security event
 
 #### PUT `/api/auth/profile`
 
@@ -640,8 +723,10 @@ node scripts/unified-database-setup.js --force
 # Show help with all options
 node scripts/unified-database-setup.js --help
 
-# Update indexes only (for existing databases)
-npm run db:indexes
+# Migration Scripts (if needed)
+node scripts/migrate-to-single-token.js --force-logout  # Migrate to single token
+node scripts/verify-migration.js                         # Verify migration status
+node scripts/cleanup-old-indexes.js                      # Clean old indexes
 ```
 
 ### Code Organization
@@ -677,14 +762,19 @@ npm run db:indexes
 - Selective field projection
 - Query result limiting
 
-### Security Best Practices
+**Security Best Practices:**
 
 **Authentication & Authorization:**
 
-- JWT tokens with 24-hour expiry
+- Single JWT refresh token (1-day or 7-day expiry with Remember Me)
+- httpOnly, secure, sameSite cookies for token storage
+- Token validated on every request against database session
 - Password hashing with bcrypt (12 rounds)
 - Rate limiting on authentication endpoints (5 attempts/minute)
 - Protected API routes with middleware
+- Session validation on every request
+- Multi-device session management with manual revocation
+- Automatic session cleanup on security events (password change, MFA disable)
 
 **Input Validation:**
 
@@ -826,7 +916,7 @@ npm run build
 3. **Configure environment variables**:
 
    ```
-   MONGODB_URI="mongodb+srv://<username>:<password>@cluster.mongodb.net/spend-tracker?retryWrites=true&w=majority"
+   MONGODB_URI=mongodb+srv://<username>:<password>@cluster.mongodb.net/spend-tracker?retryWrites=true&w=majority
    JWT_SECRET=your-production-secret-here
    NODE_ENV=production
    ```
@@ -879,16 +969,24 @@ npm start
 
 ```env
 # Required
-MONGODB_URI="mongodb+srv://<username>:<password>@cluster.mongodb.net/spend-tracker?retryWrites=true&w=majority"
+MONGODB_URI=mongodb+srv://<username>:<password>@cluster.mongodb.net/spend-tracker?retryWrites=true&w=majority
 JWT_SECRET=generate-with-openssl-rand-base64-32
+JWT_REFRESH_SECRET=generate-with-openssl-rand-base64-32
 NODE_ENV=production
 
 # Optional
 PORT=3000
 NEXT_PUBLIC_API_URL=https://your-domain.com
+
+# Email (if using email features)
+EMAIL_HOST=smtp.gmail.com
+EMAIL_PORT=587
+EMAIL_USER=your-email@gmail.com
+EMAIL_PASSWORD=your-app-password
+EMAIL_FROM=noreply@yourapp.com
 ```
 
-**Generate secure JWT secret:**
+**Generate secure JWT secrets:**
 
 ```bash
 # Linux/Mac
@@ -900,6 +998,8 @@ openssl rand -base64 32
 # Node.js
 node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
 ```
+
+**Note:** Generate different secrets for `JWT_SECRET` and `JWT_REFRESH_SECRET` in production.
 
 ## 🤝 Contributing
 

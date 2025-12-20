@@ -25,17 +25,17 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(searchParams.get("limit") || "20");
 
-    // Get current session ID from access token
-    const accessToken = request.cookies.get("accessToken")?.value;
+    // Get current session ID from refresh token
+    const token = request.cookies.get("refreshToken")?.value;
     let sessionId: string | undefined;
 
-    if (accessToken) {
+    if (token) {
       try {
         const client = await clientPromise;
         const db = client.db("spend-tracker");
         const session = await db.collection("sessions").findOne({
           userId: user.userId,
-          accessToken,
+          token,
           isActive: true,
         });
         if (session) {

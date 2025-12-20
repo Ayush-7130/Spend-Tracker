@@ -29,9 +29,9 @@ const handleMFADisable = createApiRoute({
 
       // SECURITY: Check if session has been active for at least 24 hours
       // This prevents immediate malicious MFA disabling from newly compromised accounts
-      const accessToken = request.cookies.get("accessToken")?.value;
+      const token = request.cookies.get("refreshToken")?.value;
       const { checkSessionAge } = await import("@/lib/auth");
-      const sessionAgeCheck = await checkSessionAge(user.id, accessToken, 24);
+      const sessionAgeCheck = await checkSessionAge(user.id, token, 24);
 
       if (!sessionAgeCheck.isValid) {
         return NextResponse.json(

@@ -26,8 +26,55 @@ export async function GET(
       );
     }
 
+    // Get month parameter if provided (format: YYYY-MM)
+    const { searchParams } = new URL(request.url);
+    const monthFilter = searchParams.get("month");
+
     const client = await clientPromise;
     const db = client.db("spend-tracker");
+
+    // Build date filter for monthly view
+    let dateFilter = {};
+    if (monthFilter) {
+      // Parse month format like "Nov '24" or "2024-11"
+      let year: number, month: number;
+
+      if (monthFilter.includes("-")) {
+        // Format: YYYY-MM
+        [year, month] = monthFilter.split("-").map(Number);
+      } else {
+        // Format: "Nov '24" - need to parse
+        const monthMap: Record<string, number> = {
+          Jan: 1,
+          Feb: 2,
+          Mar: 3,
+          Apr: 4,
+          May: 5,
+          Jun: 6,
+          Jul: 7,
+          Aug: 8,
+          Sep: 9,
+          Oct: 10,
+          Nov: 11,
+          Dec: 12,
+        };
+        const parts = monthFilter.split(" ");
+        const monthName = parts[0];
+        const yearPart = parts[1].replace("'", "");
+        month = monthMap[monthName];
+        year = parseInt(yearPart) + (yearPart.length === 2 ? 2000 : 0);
+      }
+
+      const startDate = new Date(year, month - 1, 1);
+      const endDate = new Date(year, month, 0, 23, 59, 59, 999);
+
+      dateFilter = {
+        date: {
+          $gte: startDate,
+          $lte: endDate,
+        },
+      };
+    }
 
     // Get user's category distribution (including both expenses paid by user and their share of split expenses)
     const categoryDistribution = await db
@@ -35,6 +82,7 @@ export async function GET(
       .aggregate([
         {
           $match: {
+            ...dateFilter,
             $or: [
               { paidBy: userName },
               {

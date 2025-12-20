@@ -46,14 +46,16 @@ const handleGetLoginHistory = createApiRoute({
 
       // Format response
       const formattedHistory = history.map((entry) => ({
-        id: entry._id.toString(),
+        _id: entry._id.toString(),
         email: entry.email,
         success: entry.success,
         ipAddress: entry.ipAddress,
         device: entry.deviceInfo?.browser
           ? `${entry.deviceInfo.browser} on ${entry.deviceInfo.os || "Unknown OS"}`
           : "Unknown Device",
-        deviceType: entry.deviceInfo?.device,
+        browser: entry.deviceInfo?.browser || "Unknown Browser",
+        os: entry.deviceInfo?.os || "Unknown OS",
+        deviceType: entry.deviceInfo?.device || "desktop",
         location: entry.location
           ? `${entry.location.city || "Unknown"}, ${entry.location.country || "Unknown"}`
           : undefined,

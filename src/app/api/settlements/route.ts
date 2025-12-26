@@ -34,7 +34,7 @@ export async function GET() {
     return response;
   } catch {
     return NextResponse.json(
-      { error: "Failed to fetch settlements" },
+      { success: false, error: "Failed to fetch settlements" },
       { status: 500 }
     );
   }
@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
     const user = await getUserFromRequest(request);
     if (!user) {
       return NextResponse.json(
-        { error: "Authentication required" },
+        { success: false, error: "Authentication required" },
         { status: 401 }
       );
     }
@@ -73,7 +73,10 @@ export async function POST(request: NextRequest) {
       .collection("users")
       .findOne({ _id: new ObjectId(user.userId) });
     if (!currentUser) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+      return NextResponse.json(
+        { success: false, error: "User not found" },
+        { status: 404 }
+      );
     }
 
     // Create new settlement record
@@ -125,7 +128,7 @@ export async function POST(request: NextRequest) {
     });
   } catch {
     return NextResponse.json(
-      { error: "Failed to create settlement" },
+      { success: false, error: "Failed to create settlement" },
       { status: 500 }
     );
   }

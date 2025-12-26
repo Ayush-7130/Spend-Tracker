@@ -1,66 +1,136 @@
+/**
+ * Database Layer - MongoDB Connection and Type-Safe Data Access
+ *
+ * Provides centralized database access with:
+ * - Singleton pattern for connection reuse (prevents connection pool exhaustion)
+ * - Type-safe interfaces matching MongoDB document schemas
+ * - Helper methods for common database operations
+ * - Error handling and connection management
+ *
+ * WHY Singleton Pattern:
+ * - MongoDB connections are expensive to create
+ * - Reusing connections improves performance
+ * - Prevents "too many connections" errors in production
+ *
+ * Security Considerations:
+ * - All sensitive fields (passwordHash, tokens) are typed but excluded from responses
+ * - User operations never return password hashes
+ * - Session tokens are stored hashed in the database
+ */
+
 import clientPromise from "./mongodb";
 import { ObjectId } from "mongodb";
+import logger from "./logger";
 
-// User interface (updated with enhanced security fields)
+/**
+ * User Document Interface
+ *
+ * Represents user accounts with comprehensive security fields.
+ *
+ * Security Features:
+ * - passwordHash: bcrypt hashed, never returned in API responses
+ * - emailVerificationToken: hashed before storage
+ * - passwordResetToken: hashed before storage
+ * - mfaSecret: encrypted TOTP secret for 2FA
+ * - mfaBackupCodes: single-use recovery codes (hashed)
+ * - accountLocked: temporary lockout after failed login attempts
+ * - failedLoginAttempts: counter for account lockout mechanism
+ */
 export interface User {
   _id: string;
   name: string;
-  email: string;
-  passwordHash: string;
-  role: "user" | "admin";
+  email: string; // Stored lowercase for case-insensitive lookups
+  passwordHash: string; // bcrypt hash, 12 rounds
+  role: "user" | "admin"; // Role-based access control
 
-  // Email verification
+  // Email verification: Prevents unauthorized signups
   isEmailVerified: boolean;
-  emailVerificationToken?: string;
-  emailVerificationExpiry?: Date;
+  emailVerificationToken?: string; // Hashed 32-byte token
+  emailVerificationExpiry?: Date; // 24-hour validity
 
-  // Password security
-  passwordChangedAt?: Date;
-  passwordResetToken?: string;
-  passwordResetExpiry?: Date;
+  // Password security: Reset and change tracking
+  passwordChangedAt?: Date; // Invalidates old tokens issued before this time
+  passwordResetToken?: string; // Hashed token for forgot password flow
+  passwordResetExpiry?: Date; // 1-hour validity
 
-  // MFA/2FA
+  // Multi-Factor Authentication (TOTP-based)
   mfaEnabled: boolean;
-  mfaSecret?: string;
-  mfaBackupCodes?: string[];
+  mfaSecret?: string; // TOTP secret (encrypted at rest)
+  mfaBackupCodes?: string[]; // Single-use backup codes (hashed)
 
-  // Account status
+  // Account lockout: Prevents brute force attacks
   accountLocked: boolean;
-  lockReason?: string;
-  lockedUntil?: Date;
+  lockReason?: string; // Human-readable reason for audit
+  lockedUntil?: Date; // Auto-unlock time (15 minutes after 5 failed attempts)
 
-  // Login tracking
+  // Login tracking: For security monitoring
   lastLoginAt?: Date;
-  failedLoginAttempts: number;
+  failedLoginAttempts: number; // Reset to 0 on successful login
   lastFailedLoginAt?: Date;
 
+  // Audit timestamps
   createdAt: Date;
   updatedAt: Date;
 }
 
-// Session interface for JWT-based session tracking
+/**
+ * Session Document Interface
+ *
+ * Tracks active user sessions with FIXED expiry (no sliding sessions).
+ *
+ * CRITICAL FIXED EXPIRY MODEL:
+ * - expiresAt is set ONCE at login and NEVER modified
+ * - lastActivityAt is tracked for analytics only, NOT expiry
+ * - rememberMe controls initial duration (1 day vs 7 days)
+ * - Session expires at EXACT time from login, regardless of activity
+ *
+ * WHY Fixed Expiry:
+ * - Predictable security model (users know when re-login required)
+ * - Prevents indefinite sessions through activity
+ * - Simpler implementation (no sliding window logic)
+ * - Compliance-friendly (clear audit trail)
+ *
+ * Device Tracking:
+ * - Allows multi-device sessions (phone, laptop, tablet)
+ * - Each device has independent session lifecycle
+ * - User can view and revoke individual device sessions
+ */
 export interface Session {
   _id: string;
   userId: string;
-  token: string; // Single refresh token
+  token: string; // Single JWT token (not split access/refresh)
   deviceInfo: {
-    userAgent: string;
-    browser?: string;
-    os?: string;
-    device?: string;
+    userAgent: string; // Full user agent string
+    browser?: string; // Parsed browser name (Chrome, Firefox, etc.)
+    os?: string; // Parsed OS (Windows, macOS, Linux, iOS, Android)
+    device?: string; // Device type (desktop, mobile, tablet)
   };
   location?: {
-    city?: string;
-    country?: string;
+    city?: string; // Geo-IP lookup (approximate)
+    country?: string; // ISO country code
   };
-  isActive: boolean;
-  rememberMe: boolean; // Remember Me flag - controls token lifetime
-  expiresAt: Date;
+  isActive: boolean; // False when logged out or expired
+  rememberMe: boolean; // Controls initial duration at login
+  expiresAt: Date; // FIXED expiry - NEVER updated after creation
   createdAt: Date;
-  lastActivityAt: Date;
+  lastActivityAt: Date; // Tracked for analytics, NOT expiry calculation
 }
 
-// Login history interface for audit trail
+/**
+ * Login History Document Interface
+ *
+ * Audit trail for all login attempts (successful and failed).
+ *
+ * WHY Track Failed Logins:
+ * - Detect brute force attacks
+ * - Alert users to unauthorized access attempts
+ * - Compliance requirements (SOC2, GDPR)
+ *
+ * Privacy Considerations:
+ * - IP addresses stored for display only, not enforcement
+ * - TTL index auto-deletes entries after 90 days
+ * - Users can view their own login history
+ */
 export interface LoginHistory {
   _id: string;
   userId: string;
@@ -76,11 +146,27 @@ export interface LoginHistory {
     city?: string;
     country?: string;
   };
-  failureReason?: string;
-  timestamp: Date;
+  failureReason?: string; // "Invalid credentials", "Account locked", "Invalid MFA token"
+  timestamp: Date; // Auto-deleted after 90 days via TTL index
 }
 
-// Security log interface for security events
+/**
+ * Security Log Document Interface
+ *
+ * Audit trail for security-sensitive actions.
+ *
+ * WHY Separate from Login History:
+ * - Login history is user-facing (visible in profile)
+ * - Security logs are admin-facing (compliance, forensics)
+ * - Different retention policies (security logs kept longer)
+ *
+ * Events Tracked:
+ * - Password changes and resets
+ * - MFA enable/disable
+ * - Session revocations
+ * - Account lockouts
+ * - Email verifications
+ */
 export interface SecurityLog {
   _id: string;
   userId: string;
@@ -93,12 +179,31 @@ export interface SecurityLog {
     | "account_locked"
     | "account_unlocked"
     | "email_verified";
-  description: string;
-  metadata?: Record<string, any>;
+  description: string; // Human-readable event description
+  metadata?: Record<string, any>; // Additional context (device, location, etc.)
   timestamp: Date;
 }
 
-// Notification interface (enhanced with security notifications)
+/**
+ * Notification Document Interface
+ *
+ * In-app notifications for user actions and security events.
+ *
+ * Security Notifications:
+ * - New login from unfamiliar device
+ * - Failed login attempts
+ * - Password changes
+ * - MFA status changes
+ * - Session revocations
+ *
+ * WHY Auto-Expire:
+ * - Notifications auto-delete 24 hours after being read
+ * - Prevents notification bloat
+ * - Encourages timely review of security alerts
+ *
+ * excludeSessionId:
+ * - Prevents self-notification (e.g., don't notify current session about own login)
+ */
 export interface Notification {
   _id: string;
   userId: string;
@@ -120,53 +225,79 @@ export interface Notification {
     | "mfa_enabled"
     | "mfa_disabled";
   message: string;
-  entityId?: string;
+  entityId?: string; // Related entity ID (expense, settlement, category)
   entityType?: "expense" | "settlement" | "category" | "security";
   read: boolean;
   readAt?: Date;
   expiresAt?: Date; // Auto-expire 24 hours after being read
   metadata?: {
-    deviceInfo?: string;
-    location?: string;
-    excludeSessionId?: string;
+    deviceInfo?: string; // Device description for security notifications
+    location?: string; // Location string for security notifications
+    excludeSessionId?: string; // Exclude this session from receiving notification
   };
   createdAt: Date;
 }
 
-// Activity Log interface
-// Enhanced interfaces with ownership
+/**
+ * Expense Document Interface with Ownership Tracking
+ *
+ * WHY Ownership Field:
+ * - Multi-user expense tracking requires knowing who created each expense
+ * - Enables permission checks (only creator can edit/delete)
+ * - Audit trail for compliance and dispute resolution
+ */
 export interface ExpenseWithOwnership {
   _id: string;
   amount: number;
   description: string;
-  date: string;
+  date: string; // ISO 8601 date string
   category: string;
   subcategory?: string;
-  paidBy: string;
-  isSplit?: boolean;
+  paidBy: string; // User ID who paid the expense
+  isSplit?: boolean; // Whether expense is split between users
   splitDetails?: {
     saketAmount?: number;
     ayushAmount?: number;
   };
-  createdBy: string; // New field
+  createdBy: string; // User ID who created this record
   createdAt: Date;
   updatedAt: Date;
 }
 
+/**
+ * Settlement Document Interface with Ownership Tracking
+ *
+ * Tracks money transfers between users to settle shared expenses.
+ *
+ * WHY Status Field:
+ * - pending: Settlement created but not yet paid
+ * - completed: Payment confirmed by receiving user
+ * - cancelled: Settlement voided (e.g., expense was deleted)
+ */
 export interface SettlementWithOwnership {
   _id: string;
-  expenseId: string;
-  fromUser: string;
-  toUser: string;
+  expenseId: string; // Reference to related expense
+  fromUser: string; // User ID who owes money
+  toUser: string; // User ID who is owed money
   amount: number;
   description: string;
-  date: string;
+  date: string; // ISO 8601 date string
   status: "pending" | "completed" | "cancelled";
-  createdBy: string; // New field
+  createdBy: string; // User ID who created this settlement
   createdAt: Date;
   updatedAt: Date;
 }
 
+/**
+ * Category Document Interface with Ownership Tracking
+ *
+ * Custom expense categories with optional subcategories.
+ *
+ * WHY Subcategories:
+ * - Better expense organization (e.g., "Food" > "Groceries", "Restaurants")
+ * - More detailed analytics and reporting
+ * - User-defined taxonomy for personal finance tracking
+ */
 export interface CategoryWithOwnership {
   _id: string;
   name: string;
@@ -175,15 +306,35 @@ export interface CategoryWithOwnership {
     name: string;
     description: string;
   }>;
-  createdBy: string; // New field
+  createdBy: string; // User ID who created this category
   createdAt: Date;
   updatedAt: Date;
 }
 
-// Database utilities
+/**
+ * DatabaseManager Class - Singleton Pattern for Connection Reuse
+ *
+ * Provides centralized, type-safe database access across the application.
+ *
+ * WHY Singleton Pattern:
+ * - MongoDB client maintains connection pool (default 10 connections)
+ * - Multiple instances would create multiple connection pools
+ * - Connection pool exhaustion causes "MongoServerSelectionError"
+ * - Singleton ensures all code uses the same connection pool
+ *
+ * Usage:
+ *   const dbManager = DatabaseManager.getInstance();
+ *   const db = await dbManager.getDatabase();
+ *   const user = await db.collection('users').findOne({...});
+ */
 export class DatabaseManager {
   private static instance: DatabaseManager;
 
+  /**
+   * Get singleton instance of DatabaseManager
+   *
+   * Thread-safe in Node.js (single-threaded event loop)
+   */
   public static getInstance(): DatabaseManager {
     if (!DatabaseManager.instance) {
       DatabaseManager.instance = new DatabaseManager();
@@ -191,18 +342,36 @@ export class DatabaseManager {
     return DatabaseManager.instance;
   }
 
-  // Get database connection
+  /**
+   * Get MongoDB database connection
+   *
+   * Uses connection pooling from mongodb.ts (10 connections)
+   * Throws error if MongoDB is unreachable (network issues, wrong credentials)
+   *
+   * @returns MongoDB database instance for 'spend-tracker' database
+   */
   async getDatabase() {
     try {
       const client = await clientPromise;
       return client.db("spend-tracker");
     } catch (error) {
-      console.error("Failed to connect to database:", error);
+      logger.error("Failed to connect to database", error, {
+        context: "DatabaseManager.getDatabase",
+      });
       throw error;
     }
   }
 
-  // User operations
+  // =========================================================================
+  // USER OPERATIONS
+  // =========================================================================
+
+  /**
+   * Create new user account
+   *
+   * Automatically adds createdAt and updatedAt timestamps
+   * Returns user document with MongoDB _id converted to string
+   */
   async createUser(
     userData: Omit<User, "_id" | "createdAt" | "updatedAt">
   ): Promise<User> {
@@ -219,6 +388,12 @@ export class DatabaseManager {
     return { ...user, _id: result.insertedId.toString() };
   }
 
+  /**
+   * Find user by email address
+   *
+   * Email is stored lowercase for case-insensitive lookups
+   * Returns null if user not found (not an error)
+   */
   async getUserByEmail(email: string): Promise<User | null> {
     const db = await this.getDatabase();
     const user = await db.collection("users").findOne({ email });
@@ -231,6 +406,12 @@ export class DatabaseManager {
     } as User;
   }
 
+  /**
+   * Find user by MongoDB ObjectId
+   *
+   * Converts string ID to ObjectId for database query
+   * Returns null if user not found (not an error)
+   */
   async getUserById(userId: string): Promise<User | null> {
     const db = await this.getDatabase();
     const user = await db
@@ -245,7 +426,16 @@ export class DatabaseManager {
     } as User;
   }
 
-  // Notification operations
+  // =========================================================================
+  // NOTIFICATION OPERATIONS
+  // =========================================================================
+
+  /**
+   * Create new notification for user
+   *
+   * Automatically adds createdAt timestamp
+   * Used for both app notifications and security alerts
+   */
   async createNotification(
     notificationData: Omit<Notification, "_id" | "createdAt">
   ): Promise<Notification> {

@@ -6,6 +6,8 @@ export interface ApiResponse<T = any> {
   error?: string;
 }
 
+import logger from "@/lib/logger";
+
 // API Error class for better error handling
 export class ApiError extends Error {
   constructor(
@@ -98,11 +100,11 @@ export async function apiRequest<T = any>(
         response.status,
         errorData
       );
-      console.error(
-        `API request failed [${response.status}]:`,
+      logger.error(`API request failed [${response.status}]`, apiError, {
         endpoint,
-        apiError.message
-      );
+        status: response.status,
+        message: apiError.message,
+      });
       throw apiError;
     }
 
@@ -114,7 +116,7 @@ export async function apiRequest<T = any>(
     }
 
     // Handle network errors or JSON parsing errors
-    console.error("API request error:", endpoint, error);
+    logger.error("API request error", error, { endpoint });
     throw new ApiError(
       error instanceof Error ? error.message : "An unknown error occurred"
     );
@@ -182,12 +184,12 @@ export async function withRetry<T>(
 
     if (retries > 0) {
       if (process.env.NODE_ENV === "development") {
-        console.warn(`Retrying request (${retries} attempts remaining)...`);
+        logger.warn(`Retrying request (${retries} attempts remaining)...`);
       }
       await new Promise((resolve) => setTimeout(resolve, delay));
       return withRetry(fn, retries - 1, delay * 2);
     }
-    console.error("Request failed after all retry attempts:", error);
+    logger.error("Request failed after all retry attempts", error);
     throw error;
   }
 }

@@ -4,6 +4,8 @@
  * Tools for monitoring and optimizing application performance.
  */
 
+import logger from "../logger";
+
 // ===========================================================================
 // WEB VITALS MONITORING
 // ===========================================================================
@@ -86,7 +88,7 @@ export async function measurePerformance<T>(
   const duration = performance.now() - start;
 
   if (process.env.NODE_ENV === "development") {
-    console.log(`[Performance] ${name}: ${duration.toFixed(2)}ms`);
+    logger.debug(`[Performance] ${name}: ${duration.toFixed(2)}ms`);
   }
 
   return { result, duration };
@@ -145,7 +147,7 @@ export function clearMarks(name?: string): void {
  */
 export function logRenderPerformance(componentName: string, deps: any[]): void {
   if (process.env.NODE_ENV === "development") {
-    console.log(`[Render] ${componentName}`, deps);
+    logger.debug(`[Render] ${componentName}`, { deps });
   }
 }
 
@@ -171,7 +173,7 @@ export function detectSlowRender(
       const duration = measure(componentName, startMark, endMark);
 
       if (duration && duration > threshold) {
-        console.warn(
+        logger.warn(
           `Slow render detected in ${componentName}: ${duration.toFixed(2)}ms (threshold: ${threshold}ms)`
         );
       }
@@ -291,11 +293,11 @@ export function logBundleInfo(): void {
       });
     });
 
-    console.log(`[Bundle] Total JS size: ${(totalSize / 1024).toFixed(2)} KB`);
+    logger.info(`[Bundle] Total JS size: ${(totalSize / 1024).toFixed(2)} KB`);
     scripts
       .sort((a, b) => b.size - a.size)
       .forEach(({ name, size }) => {
-        console.log(`  ${name}: ${(size / 1024).toFixed(2)} KB`);
+        logger.info(`  ${name}: ${(size / 1024).toFixed(2)} KB`);
       });
   }
 }
@@ -333,7 +335,7 @@ export function getMemoryUsage(): {
 export function logMemoryUsage(): void {
   const memory = getMemoryUsage();
   if (memory) {
-    console.log("[Memory Usage]", {
+    logger.info("[Memory Usage]", {
       used: `${(memory.usedJSHeapSize / 1048576).toFixed(2)} MB`,
       total: `${(memory.totalJSHeapSize / 1048576).toFixed(2)} MB`,
       limit: `${(memory.jsHeapSizeLimit / 1048576).toFixed(2)} MB`,
@@ -361,16 +363,19 @@ export async function monitorApiCall<T>(
     if (process.env.NODE_ENV === "development") {
       const color =
         duration > 1000 ? "red" : duration > 500 ? "orange" : "green";
-      console.log(
-        `%c[API] ${url}: ${duration.toFixed(2)}ms`,
-        `color: ${color}; font-weight: bold`
-      );
+      logger.info(`[API] ${url}: ${duration.toFixed(2)}ms`, {
+        color,
+        duration,
+      });
     }
 
     return result;
   } catch (error) {
     const duration = performance.now() - start;
-    console.error(`[API Error] ${url}: ${duration.toFixed(2)}ms`, error);
+    logger.error(`[API Error] ${url}: ${duration.toFixed(2)}ms`, error, {
+      url,
+      duration,
+    });
     throw error;
   }
 }

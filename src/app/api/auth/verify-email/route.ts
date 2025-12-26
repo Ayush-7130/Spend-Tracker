@@ -1,15 +1,49 @@
 /**
- * Email Verification API Route
- * Verifies user email using the token sent via email
+ * POST /api/auth/verify-email
+ *
+ * Verifies user email address using token from registration email.
+ *
+ * SECURITY: Rate limited to prevent token brute force attacks.
+ * Email verification required before accessing certain features.
+ *
+ * Rate limit: 5 attempts per hour per IP
+ *
+ * @body { token }
+ * @returns { success: true } with verified email on success
+ * @returns { error } with 400 for invalid/expired token
+ * @returns { error } with 429 if rate limit exceeded
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { hashToken } from "@/lib/auth";
 import { dbManager } from "@/lib/database";
 import { sendWelcomeEmail } from "@/lib/email";
+import { RateLimiter } from "@/lib/utils/security";
+import { getIpAddress } from "@/lib/device-info";
+
+// Rate limiter: 5 verification attempts per hour per IP
+// Prevents brute force attacks on verification tokens
+const verifyEmailRateLimiter = new RateLimiter(5, 60 * 60 * 1000);
 
 export async function POST(request: NextRequest) {
   try {
+    // Extract client IP for rate limiting
+    const clientIp = getIpAddress(request.headers);
+
+    // Rate limiting: Prevent brute force token guessing
+    if (!verifyEmailRateLimiter.isAllowed(clientIp)) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Too many verification attempts. Please try again in an hour.",
+        },
+        {
+          status: 429,
+          headers: { "Retry-After": "3600" }, // 1 hour
+        }
+      );
+    }
+
     const body = await request.json();
     const { token } = body;
 

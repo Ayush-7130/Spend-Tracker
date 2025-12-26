@@ -2,21 +2,35 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { NextRequest } from "next/server";
 import * as crypto from "crypto";
+import logger from "./logger";
 
-// JWT Secrets (should be in environment variables)
-// Note: JWT_SECRET kept for backward compatibility but not used in single-token system
-const JWT_REFRESH_SECRET =
-  process.env.JWT_REFRESH_SECRET ||
-  process.env.JWT_SECRET ||
-  "your-super-secret-refresh-key-change-in-production";
+/**
+ * JWT Secret for single-token authentication
+ *
+ * SECURITY: Single token system with fixed expiry (no sliding sessions)
+ * - Token expiry is set once at login and NEVER extended
+ * - Remember Me = false: 1 day fixed expiry
+ * - Remember Me = true: 7 days fixed expiry
+ * - Refresh route validates but does NOT extend session
+ */
+const JWT_SECRET =
+  process.env.JWT_SECRET || "your-super-secret-key-change-in-production";
 
-// Token expiration times
-// STRATEGY: Remember Me affects token TTL, cookie maxAge, and session expiry
-// All three (JWT expiry, cookie maxAge, session expiresAt) MUST match to prevent early logout
-// Single refresh token approach:
-const REFRESH_TOKEN_EXPIRES_IN = "1d"; // 1 day (session persists for 1 day across browser restarts)
-// With Remember Me:
-const REFRESH_TOKEN_EXPIRES_IN_REMEMBERED = "7d"; // 7 days (longer session for convenience)
+/**
+ * Token expiration configuration
+ *
+ * CRITICAL: All three components MUST have matching expiry times:
+ * 1. JWT token expiry (expiresIn parameter)
+ * 2. HTTP cookie maxAge (in seconds)
+ * 3. Database session expiresAt (Date object)
+ *
+ * Mismatch causes premature logout or stale session issues.
+ *
+ * Without Remember Me: 1 day fixed duration
+ * With Remember Me: 7 days fixed duration
+ */
+const TOKEN_EXPIRES_IN = "1d"; // 1 day without Remember Me
+const TOKEN_EXPIRES_IN_REMEMBERED = "7d"; // 7 days with Remember Me
 
 // User interface (using database User interface)
 export interface User {
@@ -64,30 +78,46 @@ export async function verifyPassword(
   return await bcrypt.compare(password, hashedPassword);
 }
 
-// Generate refresh token
+/**
+ * Generate authentication token with fixed expiry
+ *
+ * Creates a JWT token with fixed expiration time that NEVER extends.
+ * This is the core of the fixed-session security model.
+ *
+ * SECURITY RATIONALE:
+ * - Fixed expiry prevents infinite session extension attacks
+ * - Stolen tokens have guaranteed expiration time
+ * - Forces periodic re-authentication for security
+ *
+ * @param payload - User identification data (userId, email, role)
+ * @param rememberMe - If true, extends session to 7 days instead of 1 day
+ * @returns TokenInfo with signed JWT and exact expiration date
+ */
 export function generateRefreshToken(
   payload: Omit<JWTPayload, "iat" | "exp">,
   rememberMe: boolean = false
 ): TokenInfo {
   const now = new Date();
 
-  // Choose expiration time based on rememberMe setting
-  const refreshTokenExpiry = rememberMe
-    ? REFRESH_TOKEN_EXPIRES_IN_REMEMBERED
-    : REFRESH_TOKEN_EXPIRES_IN;
+  // Choose fixed expiration duration based on Remember Me preference
+  const tokenExpiry = rememberMe
+    ? TOKEN_EXPIRES_IN_REMEMBERED
+    : TOKEN_EXPIRES_IN;
 
-  // Generate refresh token (long-lived or extra-long if remembered)
-  const token = jwt.sign({ ...payload, type: "refresh" }, JWT_REFRESH_SECRET, {
-    expiresIn: refreshTokenExpiry,
+  // Generate JWT token with fixed expiration
+  const token = jwt.sign({ ...payload, type: "refresh" }, JWT_SECRET, {
+    expiresIn: tokenExpiry,
   });
 
-  // Calculate expiration date
-  // CRITICAL: This date MUST match cookie maxAge and session expiresAt
-  // Without Remember Me: 1 day
-  // With Remember Me: 7 days
+  // Calculate exact expiration timestamp
+  // CRITICAL: This MUST match:
+  // 1. Cookie maxAge (converted to seconds)
+  // 2. Database session.expiresAt field
+  // Without Remember Me: 1 day = 86400 seconds
+  // With Remember Me: 7 days = 604800 seconds
   const expiresAt = rememberMe
-    ? new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000) // 7 days
-    : new Date(now.getTime() + 1 * 24 * 60 * 60 * 1000); // 1 day
+    ? new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000) // 7 days in milliseconds
+    : new Date(now.getTime() + 1 * 24 * 60 * 60 * 1000); // 1 day in milliseconds
 
   return {
     token,
@@ -103,36 +133,58 @@ export interface TokenVerificationResult {
   error?: string;
 }
 
-// Verify refresh token with clock tolerance
+/**
+ * Verify authentication token
+ *
+ * Validates JWT token signature and expiration.
+ * Includes clock tolerance to handle minor time differences between servers.
+ *
+ * SECURITY: This only verifies the token itself, NOT the session status.
+ * Always check database session.isActive and session.expiresAt after
+ * token verification to ensure session hasn't been revoked.
+ *
+ * @param token - JWT token string to verify
+ * @returns Decoded payload if valid, null if invalid/expired
+ */
 export function verifyRefreshToken(token: string): JWTPayload | null {
   try {
-    // Add 60-second clock tolerance to account for clock skew between servers
-    const decoded = jwt.verify(token, JWT_REFRESH_SECRET, {
-      clockTolerance: 60, // 60 seconds tolerance
+    // Verify token with 60-second clock tolerance for distributed systems
+    // This prevents false negatives from minor clock drift between servers
+    const decoded = jwt.verify(token, JWT_SECRET, {
+      clockTolerance: 60,
     }) as JWTPayload;
 
-    // Ensure it's a refresh token
+    // Ensure token has correct type marker
     if ((decoded as any).type !== "refresh") {
       return null;
     }
 
     return decoded;
   } catch {
+    // Invalid signature, expired token, or malformed JWT
     return null;
   }
 }
 
-// Enhanced refresh token verification with detailed error information
+/**
+ * Enhanced token verification with detailed error reporting
+ *
+ * Provides comprehensive validation results including specific error types.
+ * Useful for debugging authentication issues and providing clear user feedback.
+ *
+ * @param token - JWT token string to verify
+ * @returns TokenVerificationResult with detailed status and error information
+ */
 export function verifyRefreshTokenEnhanced(
   token: string
 ): TokenVerificationResult {
   try {
-    // Add 60-second clock tolerance to account for clock skew between servers
-    const decoded = jwt.verify(token, JWT_REFRESH_SECRET, {
-      clockTolerance: 60, // 60 seconds tolerance
+    // Verify token with clock tolerance
+    const decoded = jwt.verify(token, JWT_SECRET, {
+      clockTolerance: 60,
     }) as JWTPayload;
 
-    // Ensure it's a refresh token
+    // Validate token type
     if ((decoded as any).type !== "refresh") {
       return {
         payload: null,
@@ -148,22 +200,22 @@ export function verifyRefreshTokenEnhanced(
       expired: false,
     };
   } catch (error: any) {
-    // Check if token is expired
+    // Token expired - session needs renewal via login
     if (error.name === "TokenExpiredError") {
       return {
         payload: null,
         valid: false,
         expired: true,
-        error: "Refresh token has expired",
+        error: "Token has expired",
       };
     }
 
-    // Other JWT errors
+    // Other JWT errors (invalid signature, malformed, etc.)
     return {
       payload: null,
       valid: false,
       expired: false,
-      error: error.message || "Refresh token is invalid",
+      error: error.message || "Token is invalid",
     };
   }
 }
@@ -265,7 +317,9 @@ export async function checkSessionAge(
         : `Session must be active for ${requiredHours} hours. Current: ${Math.floor(sessionAgeHours)} hours`,
     };
   } catch (error) {
-    console.error("[checkSessionAge] Error:", error);
+    logger.error("[checkSessionAge] Error", error, {
+      context: "checkSessionAge",
+    });
     return {
       isValid: false,
       sessionAge: 0,
@@ -336,7 +390,10 @@ export async function revokeOtherSessions(
 
     return result.modifiedCount;
   } catch (error) {
-    console.error("[revokeOtherSessions] Error:", error);
+    logger.error("[revokeOtherSessions] Error", error, {
+      context: "revokeOtherSessions",
+      userId,
+    });
     return 0;
   }
 }
@@ -393,24 +450,43 @@ export async function revokeAllSessions(
 
     return result.modifiedCount;
   } catch (error) {
-    console.error("[revokeAllSessions] Error:", error);
+    logger.error("[revokeAllSessions] Error", error, {
+      context: "revokeAllSessions",
+      userId,
+      reason,
+    });
     return 0;
   }
 }
 
-// Extract user from request (middleware helper)
+/**
+ * Extract user from HTTP request and validate session
+ *
+ * Comprehensive authentication validation:
+ * 1. Extracts token from Authorization header or cookie
+ * 2. Verifies JWT signature and expiration
+ * 3. Checks session still exists and is active in database
+ * 4. Validates session hasn't reached FIXED expiry time
+ * 5. Updates lastActivityAt for tracking (NOT expiry)
+ *
+ * SECURITY: Session expiry is FIXED and never extended.
+ * This function validates against the original expiresAt set during login.
+ *
+ * @param request - Next.js HTTP request object
+ * @returns Decoded JWT payload if valid, null if invalid/expired
+ */
 export async function getUserFromRequest(
   request: NextRequest
 ): Promise<JWTPayload | null> {
   try {
-    // Try to get token from Authorization header
+    // Extract token from Authorization header or cookie
     const authHeader = request.headers.get("Authorization");
     let token = null;
 
     if (authHeader && authHeader.startsWith("Bearer ")) {
       token = authHeader.substring(7);
     } else {
-      // Fallback to cookies - use refreshToken (single token approach)
+      // Fallback to httpOnly cookie (single token approach)
       token = request.cookies.get("refreshToken")?.value;
     }
 
@@ -418,39 +494,66 @@ export async function getUserFromRequest(
       return null;
     }
 
+    // Verify JWT signature and expiration
     const payload = verifyRefreshToken(token);
 
     if (!payload) {
+      // Token invalid or expired according to JWT expiration
       return null;
     }
 
-    // Check cache first to avoid database lookup on every request
+    // Check cache to avoid database query on every request (performance optimization)
     const now = Date.now();
     const cached = sessionValidationCache.get(token);
     if (cached && now - cached.timestamp < SESSION_CACHE_TTL) {
       return cached.valid ? payload : null;
     }
 
-    // Validate that the session is still active in the database
+    // Validate session in database (check active status and fixed expiry)
     try {
       const { dbManager } = await import("@/lib/database");
       const db = await dbManager.getDatabase();
 
+      // Fetch session with expiry information
       const session = await db.collection("sessions").findOne(
         {
           token: token,
           isActive: true,
         },
         {
-          projection: { _id: 1 }, // Only fetch _id for faster query
+          projection: { _id: 1, expiresAt: 1 }, // Fetch session ID and expiry
         }
       );
 
-      // Cache the result
-      const isValid = session !== null;
-      sessionValidationCache.set(token, { valid: isValid, timestamp: now });
+      // Session not found or has been revoked
+      if (!session) {
+        sessionValidationCache.set(token, { valid: false, timestamp: now });
+        return null;
+      }
 
-      // Clean up old cache entries (keep cache size manageable)
+      // CRITICAL: Validate FIXED session expiry hasn't been reached
+      // Sessions expire at exact time set during login, never extended
+      if (session.expiresAt && new Date() > new Date(session.expiresAt)) {
+        // Session has expired - mark as inactive in database
+        await db.collection("sessions").updateOne(
+          { _id: session._id },
+          {
+            $set: {
+              isActive: false,
+              expiredAt: new Date(),
+            },
+          }
+        );
+
+        // Clear from cache
+        sessionValidationCache.set(token, { valid: false, timestamp: now });
+        return null;
+      }
+
+      // Session valid - cache the result
+      sessionValidationCache.set(token, { valid: true, timestamp: now });
+
+      // Clean up old cache entries (prevent memory leak)
       if (sessionValidationCache.size > 1000) {
         const entriesToDelete: string[] = [];
         for (const [key, value] of sessionValidationCache.entries()) {
@@ -461,29 +564,28 @@ export async function getUserFromRequest(
         entriesToDelete.forEach((key) => sessionValidationCache.delete(key));
       }
 
-      // If session is not found or not active, token is invalid
-      if (!isValid) {
-        return null;
-      }
-
-      // CRITICAL FIX: Update lastActivityAt to keep session alive
-      // This runs asynchronously without blocking the request
-      // Update every 60 seconds to avoid too many DB writes
-      const shouldUpdate = !cached || now - cached.timestamp > 60000; // 60 seconds
-      if (isValid && session && shouldUpdate) {
+      // Update lastActivityAt for tracking purposes ONLY
+      // This does NOT extend session expiry - just tracks last usage
+      // Update throttled to every 60 seconds to reduce database writes
+      const shouldUpdate = !cached || now - cached.timestamp > 60000;
+      if (shouldUpdate) {
         // Fire and forget - don't await to keep request fast
+        // SECURITY: Only updates lastActivityAt, NOT expiresAt
         db.collection("sessions")
           .updateOne(
             { _id: session._id },
             { $set: { lastActivityAt: new Date() } }
           )
-          .catch(() => {});
+          .catch(() => {
+            // Silently fail - activity tracking is non-critical
+          });
       }
 
       return payload;
     } catch {
-      // If database is unavailable, fall back to JWT validation only
-      // This prevents total outage if DB is temporarily down
+      // Database unavailable - fall back to JWT validation only
+      // This prevents complete service outage if database is temporarily down
+      // Less secure but better than rejecting all valid requests
       return payload;
     }
   } catch {

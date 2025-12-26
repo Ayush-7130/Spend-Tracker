@@ -1,6 +1,24 @@
 /**
  * Login API Route
- * Handles user authentication with session tracking, device info, and MFA support
+ *
+ * Authenticates users and creates sessions with FIXED expiry (no sliding sessions).
+ *
+ * Security features:
+ * - Rate limiting: 5 attempts per 15 minutes per IP (prevents brute force)
+ * - Account lockout: 15 minutes after 5 failed password attempts
+ * - MFA support: TOTP tokens and backup codes
+ * - Session tracking: Device fingerprinting and multi-device management
+ * - IP logging: Stored for display only, not enforcement (privacy-focused)
+ * - Fixed session expiry: 1 day or 7 days, NEVER extended (security > convenience)
+ *
+ * Session Expiry Model:
+ * - Remember Me = false: 1 day fixed expiry from login time
+ * - Remember Me = true: 7 days fixed expiry from login time
+ * - Session expires at EXACT time set during login, regardless of activity
+ * - lastActivityAt tracked for analytics only, does NOT extend session
+ *
+ * @route POST /api/auth/login
+ * @access Public
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -17,28 +35,31 @@ import { notificationService } from "@/lib/notifications";
 import { verifyMFAToken, verifyBackupCode, removeBackupCode } from "@/lib/mfa";
 import { ObjectId } from "mongodb";
 
-// Rate limiter: 5 login attempts per minute per IP
-const loginRateLimiter = new RateLimiter(5, 60000);
+// Prevent brute force attacks: 5 attempts per 15 minutes per IP address
+// Tighter than typical rate limits because failed logins indicate attack patterns
+const loginRateLimiter = new RateLimiter(5, 15 * 60 * 1000);
 
 export async function POST(request: NextRequest) {
   const db = await dbManager.getDatabase();
 
   try {
-    // Get client information
+    // Gather client information for security tracking
+    // IP address stored for display in login history, not used for enforcement
     const ipAddress = getIpAddress(request.headers);
     const userAgent = request.headers.get("user-agent") || "Unknown";
     const deviceInfo = parseUserAgent(userAgent);
 
-    // Rate limiting
+    // Rate limiting: Prevent automated password guessing attacks
+    // 15-minute window balances security and legitimate user retry attempts
     if (!loginRateLimiter.isAllowed(ipAddress)) {
       return NextResponse.json(
         {
           success: false,
-          error: "Too many login attempts. Please try again in a minute.",
+          error: "Too many login attempts. Please try again in 15 minutes.",
         },
         {
           status: 429,
-          headers: { "Retry-After": "60" },
+          headers: { "Retry-After": "900" }, // 15 minutes in seconds
         }
       );
     }
@@ -46,7 +67,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { email, password, mfaToken, rememberMe = false } = body;
 
-    // Validation
+    // Basic input validation
     if (!email || !password) {
       return NextResponse.json(
         { success: false, error: "Email and password are required" },
@@ -61,13 +82,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Find user by email
+    // Query database for user account
+    // Email stored lowercase to prevent duplicate accounts with different casing
     const user = await db.collection("users").findOne({
       email: email.toLowerCase(),
     });
 
     if (!user) {
-      // Log failed login attempt (no user found) - IP address stored for display
+      // Log failed attempt for security monitoring
+      // IP address stored for display in admin panels, not for blocking
       await db.collection("loginHistory").insertOne({
         email: email.toLowerCase(),
         success: false,
@@ -85,7 +108,8 @@ export async function POST(request: NextRequest) {
 
     const userId = user._id.toString();
 
-    // Check if account is locked
+    // Account lockout check: Temporary protection after repeated failures
+    // 15-minute lockout after 5 failed attempts prevents sustained brute force
     if (user.accountLocked) {
       if (user.lockedUntil && new Date() < new Date(user.lockedUntil)) {
         const minutesLeft = Math.ceil(
@@ -110,7 +134,8 @@ export async function POST(request: NextRequest) {
           { status: 403 }
         );
       } else {
-        // Unlock account if lock period has expired
+        // Auto-unlock after lock period expires
+        // Resets failed attempt counter for fresh start
         await db.collection("users").updateOne(
           { _id: user._id },
           {
@@ -127,25 +152,27 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Verify password
+    // Verify password using bcrypt constant-time comparison
+    // Protects against timing attacks that could leak password information
     const isPasswordValid = await verifyPassword(password, user.passwordHash);
 
     if (!isPasswordValid) {
-      // Increment failed login attempts
+      // Track failed attempts for account lockout mechanism
       const failedAttempts = (user.failedLoginAttempts || 0) + 1;
       const updateData: any = {
         failedLoginAttempts: failedAttempts,
         lastFailedLoginAt: new Date(),
       };
 
-      // Lock account after 5 failed attempts
+      // Trigger account lockout after 5 failed attempts
+      // Prevents attackers from unlimited password guessing
       if (failedAttempts >= 5) {
         const lockDuration = 15 * 60 * 1000; // 15 minutes
         updateData.accountLocked = true;
         updateData.lockedUntil = new Date(Date.now() + lockDuration);
         updateData.lockReason = "Too many failed login attempts";
 
-        // Send notification about failed attempts
+        // Notify user of suspicious activity via email/notification system
         await notificationService.notifyFailedLoginAttempts(
           userId,
           failedAttempts
@@ -156,7 +183,7 @@ export async function POST(request: NextRequest) {
         .collection("users")
         .updateOne({ _id: user._id }, { $set: updateData });
 
-      // Log failed login (IP address stored for display)
+      // Log failed attempt for security audit trail
       await db.collection("loginHistory").insertOne({
         userId,
         email: user.email,
@@ -167,6 +194,7 @@ export async function POST(request: NextRequest) {
         timestamp: new Date(),
       });
 
+      // Inform user of account lockout
       if (failedAttempts >= 5) {
         return NextResponse.json(
           {
@@ -178,15 +206,18 @@ export async function POST(request: NextRequest) {
         );
       }
 
+      // Generic error message prevents attacker from knowing password was wrong
       return NextResponse.json(
         { success: false, error: "Invalid email or password" },
         { status: 401 }
       );
     }
 
-    // Handle MFA if enabled
+    // Multi-Factor Authentication (MFA) validation for enhanced security
+    // Required for users who have enabled TOTP-based 2FA
     if (user.mfaEnabled) {
       if (!mfaToken) {
+        // Prompt user for MFA token after successful password validation
         return NextResponse.json(
           {
             success: false,
@@ -197,20 +228,24 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Verify MFA token or backup code
+      // Support both TOTP tokens and backup codes
+      // Backup codes provide recovery when user loses authenticator device
       let mfaValid = false;
       let usedBackupCode = false;
 
       if (mfaToken.includes("-")) {
         // Backup code format (e.g., "ABCD-1234")
+        // Each backup code is single-use to prevent replay attacks
         mfaValid = verifyBackupCode(mfaToken, user.mfaBackupCodes || []);
         usedBackupCode = true;
       } else {
-        // TOTP token (6 digits)
+        // TOTP token (6 digits, time-based, 30-second window)
+        // Provides time-synchronized security without network dependency
         mfaValid = verifyMFAToken(mfaToken, user.mfaSecret);
       }
 
       if (!mfaValid) {
+        // Log MFA failure for security monitoring
         await db.collection("loginHistory").insertOne({
           userId,
           email: user.email,
@@ -227,7 +262,8 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Remove used backup code
+      // Remove used backup code to prevent replay attacks
+      // Each backup code is single-use and must be deleted after successful use
       if (usedBackupCode) {
         const updatedBackupCodes = removeBackupCode(
           mfaToken,
@@ -242,7 +278,9 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Generate refresh token with Remember Me support
+    // Generate JWT token with FIXED expiry (no sliding sessions)
+    // Remember Me: false = 1 day fixed, true = 7 days fixed
+    // Session expiry is set ONCE at login and NEVER extended
     const tokenInfo = generateRefreshToken(
       {
         userId,
@@ -252,17 +290,26 @@ export async function POST(request: NextRequest) {
       rememberMe
     );
 
-    // Get location info (optional) - IP not stored in database
+    // Geo-location lookup for security monitoring (IP not stored long-term)
     const location = await getLocationFromIp(ipAddress);
 
-    // IMPORTANT: Session management strategy
-    // Strategy: Invalidate old sessions from the SAME device only
-    // This prevents token conflicts when multiple tabs are open on the same device
-    // BUT allows users to stay logged in on different devices
+    // Session management strategy: Single active session per device
+    //
+    // WHY: Prevents token conflicts when multiple tabs open on same device
+    // - If user opens 2 tabs, both tabs should share the same session token
+    // - Otherwise, tab A login invalidates tab B token, causing ping-pong effect
+    //
+    // MULTI-DEVICE: Users CAN be logged in on phone, laptop, tablet simultaneously
+    // - Different devices have different browser/OS combinations
+    // - Each device gets its own independent session
+    //
+    // SECURITY: Old sessions from same device are invalidated
+    // - Prevents session fixation attacks
+    // - Ensures stolen tokens from old sessions don't work
     const sessionId = new ObjectId();
 
-    // Invalidate old sessions from the SAME browser/device combination
-    // This prevents multiple active sessions on the same device fighting over tokens
+    // Invalidate previous sessions from the SAME device only
+    // Matches browser + OS to identify same device across logins
     if (deviceInfo?.browser && deviceInfo?.os) {
       await db.collection("sessions").updateMany(
         {
@@ -281,26 +328,29 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create NEW session (IP address stored for display purposes only)
-    // IMPORTANT: Store the ORIGINAL expiry time (fixed session duration)
-    // This ensures session expires exactly 1 day (or 7 days) after login
+    // Create new session with FIXED expiry timestamp
+    // CRITICAL: expiresAt is set ONCE and NEVER modified
+    // This implements the fixed expiry model (no sliding sessions)
+    // Session expires exactly 1 day (or 7 days) after login, regardless of activity
     const session = {
       _id: sessionId,
       userId,
-      token: tokenInfo.token, // Single refresh token
+      token: tokenInfo.token, // Single JWT token (not access/refresh split)
       deviceInfo,
-      ipAddress, // Store IP address for display in sessions list
+      ipAddress, // Stored for display in user's active sessions list
       location,
       isActive: true,
-      rememberMe, // Store Remember Me preference
-      expiresAt: tokenInfo.expiresAt, // FIXED expiry from original login
-      originalExpiresAt: tokenInfo.expiresAt, // Store original expiry for validation
+      rememberMe, // User's preference for session duration
+      expiresAt: tokenInfo.expiresAt, // FIXED expiry - NEVER updated
+      originalExpiresAt: tokenInfo.expiresAt, // Backup for validation/migration
       createdAt: new Date(),
-      lastActivityAt: new Date(),
+      lastActivityAt: new Date(), // Tracked for analytics only, NOT expiry
     };
 
     await db.collection("sessions").insertOne(session);
-    // Update user - reset failed attempts and set last login (no IP stored)
+
+    // Reset account lockout fields on successful login
+    // User has proven identity, clear failed attempt counter
     await db.collection("users").updateOne(
       { _id: user._id },
       {
@@ -313,7 +363,8 @@ export async function POST(request: NextRequest) {
       }
     );
 
-    // Log successful login (IP address stored for display purposes)
+    // Audit trail: Log successful authentication
+    // IP address stored for security review and compliance
     await db.collection("loginHistory").insertOne({
       userId,
       email: user.email,
@@ -324,7 +375,8 @@ export async function POST(request: NextRequest) {
       timestamp: new Date(),
     });
 
-    // Log security event (no IP address stored)
+    // Security log: Track login events for monitoring
+    // No IP address stored here (privacy-focused logging)
     await db.collection("securityLogs").insertOne({
       userId,
       eventType: "login",
@@ -333,8 +385,9 @@ export async function POST(request: NextRequest) {
       timestamp: new Date(),
     });
 
-    // Send notification about new login to other sessions
-    // Exclude the current session from receiving this notification
+    // Notify user of new login across all their active sessions
+    // Helps users detect unauthorized access from unfamiliar devices
+    // Current session is excluded to avoid self-notification
     const locationStr = location
       ? `${location.city}, ${location.country}`
       : "Unknown location";
@@ -342,7 +395,7 @@ export async function POST(request: NextRequest) {
       userId,
       getDeviceDescription(deviceInfo),
       locationStr,
-      sessionId.toString() // Exclude current session
+      sessionId.toString() // Exclude current session from notification
     );
 
     const response = NextResponse.json(
@@ -361,22 +414,28 @@ export async function POST(request: NextRequest) {
           session: {
             sessionId: sessionId.toString(),
             expiresAt: tokenInfo.expiresAt,
-            rememberMe, // Send Remember Me flag to client
+            rememberMe, // Client needs this to show session duration
           },
         },
       },
       { status: 200 }
     );
 
-    // CRITICAL: Set cookie maxAge to match refresh token expiry
-    // This ensures cookies persist as long as the refresh token is valid
-    // With Remember Me: 7 days (long-lived session)
-    // Without Remember Me: 1 day (shorter session but still persists across browser restarts)
+    // Set authentication cookie with same expiry as session
+    //
+    // Cookie maxAge must match token expiry to ensure:
+    // - Browser persists cookie as long as token is valid
+    // - Cookie expires when token expires (automatic cleanup)
+    // - Remember Me works correctly (7 days vs 1 day persistence)
+    //
+    // HttpOnly flag prevents JavaScript access (XSS protection)
+    // Secure flag ensures HTTPS-only transmission in production
+    // SameSite 'lax' provides CSRF protection while allowing GET navigation
     const cookieMaxAge = rememberMe
       ? 7 * 24 * 60 * 60 // 7 days in seconds
       : 1 * 24 * 60 * 60; // 1 day in seconds
 
-    // Clear any legacy accessToken cookie from old sessions
+    // Remove legacy cookie from old authentication system
     response.cookies.set("accessToken", "", {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
@@ -385,7 +444,8 @@ export async function POST(request: NextRequest) {
       path: "/",
     });
 
-    // Set the new refreshToken cookie
+    // Set the authentication cookie (named refreshToken for backwards compatibility)
+    // This is actually the single JWT token, not a traditional refresh token
     response.cookies.set("refreshToken", tokenInfo.token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",

@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
 import MainLayout from "@/components/MainLayout";
 import Link from "next/link";
+import logger from "@/lib/logger";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -143,7 +144,10 @@ export default function UserAnalyticsPage() {
   const fetchMonthlyCategoryData = useCallback(
     async (month: string) => {
       try {
-        console.log(`Fetching monthly data for ${month}...`);
+        logger.debug(`Fetching monthly data for ${month}...`, {
+          month,
+          userName,
+        });
         const response = await fetch(
           `/api/analytics/user/${userName}?month=${month}`
         );
@@ -151,19 +155,21 @@ export default function UserAnalyticsPage() {
           throw new Error("Failed to fetch monthly data");
         }
         const result = await response.json();
-        console.log("Monthly data result:", result);
+        logger.debug("Monthly data result", { result });
         if (result.success && result.data) {
-          console.log(
-            "Category distribution:",
-            result.data.categoryDistribution
-          );
+          logger.debug("Category distribution", {
+            categoryDistribution: result.data.categoryDistribution,
+          });
           setMonthlyCategoryData(result.data.categoryDistribution);
         } else {
           // Set empty data if no results
           setMonthlyCategoryData({ labels: [], amounts: [] });
         }
       } catch (err) {
-        console.error("Error fetching monthly category data:", err);
+        logger.error("Error fetching monthly category data", err, {
+          userName,
+          month,
+        });
         setMonthlyCategoryData({ labels: [], amounts: [] });
       }
     },
@@ -300,8 +306,8 @@ export default function UserAnalyticsPage() {
           <div className="col-12">
             {/* Header */}
             <div className="mb-3">
-              <div className="d-flex justify-content-between align-items-start flex-wrap">
-                <div className="mb-2 mb-md-0">
+              <div className="d-flex justify-content-between align-items-center mb-4">
+                <div className="mb-md-0">
                   <h1 className="h4 mb-0">
                     <i className="bi bi-person-circle me-2"></i>
                     Analytics

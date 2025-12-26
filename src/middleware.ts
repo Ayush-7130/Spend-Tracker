@@ -1,19 +1,25 @@
 /**
- * Next.js Middleware for Authentication
+ * Next.js Middleware for Authentication & Security
  *
- * Handles:
- * - Route protection
- * - Token validation (single refresh token approach)
- * - Redirect unauthenticated users
+ * Responsibilities:
+ * 1. Route protection - Validates authentication for protected pages/APIs
+ * 2. Token validation - Verifies JWT token signatures and expiration
+ * 3. Security headers - Adds HTTP security headers to all responses
+ * 4. Redirect handling - Routes unauthenticated users to login
  *
- * Note: Uses only refresh token for authentication
+ * SECURITY: Single token system with FIXED expiry (no sliding sessions)
+ * - Sessions expire at exact time set during login
+ * - Refresh route updates activity tracking but NOT expiry time
+ * - Expired sessions redirect to login immediately
  */
 
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { verifyRefreshToken } from "@/lib/auth-edge";
 
-// Routes that require authentication
+/**
+ * Routes requiring valid authentication token
+ */
 const PROTECTED_ROUTES = [
   "/expenses",
   "/categories",
@@ -23,10 +29,14 @@ const PROTECTED_ROUTES = [
   "/security",
 ];
 
-// Routes that should redirect to home if already authenticated
+/**
+ * Routes that redirect to dashboard if already authenticated
+ */
 const AUTH_ROUTES = ["/login", "/register", "/signup"];
 
-// Public routes that don't need authentication
+/**
+ * Public routes accessible without authentication
+ */
 const PUBLIC_ROUTES = [
   "/auth/verify-email",
   "/auth/reset-password",
@@ -37,25 +47,88 @@ const PUBLIC_ROUTES = [
   "/api/auth/forgot-password",
   "/api/auth/reset-password",
   "/api/auth/signup",
-  "/api/auth/me", // Allow /api/auth/me for token verification
+  "/api/auth/me", // Allow for token validation (session checked in handler)
 ];
+
+/**
+ * Add security headers to response
+ *
+ * Implements defense-in-depth security through HTTP headers:
+ * - X-Frame-Options: Prevents clickjacking attacks
+ * - X-Content-Type-Options: Prevents MIME-sniffing attacks
+ * - Referrer-Policy: Controls referrer information leakage
+ * - X-XSS-Protection: Legacy XSS filter (for older browsers)
+ * - Permissions-Policy: Restricts access to browser features
+ * - HSTS: Forces HTTPS in production
+ * - CSP: Prevents XSS and code injection attacks
+ *
+ * @param response - Response object to add headers to
+ * @returns Response with security headers added
+ */
+function addSecurityHeaders(response: NextResponse): NextResponse {
+  // Prevent page from being displayed in iframe (clickjacking protection)
+  response.headers.set("X-Frame-Options", "DENY");
+
+  // Prevent MIME-sniffing attacks by forcing declared content types
+  response.headers.set("X-Content-Type-Options", "nosniff");
+
+  // Control referrer information sent in requests
+  response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+
+  // Enable legacy XSS filter for older browsers
+  response.headers.set("X-XSS-Protection", "1; mode=block");
+
+  // Restrict access to sensitive browser features
+  response.headers.set(
+    "Permissions-Policy",
+    "camera=(), microphone=(), geolocation=(), interest-cohort=()"
+  );
+
+  // HSTS - Force HTTPS in production to prevent downgrade attacks
+  if (process.env.NODE_ENV === "production") {
+    response.headers.set(
+      "Strict-Transport-Security",
+      "max-age=31536000; includeSubDomains; preload"
+    );
+  }
+
+  // Content Security Policy - Restricts resource loading to prevent XSS
+  // Note: 'unsafe-inline' and 'unsafe-eval' needed for Next.js development
+  // TODO: Tighten CSP for production by removing unsafe-* directives
+  response.headers.set(
+    "Content-Security-Policy",
+    process.env.NODE_ENV === "production"
+      ? "default-src 'self'; " +
+          "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
+          "style-src 'self' 'unsafe-inline'; " +
+          "img-src 'self' data: https:; " +
+          "font-src 'self' data:; " +
+          "connect-src 'self'; " +
+          "frame-ancestors 'none';"
+      : "default-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
+          "img-src 'self' data: https:; " +
+          "font-src 'self' data:;"
+  );
+
+  return response;
+}
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Skip middleware for static files and Next.js internals
+  // Skip middleware for static files, Next.js internals, and file extensions
   if (
     pathname.startsWith("/_next") ||
     pathname.startsWith("/static") ||
-    pathname.includes(".") // files with extensions
+    pathname.includes(".") // Skip files with extensions (favicon.ico, robots.txt, etc.)
   ) {
     return NextResponse.next();
   }
 
-  // Get refresh token from cookies
+  // Get authentication token from httpOnly cookie
   const token = request.cookies.get("refreshToken")?.value;
 
-  // Check if route needs authentication
+  // Determine route type
   const isProtectedRoute = PROTECTED_ROUTES.some((route) =>
     pathname.startsWith(route)
   );
@@ -64,49 +137,64 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith(route)
   );
 
-  // API routes - validate token but don't redirect
+  // ======================================================================
+  // API ROUTE HANDLING
+  // ======================================================================
+
   if (pathname.startsWith("/api")) {
-    // Public API routes - always allow
+    // Public API routes - allow access without authentication
     if (isPublicRoute) {
-      return NextResponse.next();
+      const response = NextResponse.next();
+      return addSecurityHeaders(response);
     }
 
-    // Protected API routes - check for valid refresh token
+    // Protected API routes - require valid token and active session
     if (token) {
       const payload = await verifyRefreshToken(token);
 
       if (payload) {
-        // Token is valid - allow request through
+        // Token signature valid - pass user info to API handler via headers
+        // Handler is responsible for checking session.isActive and session.expiresAt
         const response = NextResponse.next();
         response.headers.set("x-user-id", payload.userId);
         response.headers.set("x-user-email", payload.email);
-        return response;
+        return addSecurityHeaders(response);
       }
     }
 
-    // No valid token - return 401
-    return NextResponse.json(
-      { success: false, error: "Authentication required" },
-      { status: 401 }
+    // No valid token - return 401 Unauthorized
+    return addSecurityHeaders(
+      NextResponse.json(
+        { success: false, error: "Authentication required" },
+        { status: 401 }
+      )
     );
   }
 
-  // Page routes handling
+  // ======================================================================
+  // PAGE ROUTE HANDLING
+  // ======================================================================
 
-  // Public pages - allow access
+  // Public pages - allow access without authentication
   if (isPublicRoute) {
-    return NextResponse.next();
+    const response = NextResponse.next();
+    return addSecurityHeaders(response);
   }
 
-  // Auth pages (login, register) - redirect to dashboard if already authenticated
+  // Auth pages (login, signup) - redirect to dashboard if already logged in
   if (isAuthRoute) {
     if (token) {
       const payload = await verifyRefreshToken(token);
       if (payload) {
-        return NextResponse.redirect(new URL("/", request.url));
+        // Already authenticated - redirect to home page
+        return addSecurityHeaders(
+          NextResponse.redirect(new URL("/", request.url))
+        );
       }
     }
-    return NextResponse.next();
+    // Not authenticated - allow access to auth pages
+    const response = NextResponse.next();
+    return addSecurityHeaders(response);
   }
 
   // Protected pages - require authentication
@@ -115,27 +203,37 @@ export async function middleware(request: NextRequest) {
     if (!token) {
       const loginUrl = new URL("/login", request.url);
       loginUrl.searchParams.set("redirect", pathname);
-      return NextResponse.redirect(loginUrl);
+      return addSecurityHeaders(NextResponse.redirect(loginUrl));
     }
 
-    // Verify token
+    // Verify token signature
     const payload = await verifyRefreshToken(token);
     if (payload) {
-      // Valid token - allow page access
-      return NextResponse.next();
+      // Token valid - allow access (handler will check session.expiresAt)
+      const response = NextResponse.next();
+      return addSecurityHeaders(response);
     }
 
     // Invalid token - redirect to login
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("redirect", pathname);
-    return NextResponse.redirect(loginUrl);
+    return addSecurityHeaders(NextResponse.redirect(loginUrl));
   }
 
-  // Allow access to other routes
-  return NextResponse.next();
+  // All other routes - allow access with security headers
+  const response = NextResponse.next();
+  return addSecurityHeaders(response);
 }
 
-// Configure which routes to run middleware on
+/**
+ * Configure which routes run middleware
+ *
+ * Matches all routes except:
+ * - Static files (_next/static)
+ * - Image optimization files (_next/image)
+ * - Favicon and other root-level files
+ * - Public folder contents
+ */
 export const config = {
   matcher: [
     /*

@@ -19,8 +19,6 @@ This application has been extensively optimized for performance:
 - **⏱️ <200ms API Responses** - Optimized queries & connection pooling
 - **📊 Web Vitals Monitoring** - Real-time performance tracking
 
-See [PERFORMANCE-IMPLEMENTATION-SUMMARY.md](PERFORMANCE-IMPLEMENTATION-SUMMARY.md) for details.
-
 ## ✨ Features
 
 ### Core Functionality
@@ -56,21 +54,26 @@ See [PERFORMANCE-IMPLEMENTATION-SUMMARY.md](PERFORMANCE-IMPLEMENTATION-SUMMARY.m
 - **📱 Responsive Design**: Mobile-first approach with tablet and desktop optimizations
 - **🔒 Security** (Enhanced Dec 2025):
   - **HTTPS Enforcement**: Production-grade TLS/SSL with HSTS
-  - **Security Headers**: OWASP-compliant headers (CSP, X-Frame-Options, etc.)
-  - **JWT Authentication**: Single refresh token with httpOnly secure cookies
-  - **Token Management**: 1-day (default) or 7-day (Remember Me) token lifespan
-  - **Password Security**: bcrypt with 12 rounds, strong password policy
-  - **Rate Limiting**: Protection against brute force attacks
-  - **Session Management**: Multi-device support with revocation
-  - **MFA Support**: Optional TOTP-based two-factor authentication
+  - **Security Headers**: OWASP-compliant (CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy)
+  - **JWT Authentication**: Single token system with FIXED expiry (no sliding sessions)
+  - **Session Management**: Fixed 1-day or 7-day expiry (Remember Me) - never extends
+  - **Password Security**: bcrypt with 12 rounds, strong password policy (8+ chars, mixed case, numbers)
+  - **Rate Limiting**:
+    - Login: 5 attempts per 15 minutes
+    - Signup: 5 attempts per hour
+    - Password Reset: 3 attempts per hour
+    - Email Verification: 5 attempts per hour
+    - API Endpoints: 30 requests per minute
+  - **Session Tracking**: Multi-device support with device fingerprinting
+  - **MFA Support**: Optional TOTP-based two-factor authentication with backup codes
   - **Input Validation**: Server-side validation & sanitization
-  - **NoSQL Injection Prevention**: Parameterized queries & type validation
-  - **Privacy-Focused**: IP addresses NOT stored in database
+  - **NoSQL Injection Prevention**: Parameterized queries & MongoDB operators only
+  - **Privacy-Focused**: IP addresses stored only for display (not used for enforcement)
 - **⚡ Performance** (Optimized Nov 2025):
   - **Connection Pooling**: MongoDB optimized with compression
   - **Intelligent Caching**: 70-90% reduction in database queries
   - **Code Splitting**: Dynamic imports for 25% smaller bundles
-  - **Query Optimization**: Field projection and indexed queries
+  - **Query Optimization**: Field projection, compound indexes, TTL indexes
   - **React Memoization**: useCallback/useMemo to prevent re-renders
   - **HTTP Caching**: Cache-Control headers with stale-while-revalidate
   - **Web Vitals**: Real-time monitoring (LCP, FID, CLS, FCP, TTFB, INP)
@@ -78,19 +81,21 @@ See [PERFORMANCE-IMPLEMENTATION-SUMMARY.md](PERFORMANCE-IMPLEMENTATION-SUMMARY.m
 - **🎭 Dark Mode**: System preference detection with manual toggle
 - **🛡️ Error Handling**: React Error Boundaries with fallback UIs
 - **📝 Type Safety**: Full TypeScript coverage with shared API types
+- **📊 Structured Logging**: Production-ready logging with automatic sensitive data redaction
 
 ## 🛠️ Technology Stack
 
-- **Frontend & Backend**: Next.js 14 (App Router, React Server Components)
-- **Database**: MongoDB with optimized indexes
+- **Frontend & Backend**: Next.js 15 (App Router, React Server Components)
+- **Database**: MongoDB with optimized indexes and TTL cleanup
 - **Styling**: Bootstrap 5.3 + Custom CSS (themes, responsive, accessibility)
 - **Icons**: Bootstrap Icons
 - **Charts**: Chart.js with react-chartjs-2
 - **Language**: TypeScript 5.0
-- **Authentication**: Custom JWT implementation
-- **Password Hashing**: bcrypt
+- **Authentication**: Custom JWT implementation (single token, fixed expiry)
+- **Password Hashing**: bcrypt (12 rounds)
 - **Date Handling**: Native JavaScript Date API
 - **Validation**: Custom validation with type-safe schemas
+- **Logging**: Structured logging with sensitive data redaction
 
 ## 🚀 Quick Start
 
@@ -99,18 +104,32 @@ See [PERFORMANCE-IMPLEMENTATION-SUMMARY.md](PERFORMANCE-IMPLEMENTATION-SUMMARY.m
 - **Node.js**: 18.0 or higher ([Download](https://nodejs.org/))
 - **MongoDB**: Atlas account ([Sign up free](https://www.mongodb.com/cloud/atlas/register))
 - **Git**: For version control ([Download](https://git-scm.com/))
+- **Resend Account** (Optional): For email functionality ([Sign up](https://resend.com))
 
 ### Authentication System
 
-This application uses a **single refresh token** authentication system (migrated Dec 2025):
+This application uses a **single token authentication** system with **FIXED session expiry**:
 
-- **Single Token**: One httpOnly JWT refresh token (no separate access token)
-- **Token Lifespan**: 1 day (default) or 7 days (with "Remember Me")
+#### Token Strategy
+
+- **Single Token**: One JWT token (no separate access/refresh tokens)
+- **Fixed Expiry**: Sessions expire at exact time set during login, **never extended**
+- **Remember Me = false**: 1 day fixed expiry
+- **Remember Me = true**: 7 days fixed expiry
 - **Storage**: Secure httpOnly cookie named `refreshToken`
 - **Security**: httpOnly, secure (production), sameSite: "lax"
-- **No Auto-Refresh**: Token validated on each request (no background renewal)
 
-**Migration Note:** If upgrading from an older version, see `MIGRATION_VERIFICATION.md` for details on the token system migration.
+#### Session Behavior
+
+- ✅ Sessions expire at **exact time** from login (no sliding)
+- ✅ Refresh route (`/api/auth/me`) validates but does NOT extend sessions
+- ✅ Activity tracked via `lastActivityAt` (for analytics only, not expiry)
+- ✅ Expired sessions automatically deactivated in database
+- ✅ Multiple devices supported (independent sessions)
+- ❌ No automatic session extension on activity
+- ❌ No infinite sessions (security by design)
+
+**Example:** Login with Remember Me at 10:00 AM → Session expires exactly 7 days later at 10:00 AM, regardless of usage.
 
 ### Installation
 
@@ -132,41 +151,74 @@ This application uses a **single refresh token** authentication system (migrated
    Create a `.env.local` file in the root directory:
 
    ```env
-   # MongoDB Connection
-   MONGODB_URI="mongodb+srv://<username>:<password>@cluster.mongodb.net/spend-tracker?retryWrites=true&w=majority"
+   # ============================================
+   # DATABASE
+   # ============================================
+   MONGODB_URI=mongodb+srv://<username>:<password>@cluster.mongodb.net/spend-tracker?retryWrites=true&w=majority
 
-   # JWT Secret (generate a random string for production)
-   JWT_SECRET="your-super-secret-jwt-key-change-this-in-production"
-   JWT_REFRESH_SECRET="your-super-secret-refresh-key-change-this-in-production"
+   # ============================================
+   # JWT SECRET (Single Token System)
+   # ============================================
+   # SECURITY: Must be at least 32 characters for cryptographic security
+   # Generate: openssl rand -base64 32
+   JWT_SECRET=your-super-secret-jwt-key-at-least-32-characters-long
 
-   # Environment
-   NODE_ENV="development"
+   # ============================================
+   # EMAIL SERVICE (Resend) - Optional
+   # ============================================
+   # For password reset and email verification
+   # Get API key from: https://resend.com/api-keys
+   RESEND_API_KEY=re_your_api_key_here
+   EMAIL_FROM=noreply@yourdomain.com  # Use verified domain in production
+
+   # ============================================
+   # APPLICATION
+   # ============================================
+   NEXT_PUBLIC_APP_URL=http://localhost:3000
+   NEXT_PUBLIC_ENABLE_SIGNUP=true  # Set to false to disable new signups
+   NODE_ENV=development
    ```
 
-   **Security Note**: Never commit `.env.local` to version control. Use strong, unique values in production.
+   **Security Notes:**
+   - ✅ Never commit `.env.local` to version control
+   - ✅ Use strong, random JWT_SECRET (32+ characters)
+   - ✅ Change EMAIL_FROM from test domain (`onboarding@resend.dev`) to verified domain before production
+   - ✅ Use HTTPS URL for NEXT_PUBLIC_APP_URL in production
+   - ⚠️ Remove `JWT_REFRESH_SECRET` and `NEXTAUTH_*` if present (no longer used)
 
-4. **Initialize the database**:
+4. **Validate environment variables**:
+
+   The application automatically validates environment variables on startup. Fix any errors before proceeding.
+
+5. **Initialize the database**:
 
    ```bash
-   # One-time setup: Creates collections, indexes, and seeds initial data
+   # One-time setup: Creates collections and seeds initial data
    npm run db:setup
 
-   # Or use the full command
-   node scripts/unified-database-setup.js
-
-   # Skip sample data if you have existing data
+   # Setup without seed data (clean start)
    npm run db:setup-no-seed
+
+   # Create optimized indexes (recommended after setup)
+   npm run db:indexes
    ```
 
-5. **Run the development server**:
+   **What happens:**
+   - Creates MongoDB collections (users, sessions, expenses, categories, etc.)
+   - Seeds sample data (categories, test expenses) if not using `--no-seed`
+   - Creates compound indexes for optimized queries
+   - Adds TTL index for automatic login history cleanup (90 days)
+
+6. **Start the development server**:
 
    ```bash
    npm run dev
    ```
 
-6. **Open your browser**:
-
-   Navigate to [http://localhost:3000](http://localhost:3000)
+7. **Open your browser and navigate to**:
+   ```
+   http://localhost:3000
+   ```
 
 ### Default Users
 
@@ -176,17 +228,6 @@ After initialization, you can log in with:
 - **Email**: `ayush@example.com` | **Password**: `password123`
 
 ⚠️ **Change these passwords immediately in production!**
-
-4. **Start the development server**:
-
-   ```bash
-   npm run dev
-   ```
-
-5. **Open your browser and navigate to**:
-   ```
-   http://localhost:3000
-   ```
 
 ### Key Optimizations
 
@@ -699,7 +740,7 @@ src/
 # Development server with hot reload
 npm run dev
 
-# Production build
+# Production build (optimized for production)
 npm run build
 
 # Start production server
@@ -711,23 +752,41 @@ npm run type-check
 # Lint code
 npm run lint
 
-# Initialize database (collections, indexes, seed data)
-npm run db:setup
+# Database Setup & Initialization
+npm run db:setup              # Initialize database (collections, indexes, seed data)
+npm run db:setup-no-seed      # Initialize without seed data (indexes only)
+npm run db:indexes            # Create optimized indexes for performance
+npm run db:cleanup            # Deactivate expired sessions (run via cron)
 
-# Initialize without seed data (indexes only)
-npm run db:setup-no-seed
+# Advanced Database Options
+node scripts/unified-database-setup.js --force  # Force recreate all data
+node scripts/unified-database-setup.js --help   # Show all options
 
-# Force recreate all data
-node scripts/unified-database-setup.js --force
-
-# Show help with all options
-node scripts/unified-database-setup.js --help
-
-# Migration Scripts (if needed)
+# Migration Scripts (if upgrading from old versions)
 node scripts/migrate-to-single-token.js --force-logout  # Migrate to single token
-node scripts/verify-migration.js                         # Verify migration status
-node scripts/cleanup-old-indexes.js                      # Clean old indexes
+node scripts/verify-migration.js                        # Verify migration status
+node scripts/cleanup-old-indexes.js                     # Clean old indexes
 ```
+
+### Database Maintenance
+
+**Session Cleanup:**
+The `npm run db:cleanup` script deactivates expired sessions in the database. Recommended to run daily via cron:
+
+```bash
+# Linux/macOS cron (runs daily at 2 AM)
+0 2 * * * cd /path/to/spend-tracker && npm run db:cleanup
+
+# Or use a task scheduler on Windows
+```
+
+**Index Creation:**
+Run `npm run db:indexes` after initial setup to create optimized indexes:
+
+- Compound indexes for multi-field queries (e.g., `userId + date`)
+- Text indexes for search functionality
+- TTL index for login history (auto-deletes after 90 days)
+- Expected performance improvement: 80-85% faster queries
 
 ### Code Organization
 
@@ -950,43 +1009,72 @@ npm start
 - Default: 3000
 - Override with `PORT` environment variable
 
-### Post-Deployment Checklist
+**Pre-Deployment:**
 
-- [ ] Environment variables configured
+- [ ] Environment validation passes (automatic on startup)
+- [ ] JWT_SECRET is 32+ characters (strong, random)
+- [ ] EMAIL_FROM uses verified domain (not @test.com)
+- [ ] Database indexes created (`npm run db:indexes`)
+- [ ] HTTPS/TLS configured with valid certificate
+
+**Post-Deployment Verification:**
+
+- [ ] Environment variables configured correctly
 - [ ] Database accessible from production
-- [ ] Database indexes created
-- [ ] Default users working
-- [ ] Authentication functioning
+- [ ] Default test users working (change passwords immediately!)
+- [ ] Authentication functioning (login/logout/session expiry)
+- [ ] Rate limiting responding with HTTP 429 on excessive requests
+- [ ] Security headers present (check browser DevTools Network tab)
 - [ ] API endpoints responding
 - [ ] Dark mode working
 - [ ] Export functionality working
 - [ ] Charts displaying correctly
 - [ ] Mobile responsiveness verified
-- [ ] Accessibility features working
+- [ ] Accessibility features working (keyboard navigation, screen readers)
 - [ ] Performance metrics acceptable (Lighthouse score > 90)
+- [ ] Session cleanup cron job configured (`npm run db:cleanup` daily)
 
 ### Production Environment Variables
 
 ```env
-# Required
+# ============================================================================
+# REQUIRED - Application will not start without these
+# ============================================================================
+
+# Database Connection (MongoDB Atlas recommended)
 MONGODB_URI=mongodb+srv://<username>:<password>@cluster.mongodb.net/spend-tracker?retryWrites=true&w=majority
-JWT_SECRET=generate-with-openssl-rand-base64-32
-JWT_REFRESH_SECRET=generate-with-openssl-rand-base64-32
+
+# Authentication (Single Token System - FIXED Expiry)
+JWT_SECRET=generate-with-openssl-rand-base64-32-minimum
+
+# Environment
 NODE_ENV=production
 
-# Optional
-PORT=3000
-NEXT_PUBLIC_API_URL=https://your-domain.com
+# Public URL (for emails, redirects)
+NEXT_PUBLIC_APP_URL=https://your-domain.com
 
-# Email (if using email features)
-EMAIL_HOST=smtp.gmail.com
-EMAIL_PORT=587
-EMAIL_USER=your-email@gmail.com
-EMAIL_PASSWORD=your-app-password
-EMAIL_FROM=noreply@yourapp.com
+# ============================================================================
+# OPTIONAL - Email functionality (Resend recommended)
+# ============================================================================
+
+# Resend API (for password reset, email verification)
+RESEND_API_KEY=re_xxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+EMAIL_FROM=noreply@yourdomain.com  # Must be verified domain
+
+# ============================================================================
+# OPTIONAL - Feature flags
+# ============================================================================
+
+NEXT_PUBLIC_ENABLE_SIGNUP=true  # Set false to disable new registrations
+
+# ============================================================================
+# OPTIONAL - Server configuration
+# ============================================================================
+
+PORT=3000  # Override default port if needed
 ```
 
-**Generate secure JWT secrets:**
+**Generate secure JWT secret:**
 
 ```bash
 # Linux/Mac

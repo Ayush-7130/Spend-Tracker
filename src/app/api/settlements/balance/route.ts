@@ -151,7 +151,7 @@ export async function GET() {
     return response;
   } catch {
     return NextResponse.json(
-      { error: "Failed to calculate balances" },
+      { success: false, error: "Failed to calculate balances" },
       { status: 500 }
     );
   }

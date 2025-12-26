@@ -5,6 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import logger from "@/lib/logger";
 
 interface WebVitalMetric {
   metric: string;
@@ -28,7 +29,7 @@ export async function POST(request: NextRequest) {
 
     // Log metrics in development
     if (process.env.NODE_ENV === "development") {
-      console.log("Web Vital:", {
+      logger.debug("Web Vital", {
         metric: body.metric,
         value: body.value,
         rating: body.rating,

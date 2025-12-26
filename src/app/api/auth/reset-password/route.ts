@@ -1,6 +1,18 @@
 /**
- * Reset Password API Route
- * Resets user password using the token from email
+ * POST /api/auth/reset-password
+ *
+ * Resets user password using token from forgot-password email.
+ *
+ * SECURITY: Rate limited to prevent brute force token guessing attacks.
+ * All existing sessions are revoked after successful password reset,
+ * forcing user to log in again with new password.
+ *
+ * Rate limit: 3 attempts per hour per IP
+ *
+ * @body { token, newPassword }
+ * @returns { success: true } on successful password reset
+ * @returns { error } with 400 for invalid/expired token or weak password
+ * @returns { error } with 429 if rate limit exceeded
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -8,9 +20,32 @@ import { hashPassword, hashToken, isValidPassword } from "@/lib/auth";
 import { dbManager } from "@/lib/database";
 import { notificationService } from "@/lib/notifications";
 import { parseUserAgent, getIpAddress } from "@/lib/device-info";
+import { RateLimiter } from "@/lib/utils/security";
+
+// Rate limiter: 3 password reset attempts per hour per IP
+// Prevents brute force attacks on reset tokens
+const resetPasswordRateLimiter = new RateLimiter(3, 60 * 60 * 1000);
 
 export async function POST(request: NextRequest) {
   try {
+    // Extract client IP for rate limiting
+    const clientIp = getIpAddress(request.headers);
+
+    // Rate limiting: Prevent brute force token guessing
+    if (!resetPasswordRateLimiter.isAllowed(clientIp)) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "Too many password reset attempts. Please try again in an hour.",
+        },
+        {
+          status: 429,
+          headers: { "Retry-After": "3600" }, // 1 hour
+        }
+      );
+    }
+
     const body = await request.json();
     const { token, newPassword } = body;
 

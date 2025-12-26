@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState, useEffect, useRef } from "react";
 import { ThemeToggle, useTheme } from "@/contexts/ThemeContext";
 import { useAuth } from "@/contexts/AuthContext";
 import NotificationBell from "./NotificationBell";
@@ -10,6 +11,9 @@ export default function Navigation() {
   const pathname = usePathname();
   const { user, logout, isAuthenticated } = useAuth();
   const { theme } = useTheme();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const navItems = [
     { href: "/", label: "Dashboard", icon: "bi-house-door" },
@@ -28,6 +32,42 @@ export default function Navigation() {
       await logout();
     } catch {}
   };
+
+  const toggleMenu = () => {
+    setIsMenuOpen(!isMenuOpen);
+  };
+
+  const closeMenu = () => {
+    setIsMenuOpen(false);
+  };
+
+  const toggleDropdown = () => {
+    setIsDropdownOpen(!isDropdownOpen);
+  };
+
+  const closeDropdown = () => {
+    setIsDropdownOpen(false);
+  };
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    if (isDropdownOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isDropdownOpen]);
 
   // Don't show navigation on login/signup pages
   if (pathname === "/login" || pathname === "/signup") {
@@ -59,10 +99,9 @@ export default function Navigation() {
         <button
           className="navbar-toggler"
           type="button"
-          data-bs-toggle="collapse"
-          data-bs-target="#navbarNav"
+          onClick={toggleMenu}
           aria-controls="navbarNav"
-          aria-expanded="false"
+          aria-expanded={isMenuOpen}
           aria-label="Toggle navigation"
           style={{
             borderColor: "var(--border-primary)",
@@ -79,7 +118,10 @@ export default function Navigation() {
           ></span>
         </button>
 
-        <div className="collapse navbar-collapse" id="navbarNav">
+        <div
+          className={`collapse navbar-collapse ${isMenuOpen ? "show" : ""}`}
+          id="navbarNav"
+        >
           {isAuthenticated && (
             <ul className="navbar-nav me-auto">
               {navItems.map((item) => (
@@ -94,6 +136,7 @@ export default function Navigation() {
                           : "transparent",
                     }}
                     href={item.href}
+                    onClick={closeMenu}
                     aria-label={`${item.label} page`}
                     aria-current={pathname === item.href ? "page" : undefined}
                   >
@@ -133,6 +176,7 @@ export default function Navigation() {
                     <Link
                       href="/profile"
                       className="btn btn-sm flex-fill"
+                      onClick={closeMenu}
                       style={{
                         backgroundColor: "transparent",
                         borderColor: "var(--border-primary)",
@@ -162,7 +206,10 @@ export default function Navigation() {
                         justifyContent: "center",
                         whiteSpace: "nowrap",
                       }}
-                      onClick={handleLogout}
+                      onClick={() => {
+                        closeMenu();
+                        handleLogout();
+                      }}
                       aria-label="Sign out from account"
                     >
                       <i
@@ -192,6 +239,7 @@ export default function Navigation() {
                 <Link
                   href="/login"
                   className="btn w-100 mb-2"
+                  onClick={closeMenu}
                   style={{
                     backgroundColor: "transparent",
                     borderColor: "var(--border-primary)",
@@ -206,6 +254,7 @@ export default function Navigation() {
                   <Link
                     href="/signup"
                     className="btn w-100 mb-2"
+                    onClick={closeMenu}
                     style={{
                       backgroundColor: "var(--btn-primary-bg)",
                       color: "var(--btn-primary-text)",
@@ -237,13 +286,13 @@ export default function Navigation() {
               <NotificationBell />
 
               {/* User Dropdown */}
-              <div className="dropdown ms-3">
+              <div className="dropdown ms-3" ref={dropdownRef}>
                 <button
                   className="btn dropdown-toggle"
                   type="button"
                   id="userDropdown"
-                  data-bs-toggle="dropdown"
-                  aria-expanded="false"
+                  onClick={toggleDropdown}
+                  aria-expanded={isDropdownOpen}
                   aria-haspopup="true"
                   aria-label={`User menu for ${user?.name || "User"}`}
                   style={{
@@ -270,9 +319,9 @@ export default function Navigation() {
                   </span>
                 </button>
                 <ul
-                  className="dropdown-menu dropdown-menu-end"
+                  className={`dropdown-menu dropdown-menu-end ${isDropdownOpen ? "show" : ""}`}
                   aria-labelledby="userDropdown"
-                  style={{ minWidth: "280px" }}
+                  style={{ minWidth: "280px", right: 0, top: "150%" }}
                 >
                   <li>
                     <span className="dropdown-item-text px-3 py-2">
@@ -302,6 +351,7 @@ export default function Navigation() {
                     <Link
                       href="/profile"
                       className="dropdown-item py-2 px-3"
+                      onClick={closeDropdown}
                       style={{ color: "var(--text-primary)" }}
                       aria-label="View and edit profile"
                     >
@@ -326,7 +376,10 @@ export default function Navigation() {
                         width: "100%",
                         textAlign: "left",
                       }}
-                      onClick={handleLogout}
+                      onClick={() => {
+                        closeDropdown();
+                        handleLogout();
+                      }}
                       aria-label="Sign out from account"
                     >
                       <i

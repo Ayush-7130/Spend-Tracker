@@ -1,15 +1,24 @@
 /**
- * Auth utilities for Edge Runtime (Middleware)
- * Uses only Web APIs compatible with Edge Runtime
- * Single refresh token approach - no access token
+ * Authentication utilities for Edge Runtime (Middleware)
+ *
+ * EDGE COMPATIBLE: Uses only Web APIs compatible with Vercel Edge Runtime.
+ * Uses jose library instead of jsonwebtoken for Edge compatibility.
+ *
+ * SECURITY: Single token system with FIXED expiry (no sliding sessions)
+ * - Token expiry set once at login, never extends
+ * - Remember Me = false: 1 day fixed expiry
+ * - Remember Me = true: 7 days fixed expiry
  */
 
 import { NextRequest } from "next/server";
 
-// JWT Secrets (should be in environment variables)
-const JWT_REFRESH_SECRET =
-  process.env.JWT_REFRESH_SECRET ||
-  "your-super-secret-refresh-key-change-in-production";
+/**
+ * JWT Secret for Edge Runtime token verification
+ *
+ * SECURITY: Must match JWT_SECRET used in auth.ts for token signing
+ */
+const JWT_SECRET =
+  process.env.JWT_SECRET || "your-super-secret-key-change-in-production";
 
 // JWT Payload interface
 export interface JWTPayload {
@@ -22,19 +31,28 @@ export interface JWTPayload {
 }
 
 /**
- * Verify refresh token with clock tolerance
- * Includes 60-second clock tolerance to handle clock skew
+ * Verify authentication token in Edge Runtime
+ *
+ * Uses jose library for JWT verification (Edge compatible).
+ * Includes clock tolerance to handle minor server time differences.
+ *
+ * SECURITY: Verifies token signature and expiration only.
+ * Middleware should also check database session status for revocation.
+ *
+ * @param token - JWT token string from cookie or header
+ * @returns Decoded payload if valid, null if invalid/expired
  */
 export async function verifyRefreshToken(
   token: string
 ): Promise<JWTPayload | null> {
   try {
     const { jwtVerify } = await import("jose");
-    const secret = new TextEncoder().encode(JWT_REFRESH_SECRET);
+    const secret = new TextEncoder().encode(JWT_SECRET);
 
-    // Add clock tolerance of 60 seconds to handle clock skew between servers
+    // Verify with 60-second clock tolerance for distributed systems
+    // Prevents false negatives from minor clock drift between servers
     const { payload } = await jwtVerify(token, secret, {
-      clockTolerance: 60, // 60 seconds tolerance
+      clockTolerance: 60,
     });
 
     return {
@@ -46,12 +64,21 @@ export async function verifyRefreshToken(
       exp: payload.exp,
     };
   } catch {
+    // Invalid signature, expired token, or malformed JWT
     return null;
   }
 }
 
 /**
- * Get refresh token from request cookies
+ * Get authentication token from HTTP request
+ *
+ * Extracts token from httpOnly cookie set during login.
+ *
+ * SECURITY: Token stored in httpOnly cookie prevents XSS attacks
+ * from stealing authentication credentials via JavaScript.
+ *
+ * @param request - Next.js request object
+ * @returns Token string or null if not present
  */
 export function getRefreshTokenFromRequest(
   request: NextRequest
@@ -60,22 +87,23 @@ export function getRefreshTokenFromRequest(
 }
 
 /**
- * Check if password meets minimum requirements
+ * Validate password strength requirements
+ *
+ * Enforces security best practices for password complexity:
+ * - Minimum 8 characters
+ * - At least one uppercase letter
+ * - At least one lowercase letter
+ * - At least one number
+ * - At least one special character
+ *
+ * @param password - Plain text password to validate
+ * @returns true if meets all requirements, false otherwise
  */
 export function isValidPassword(password: string): boolean {
-  // At least 8 characters
   if (password.length < 8) return false;
-
-  // At least one uppercase letter
   if (!/[A-Z]/.test(password)) return false;
-
-  // At least one lowercase letter
   if (!/[a-z]/.test(password)) return false;
-
-  // At least one number
   if (!/\d/.test(password)) return false;
-
-  // At least one special character
   if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) return false;
 
   return true;

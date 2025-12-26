@@ -4,6 +4,7 @@ import { getUserFromRequest } from "@/lib/auth";
 import { notificationService } from "@/lib/notifications";
 import { dbManager } from "@/lib/database";
 import { invalidateCache } from "@/lib/cache";
+import logger from "@/lib/logger";
 
 // Disable Next.js caching for this route
 export const dynamic = "force-dynamic";
@@ -122,7 +123,10 @@ export async function GET(request: NextRequest) {
 
     return response;
   } catch (error: unknown) {
-    console.error("Fetch expenses error:", error);
+    logger.error("Fetch expenses error", error, {
+      context: "/api/expenses GET",
+      userId: (error as any).userId,
+    });
     return NextResponse.json(
       { success: false, error: "Failed to fetch expenses" },
       { status: 500 }
@@ -222,7 +226,10 @@ export async function POST(request: NextRequest) {
       data: createdExpense,
     });
   } catch (error: unknown) {
-    console.error("Create expense error:", error);
+    logger.error("Create expense error", error, {
+      context: "/api/expenses POST",
+      userId: (error as any).userId,
+    });
     return NextResponse.json(
       { success: false, error: "Failed to create expense" },
       { status: 500 }

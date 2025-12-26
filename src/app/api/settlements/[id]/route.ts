@@ -5,7 +5,7 @@ import { getUserFromRequest } from "@/lib/auth";
 import { NotificationService } from "@/lib/notifications";
 import { invalidateCache } from "@/lib/cache";
 
-export async function DELETE(
+export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -16,7 +16,7 @@ export async function DELETE(
     const user = await getUserFromRequest(request);
     if (!user) {
       return NextResponse.json(
-        { error: "Authentication required" },
+        { success: false, error: "Authentication required" },
         { status: 401 }
       );
     }
@@ -101,7 +101,7 @@ export async function DELETE(
   }
 }
 
-export async function PUT(
+export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -112,7 +112,7 @@ export async function PUT(
     const user = await getUserFromRequest(request);
     if (!user) {
       return NextResponse.json(
-        { error: "Authentication required" },
+        { success: false, error: "Authentication required" },
         { status: 401 }
       );
     }
@@ -134,7 +134,10 @@ export async function PUT(
     // Validate required fields
     if (!fromUser || !toUser || !amount) {
       return NextResponse.json(
-        { error: "Missing required fields: fromUser, toUser, amount" },
+        {
+          success: false,
+          error: "Missing required fields: fromUser, toUser, amount",
+        },
         { status: 400 }
       );
     }

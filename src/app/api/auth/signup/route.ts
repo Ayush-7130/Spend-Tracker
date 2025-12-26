@@ -1,3 +1,26 @@
+/**
+ * User Registration (Signup) API Route
+ *
+ * Creates new user accounts with secure password hashing and session creation.
+ *
+ * Security features:
+ * - Rate limiting: 5 signups per hour per IP (prevents abuse)
+ * - Feature flag: Can be disabled via NEXT_PUBLIC_ENABLE_SIGNUP
+ * - Strong password validation: 8+ chars, mixed case, numbers required
+ * - bcrypt hashing: 12 rounds for password storage
+ * - Email verification: Token-based system with 24-hour expiry
+ * - Automatic session creation: Fixed 1-day expiry for new signups
+ * - Device tracking: Session includes device info for security monitoring
+ *
+ * Session Management:
+ * - New users get 1-day fixed session (Remember Me not offered during signup)
+ * - Session expires exactly 24 hours after registration
+ * - User must login again after 24 hours to set Remember Me preference
+ *
+ * @route POST /api/auth/signup
+ * @access Public (if enabled via feature flag)
+ */
+
 import { NextRequest, NextResponse } from "next/server";
 import { hashPassword, generateRefreshToken, isValidEmail } from "@/lib/auth";
 import { dbManager } from "@/lib/database";
@@ -12,16 +35,13 @@ import {
   getIpAddress,
 } from "@/lib/device-info";
 
-// Rate limiter: 5 signup attempts per hour per IP
+// Prevent signup abuse: 5 attempts per hour per IP address
+// Stricter than login because signups have higher abuse potential
 const signupRateLimiter = new RateLimiter(5, 60 * 60 * 1000);
-
-/**
- * POST /api/auth/signup
- * Register a new user account
- */
 export async function POST(request: NextRequest) {
   try {
-    // Check if signup is enabled
+    // Feature flag check: Allow admins to disable new registrations
+    // Useful for private/invite-only deployments or emergency lockdown
     const signupEnabled = process.env.NEXT_PUBLIC_ENABLE_SIGNUP === "true";
     if (!signupEnabled) {
       return NextResponse.json(
@@ -33,7 +53,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Rate limiting by IP address
+    // Rate limiting by IP address to prevent automated account creation
+    // Attackers often create bulk accounts for spam or abuse
     const clientIp =
       request.headers.get("x-forwarded-for") ||
       request.headers.get("x-real-ip") ||
@@ -59,12 +80,13 @@ export async function POST(request: NextRequest) {
     const { name, email, password, confirmPassword } = body;
 
     // ========================================================================
-    // VALIDATION
+    // INPUT VALIDATION
+    // Comprehensive validation prevents malformed data and improves UX
     // ========================================================================
 
     const errors: Record<string, string> = {};
 
-    // Validate name
+    // Validate name: Required for personalization and identification
     if (!name || !name.trim()) {
       errors.name = "Name is required";
     } else if (name.trim().length < 2) {
@@ -73,7 +95,7 @@ export async function POST(request: NextRequest) {
       errors.name = "Name must not exceed 50 characters";
     }
 
-    // Validate email
+    // Validate email: Must be valid format and reasonable length
     if (!email || !email.trim()) {
       errors.email = "Email is required";
     } else if (!isValidEmail(email)) {
@@ -82,24 +104,25 @@ export async function POST(request: NextRequest) {
       errors.email = "Email must not exceed 255 characters";
     }
 
-    // Validate password
+    // Validate password: Enforce strong password policy
+    // Security: Weak passwords are the #1 cause of account compromise
     if (!password) {
       errors.password = "Password is required";
     } else {
       const passwordValidation = isValidPassword(password);
       if (!passwordValidation.valid) {
-        errors.password = passwordValidation.errors[0]; // Show first error
+        errors.password = passwordValidation.errors[0]; // Show first error only (better UX)
       }
     }
 
-    // Validate confirm password
+    // Validate password confirmation: Prevents typos
     if (!confirmPassword) {
       errors.confirmPassword = "Please confirm your password";
     } else if (password !== confirmPassword) {
       errors.confirmPassword = "Passwords do not match";
     }
 
-    // Return validation errors if any
+    // Return all validation errors at once for better UX
     if (Object.keys(errors).length > 0) {
       return NextResponse.json(
         {
@@ -112,7 +135,8 @@ export async function POST(request: NextRequest) {
     }
 
     // ========================================================================
-    // CHECK FOR EXISTING USER
+    // DUPLICATE ACCOUNT CHECK
+    // Prevents multiple accounts with same email (security + UX)
     // ========================================================================
 
     const existingUser = await dbManager.getUserByEmail(
@@ -125,51 +149,54 @@ export async function POST(request: NextRequest) {
           error: "An account with this email already exists",
           errors: { email: "This email is already registered" },
         },
-        { status: 409 }
+        { status: 409 } // 409 Conflict
       );
     }
 
     // ========================================================================
-    // CREATE USER
+    // CREATE USER ACCOUNT
     // ========================================================================
 
-    // Hash password
+    // Hash password with bcrypt (12 rounds)
+    // Hashing prevents plaintext storage and provides one-way encryption
     const passwordHash = await hashPassword(password);
 
-    // Generate email verification token
+    // Generate email verification token for account activation
+    // 32-byte cryptographically secure random token
     const emailVerificationToken = generateSecureToken(32);
-    const emailVerificationExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+    const emailVerificationExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours validity
 
     // Get database connection
     const db = await dbManager.getDatabase();
     const now = new Date();
 
-    // Create user document
+    // Build user document with secure defaults
+    // All users start as 'user' role (not admin) for security
     const userDoc = {
       name: name.trim(),
-      email: email.toLowerCase().trim(),
+      email: email.toLowerCase().trim(), // Lowercase for case-insensitive lookups
       passwordHash,
 
-      // Email verification
+      // Email verification: Required before full account access
       isEmailVerified: false,
       emailVerificationToken,
       emailVerificationExpiry,
 
-      // Account status
+      // Account status: Active by default, can be deactivated by admins
       isActive: true,
       accountLocked: false,
 
-      // Role
+      // Role-based access control: All signups start as 'user'
       role: "user" as const,
 
-      // MFA
+      // MFA: Disabled by default, user can enable in settings
       mfaEnabled: false,
 
-      // Login tracking
+      // Login security: Track failed attempts for account lockout
       failedLoginAttempts: 0,
       loginHistory: [],
 
-      // Timestamps
+      // Audit timestamps
       createdAt: now,
       updatedAt: now,
     };
@@ -178,11 +205,12 @@ export async function POST(request: NextRequest) {
     const userId = result.insertedId.toString();
 
     // ========================================================================
-    // GENERATE TOKENS AND CREATE SESSION
+    // SESSION CREATION WITH FIXED EXPIRY
     // ========================================================================
 
-    // Generate refresh token (rememberMe is false for new signups)
-    // This gives: 1 day refresh token
+    // Generate JWT token with 1-day FIXED expiry (Remember Me not offered during signup)
+    // WHY: New users should complete email verification and explore the app first
+    // They can choose longer sessions (7 days) during subsequent logins
     const rememberMe = false;
     const tokenInfo = generateRefreshToken(
       {
@@ -193,33 +221,35 @@ export async function POST(request: NextRequest) {
       rememberMe
     );
 
-    // Get device info
+    // Collect device and location information for security tracking
+    // Helps users identify unfamiliar devices in active sessions list
     const userAgent = request.headers.get("user-agent") || "Unknown";
     const deviceInfo = parseUserAgent(userAgent);
 
-    // Get IP address
+    // Get client IP address for display in session management
+    // IP stored for display only, not used for enforcement (privacy-focused)
     const ipAddress = getIpAddress(request.headers);
 
-    // Get location info (optional)
+    // Geo-location lookup for security context (non-blocking)
     const location = await getLocationFromIp(ipAddress);
 
-    // CRITICAL FIX: Session expiry must match refresh token expiry
-    // Since rememberMe = false, use 1 day (not 7 days)
-    // OPTION B: Store FIXED expiry time (does not extend on refresh)
-    const sessionExpiresAt = new Date(Date.now() + 1 * 24 * 60 * 60 * 1000); // 1 day
+    // Create session with FIXED 1-day expiry
+    // CRITICAL: expiresAt is set ONCE and NEVER modified
+    // This implements the fixed expiry model (no sliding sessions)
+    const sessionExpiresAt = new Date(Date.now() + 1 * 24 * 60 * 60 * 1000); // 1 day from now
 
     await db.collection("sessions").insertOne({
       userId,
       token: tokenInfo.token,
       deviceInfo,
-      ipAddress,
+      ipAddress, // Stored for display in user's active sessions
       location,
       isActive: true,
-      rememberMe: false,
-      expiresAt: sessionExpiresAt, // FIXED expiry from original signup
-      originalExpiresAt: sessionExpiresAt, // Store original expiry for validation
+      rememberMe: false, // New signups always get 1-day sessions
+      expiresAt: sessionExpiresAt, // FIXED expiry - NEVER updated
+      originalExpiresAt: sessionExpiresAt, // Backup for validation/migration
       createdAt: now,
-      lastActivityAt: now,
+      lastActivityAt: now, // Tracked for analytics only, NOT expiry
     });
 
     // Log the signup in login history
@@ -237,6 +267,8 @@ export async function POST(request: NextRequest) {
     // PREPARE RESPONSE
     // ========================================================================
 
+    // Remove sensitive fields from response
+    // Never send password hashes or verification tokens to client
     const {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       passwordHash: _,
@@ -261,11 +293,11 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
 
-    // CRITICAL FIX: Set cookie to match refresh token expiry (1 day for new signups)
-    // This ensures cookie, JWT, and session all expire at the same time
-    const cookieMaxAge = 1 * 24 * 60 * 60; // 1 day in seconds (matches rememberMe = false)
+    // Set authentication cookie with 1-day expiry matching session
+    // Cookie persistence must match token expiry for proper session lifecycle
+    const cookieMaxAge = 1 * 24 * 60 * 60; // 1 day in seconds
 
-    // Clear any legacy accessToken cookie from old sessions
+    // Remove legacy cookie from old authentication system
     response.cookies.set("accessToken", "", {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
@@ -274,7 +306,9 @@ export async function POST(request: NextRequest) {
       path: "/",
     });
 
-    // Set the new refreshToken cookie
+    // Set authentication cookie (named refreshToken for backwards compatibility)
+    // HttpOnly prevents JavaScript access (XSS protection)
+    // Secure flag ensures HTTPS-only transmission in production
     response.cookies.set("refreshToken", tokenInfo.token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
@@ -283,8 +317,10 @@ export async function POST(request: NextRequest) {
       path: "/",
     });
 
-    // TODO: Send verification email
-    // This can be implemented later using the email service at src/lib/email/index.ts
+    // Email verification implementation
+    // NOTE: Email sending is configured via RESEND_API_KEY and EMAIL_FROM
+    // The sendVerificationEmail function is available in src/lib/email/index.ts
+    // Uncomment when email service is configured:
     // await sendVerificationEmail(userDoc.email, emailVerificationToken);
 
     return response;

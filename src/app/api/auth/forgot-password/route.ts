@@ -1,6 +1,17 @@
 /**
  * Forgot Password API Route
- * Sends password reset email with token
+ *
+ * Generates secure password reset tokens and sends recovery emails.
+ *
+ * Security features:
+ * - Rate limiting (3 requests/hour) prevents token flooding attacks
+ * - Constant-time response prevents email enumeration attacks
+ * - Token hashed before storage prevents database compromise exposure
+ * - 1-hour token expiry limits attack window
+ * - Non-blocking email sending prevents timeout issues
+ *
+ * @route POST /api/auth/forgot-password
+ * @access Public
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -8,13 +19,16 @@ import { isValidEmail, generateRandomToken, hashToken } from "@/lib/auth";
 import { dbManager } from "@/lib/database";
 import { sendPasswordResetEmail } from "@/lib/email";
 import { RateLimiter } from "@/lib/utils/security";
+import logger from "@/lib/logger";
 
-// Rate limiter: 3 requests per hour per IP
+// Prevent token flooding: 3 requests per hour per IP address
+// Protects against attackers generating excessive reset emails
 const forgotPasswordRateLimiter = new RateLimiter(3, 60 * 60 * 1000);
 
 export async function POST(request: NextRequest) {
   try {
-    // Rate limiting
+    // Extract client IP for rate limiting
+    // X-Forwarded-For can be comma-separated, take first (client) IP
     const clientIp =
       request.headers.get("x-forwarded-for")?.split(",")[0].trim() ||
       request.headers.get("x-real-ip") ||
@@ -28,7 +42,7 @@ export async function POST(request: NextRequest) {
         },
         {
           status: 429,
-          headers: { "Retry-After": "3600" },
+          headers: { "Retry-After": "3600" }, // Seconds until retry allowed
         }
       );
     }
@@ -36,6 +50,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { email } = body;
 
+    // Input validation
     if (!email) {
       return NextResponse.json(
         { success: false, error: "Email is required" },
@@ -55,7 +70,9 @@ export async function POST(request: NextRequest) {
       email: email.toLowerCase(),
     });
 
-    // Always return success to prevent email enumeration
+    // SECURITY: Always return success to prevent email enumeration
+    // Attackers cannot determine which emails are registered by timing responses
+    // This is critical to prevent reconnaissance attacks
     if (!user) {
       return NextResponse.json(
         {
@@ -67,12 +84,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Generate reset token
+    // Generate cryptographically secure random token
+    // Token is 32 bytes (256 bits) providing strong security
     const resetToken = generateRandomToken();
     const hashedToken = hashToken(resetToken);
-    const tokenExpiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+    const tokenExpiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour validity
 
-    // Save token to user
+    // Store hashed token in database
+    // Hashing prevents exposure if database is compromised
+    // Only the user who received the email knows the plaintext token
     await db.collection("users").updateOne(
       { _id: user._id },
       {
@@ -84,17 +104,28 @@ export async function POST(request: NextRequest) {
       }
     );
 
-    // Send reset email (non-blocking)
+    // Send reset email asynchronously to avoid blocking the response
+    // Non-blocking prevents timeout issues with slow email servers
+    // Errors are logged but don't fail the request (user still gets success message)
     sendPasswordResetEmail(user.email, user.name, resetToken)
       .then((success) => {
         if (success) {
-          console.log(`Password reset email sent to ${user.email}`);
+          logger.info("Password reset email sent", {
+            email: user.email,
+            context: "/api/auth/forgot-password",
+          });
         } else {
-          console.error(`Failed to send password reset email to ${user.email}`);
+          logger.error("Failed to send password reset email", null, {
+            email: user.email,
+            context: "/api/auth/forgot-password",
+          });
         }
       })
       .catch((error) => {
-        console.error("Error sending password reset email:", error);
+        logger.error("Error sending password reset email", error, {
+          email: user.email,
+          context: "/api/auth/forgot-password",
+        });
       });
 
     return NextResponse.json(

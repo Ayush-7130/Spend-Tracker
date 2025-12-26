@@ -192,9 +192,9 @@ export default function TimelineAnalysis() {
         <div className="col-12">
           {/* Header */}
           <div className="mb-4">
-            <div className="d-flex justify-content-between align-items-start flex-wrap">
-              <div className="mb-2 mb-md-0">
-                <h1 className="h3 mb-1">
+            <div className="d-flex justify-content-between align-items-center mb-4">
+              <div className="mb-md-0">
+                <h1 className="h3 mb-0">
                   <i className="bi bi-graph-up me-2"></i>
                   Analytics
                 </h1>

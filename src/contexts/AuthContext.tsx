@@ -12,6 +12,7 @@ import React, {
 } from "react";
 import { AuthDataSource, User } from "@/datasource/auth";
 import { LoadingSpinner } from "@/shared/components";
+import logger from "@/lib/logger";
 
 // Authentication context interface
 interface AuthContextType {
@@ -145,7 +146,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await AuthDataSource.logout();
     } catch (error) {
       // Continue with logout even if API fails
-      console.error("[Logout] API call failed:", error);
+      logger.error("[Logout] API call failed", error, {
+        context: "AuthContext.logout",
+      });
     } finally {
       // Clear user state
       setUser(null);

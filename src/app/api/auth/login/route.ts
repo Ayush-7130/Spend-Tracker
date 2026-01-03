@@ -306,17 +306,24 @@ export async function POST(request: NextRequest) {
     // SECURITY: Old sessions from same device are invalidated
     // - Prevents session fixation attacks
     // - Ensures stolen tokens from old sessions don't work
+    //
+    // DEVICE IDENTIFICATION: Uses browser + OS + IP address to identify unique devices
+    // - Browser + OS alone is insufficient (e.g., Chrome on Windows could be laptop or desktop)
+    // - Adding IP address helps distinguish between different physical locations
+    // - Same device at different locations will create new session (acceptable trade-off)
     const sessionId = new ObjectId();
 
     // Invalidate previous sessions from the SAME device only
-    // Matches browser + OS to identify same device across logins
-    if (deviceInfo?.browser && deviceInfo?.os) {
+    // Matches browser + OS + IP address to more accurately identify the same device
+    // This prevents revoking sessions from different devices with the same browser/OS combo
+    if (deviceInfo?.browser && deviceInfo?.os && ipAddress) {
       await db.collection("sessions").updateMany(
         {
           userId,
           isActive: true,
           "deviceInfo.browser": deviceInfo.browser,
           "deviceInfo.os": deviceInfo.os,
+          ipAddress: ipAddress, // Added IP address to match specific device
         },
         {
           $set: {

@@ -37,6 +37,7 @@ export default function CategoriesPage() {
   const [operationLoading, setOperationLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -46,6 +47,24 @@ export default function CategoriesPage() {
   useEffect(() => {
     fetchCategories();
   }, []);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest(".dropdown")) {
+        setOpenDropdownId(null);
+      }
+    };
+
+    if (openDropdownId) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [openDropdownId]);
 
   const fetchCategories = async () => {
     try {
@@ -284,15 +303,27 @@ export default function CategoriesPage() {
                         <button
                           className="btn btn-sm btn-outline-secondary dropdown-toggle"
                           type="button"
-                          data-bs-toggle="dropdown"
+                          onClick={() =>
+                            setOpenDropdownId(
+                              openDropdownId === category._id
+                                ? null
+                                : category._id
+                            )
+                          }
+                          aria-expanded={openDropdownId === category._id}
                         >
                           <i className="bi bi-three-dots"></i>
                         </button>
-                        <ul className="dropdown-menu">
+                        <ul
+                          className={`dropdown-menu ${openDropdownId === category._id ? "show" : ""}`}
+                        >
                           <li>
                             <button
                               className="dropdown-item"
-                              onClick={() => handleEdit(category)}
+                              onClick={() => {
+                                handleEdit(category);
+                                setOpenDropdownId(null);
+                              }}
                             >
                               <i className="bi bi-pencil me-2"></i> Edit
                             </button>
@@ -300,7 +331,10 @@ export default function CategoriesPage() {
                           <li>
                             <button
                               className="dropdown-item text-danger"
-                              onClick={() => handleDelete(category._id)}
+                              onClick={() => {
+                                handleDelete(category._id);
+                                setOpenDropdownId(null);
+                              }}
                             >
                               <i className="bi bi-trash me-2"></i> Delete
                             </button>

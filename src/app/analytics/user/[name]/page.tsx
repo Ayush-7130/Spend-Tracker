@@ -686,7 +686,7 @@ export default function UserAnalyticsPage() {
 
           .h4,
           h1 {
-            font-size: 1rem !important;
+            font-size: 0.9rem !important;
           }
 
           .card-title {

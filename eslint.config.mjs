@@ -25,7 +25,7 @@ const eslintConfig = [
     rules: {
       // Security & Code Quality
       "@typescript-eslint/no-unused-vars": "error",
-      "@typescript-eslint/no-explicit-any": "off", // off instead of error for gradual migration
+      "@typescript-eslint/no-explicit-any": "off", // Disabled - gradual migration, enable when ready for strict typing
       "no-console": ["warn", { allow: ["warn", "error"] }], // Warn on console.log, allow warn/error temporarily
 
       // React Best Practices

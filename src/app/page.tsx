@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import MainLayout from "@/components/MainLayout";
 import Link from "next/link";
 import { useOperationNotification } from "@/contexts/NotificationContext";
@@ -79,6 +79,7 @@ export default function Home() {
   const { notifyAdded } = useOperationNotification();
   const { categories } = useCategories(); // Use categories context
   const confirmation = useConfirmation();
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(
     null
@@ -93,6 +94,7 @@ export default function Home() {
   const [selectedUser, setSelectedUser] = useState<"all" | "saket" | "ayush">(
     "all"
   );
+  const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
 
   // Dialog states
   const [showAddExpenseDialog, setShowAddExpenseDialog] = useState(false);
@@ -129,6 +131,26 @@ export default function Home() {
       fetchSettlementData();
     }
   }, [selectedUser]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsUserDropdownOpen(false);
+      }
+    };
+
+    if (isUserDropdownOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isUserDropdownOpen]);
 
   // Categories are now managed by CategoriesContext - no need to fetch here
 
@@ -486,21 +508,27 @@ export default function Home() {
             </h1>
             <div className="d-flex gap-2">
               {/* User Selector Dropdown */}
-              <div className="dropdown">
+              <div className="dropdown" ref={dropdownRef}>
                 <button
                   className="btn btn-primary dropdown-toggle"
                   type="button"
-                  data-bs-toggle="dropdown"
-                  aria-expanded="false"
+                  onClick={() => setIsUserDropdownOpen(!isUserDropdownOpen)}
+                  aria-expanded={isUserDropdownOpen}
                 >
                   <i className="bi bi-person me-1"></i>
                   {getUserDisplayName()}
                 </button>
-                <ul className="dropdown-menu py-2" style={{ zIndex: 1050 }}>
+                <ul
+                  className={`dropdown-menu py-2 ${isUserDropdownOpen ? "show" : ""}`}
+                  style={{ zIndex: 1050, top: "110%", right: "0%" }}
+                >
                   <li>
                     <button
                       className={`dropdown-item py-1 ${selectedUser === "all" ? "active" : ""}`}
-                      onClick={() => setSelectedUser("all")}
+                      onClick={() => {
+                        setSelectedUser("all");
+                        setIsUserDropdownOpen(false);
+                      }}
                     >
                       <i className="bi bi-people me-2"></i>
                       All Users
@@ -512,7 +540,10 @@ export default function Home() {
                   <li>
                     <button
                       className={`dropdown-item py-1 ${selectedUser === "saket" ? "active" : ""}`}
-                      onClick={() => setSelectedUser("saket")}
+                      onClick={() => {
+                        setSelectedUser("saket");
+                        setIsUserDropdownOpen(false);
+                      }}
                     >
                       <i className="bi bi-person me-2"></i>
                       Saket
@@ -521,7 +552,10 @@ export default function Home() {
                   <li>
                     <button
                       className={`dropdown-item py-1 ${selectedUser === "ayush" ? "active" : ""}`}
-                      onClick={() => setSelectedUser("ayush")}
+                      onClick={() => {
+                        setSelectedUser("ayush");
+                        setIsUserDropdownOpen(false);
+                      }}
                     >
                       <i className="bi bi-person me-2"></i>
                       Ayush

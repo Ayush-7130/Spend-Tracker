@@ -194,7 +194,7 @@ export default function TimelineAnalysis() {
           <div className="mb-4">
             <div className="d-flex justify-content-between align-items-center mb-4">
               <div className="mb-md-0">
-                <h1 className="h3 mb-0">
+                <h1 className="h4 mb-0">
                   <i className="bi bi-graph-up me-2"></i>
                   Analytics
                 </h1>
@@ -621,7 +621,7 @@ export default function TimelineAnalysis() {
 
           .h3,
           h1 {
-            font-size: 1rem !important;
+            font-size: 0.9rem !important;
           }
 
           .card-title {

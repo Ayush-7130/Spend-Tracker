@@ -505,8 +505,8 @@ const SettlementsPage: React.FC = () => {
 
             {/* Summary Statistics */}
             {balances && (
-              <div className="row mb-3">
-                <div className="col-md-3">
+              <div className="row mb-3 g-2 g-md-3">
+                <div className="col-6 col-md-3">
                   <div className="card border-danger">
                     <div className="card-body py-2 px-3 text-center">
                       <div className="d-flex align-items-center justify-content-center">
@@ -529,7 +529,7 @@ const SettlementsPage: React.FC = () => {
                     </div>
                   </div>
                 </div>
-                <div className="col-md-3">
+                <div className="col-6 col-md-3">
                   <div className="card border-success">
                     <div className="card-body py-2 px-3 text-center">
                       <div className="d-flex align-items-center justify-content-center">
@@ -552,7 +552,7 @@ const SettlementsPage: React.FC = () => {
                     </div>
                   </div>
                 </div>
-                <div className="col-md-3">
+                <div className="col-6 col-md-3">
                   <div className="card border-primary">
                     <div className="card-body py-2 px-3 text-center">
                       <div className="d-flex align-items-center justify-content-center">
@@ -569,7 +569,7 @@ const SettlementsPage: React.FC = () => {
                     </div>
                   </div>
                 </div>
-                <div className="col-md-3">
+                <div className="col-6 col-md-3">
                   <div className="card border-warning">
                     <div className="card-body py-2 px-3 text-center">
                       <div className="d-flex align-items-center justify-content-center">

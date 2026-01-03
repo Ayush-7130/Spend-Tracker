@@ -168,7 +168,7 @@ export function validateAndLogEnvironment(): void {
     );
   }
 
-  // Success message
+  // Success message - intentional console output for startup validation
   if (result.warnings.length === 0) {
     // eslint-disable-next-line no-console
     console.log("✅ Environment variables validated successfully\n");

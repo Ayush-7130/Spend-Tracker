@@ -222,7 +222,7 @@ export default function SessionsPage() {
         <div className="row">
           <div className="col-lg-10 col-xl-8 mx-auto">
             <div className="d-flex justify-content-between align-items-center mb-4">
-              <h1 className="h3 mb-0">Active Sessions</h1>
+              <h1 className="h4 h-md-3 mb-0">Active Sessions</h1>
               {sessions.length > 1 && (
                 <button
                   className="btn btn-outline-danger"
@@ -235,7 +235,10 @@ export default function SessionsPage() {
                 </button>
               )}
             </div>
-            <p className="mb-4" style={{ color: "var(--text-secondary)" }}>
+            <p
+              className="mb-4 small"
+              style={{ color: "var(--text-secondary)" }}
+            >
               Manage devices where you&apos;re currently logged in. If you see a
               session you don&apos;t recognize, revoke it immediately.
             </p>{" "}
@@ -253,7 +256,7 @@ export default function SessionsPage() {
                               {getDeviceIcon(session.deviceType)}
                             </span>
                             <div>
-                              <h5 className="mb-0">
+                              <h5 className="mb-0 fs-6 fs-md-5">
                                 {session.device}
                                 {session.isCurrent && (
                                   <span className="badge bg-primary ms-2">
@@ -261,7 +264,12 @@ export default function SessionsPage() {
                                   </span>
                                 )}
                               </h5>
-                              <small style={{ color: "var(--text-secondary)" }}>
+                              <small
+                                style={{
+                                  color: "var(--text-secondary)",
+                                  fontSize: "0.75rem",
+                                }}
+                              >
                                 {session.ipAddress}
                               </small>
                             </div>
@@ -269,7 +277,10 @@ export default function SessionsPage() {
 
                           <div
                             className="row g-2 small"
-                            style={{ color: "var(--text-secondary)" }}
+                            style={{
+                              color: "var(--text-secondary)",
+                              fontSize: "0.75rem",
+                            }}
                           >
                             {session.location && (
                               <div className="col-12">

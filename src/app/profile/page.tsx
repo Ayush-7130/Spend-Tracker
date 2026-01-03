@@ -248,11 +248,11 @@ export default function ProfilePage() {
         {/* Page Header */}
         <div className="row mb-4">
           <div className="col">
-            <h2 className="mb-2">
+            <h2 className="mb-2 h4 h-md-3">
               <i className="bi bi-person-circle me-2"></i>
               My Profile
             </h2>
-            <p style={{ color: "var(--text-secondary)" }}>
+            <p className="small" style={{ color: "var(--text-secondary)" }}>
               Manage your account settings and password
             </p>
           </div>
@@ -263,7 +263,7 @@ export default function ProfilePage() {
           <div className="col-lg-8">
             <div className="card shadow-sm">
               <div className="card-header">
-                <h5 className="mb-0">
+                <h5 className="mb-0 fs-6 fs-md-5">
                   <i className="bi bi-person me-2"></i>
                   Profile Information
                 </h5>
@@ -276,12 +276,15 @@ export default function ProfilePage() {
                       <div className="border rounded p-3 h-100">
                         <div
                           className="small mb-1"
-                          style={{ color: "var(--text-secondary)" }}
+                          style={{
+                            color: "var(--text-secondary)",
+                            fontSize: "0.75rem",
+                          }}
                         >
                           <i className="bi bi-calendar-plus me-2"></i>
                           Account Created
                         </div>
-                        <div className="fw-semibold">
+                        <div className="fw-semibold small">
                           {new Date(profile.createdAt).toLocaleDateString()}
                         </div>
                       </div>
@@ -290,12 +293,15 @@ export default function ProfilePage() {
                       <div className="border rounded p-3 h-100">
                         <div
                           className="small mb-1"
-                          style={{ color: "var(--text-secondary)" }}
+                          style={{
+                            color: "var(--text-secondary)",
+                            fontSize: "0.75rem",
+                          }}
                         >
                           <i className="bi bi-clock-history me-2"></i>
                           Last Updated
                         </div>
-                        <div className="fw-semibold">
+                        <div className="fw-semibold small">
                           {new Date(profile.updatedAt).toLocaleDateString()}
                         </div>
                       </div>
@@ -304,12 +310,15 @@ export default function ProfilePage() {
                       <div className="border rounded p-3 h-100">
                         <div
                           className="small mb-1"
-                          style={{ color: "var(--text-secondary)" }}
+                          style={{
+                            color: "var(--text-secondary)",
+                            fontSize: "0.75rem",
+                          }}
                         >
                           <i className="bi bi-shield-check me-2"></i>
                           Account Role
                         </div>
-                        <div className="fw-semibold text-capitalize">
+                        <div className="fw-semibold text-capitalize small">
                           {profile.role}
                         </div>
                       </div>
@@ -319,7 +328,7 @@ export default function ProfilePage() {
 
                 <form onSubmit={handleProfileSubmit}>
                   <div className="mb-3">
-                    <label htmlFor="name" className="form-label">
+                    <label htmlFor="name" className="form-label small">
                       <i className="bi bi-person me-2"></i>
                       Name
                     </label>
@@ -332,14 +341,14 @@ export default function ProfilePage() {
                       required
                     />
                     {profileErrors.name && (
-                      <div className="invalid-feedback">
+                      <div className="invalid-feedback small">
                         {profileErrors.name}
                       </div>
                     )}
                   </div>
 
                   <div className="mb-4">
-                    <label htmlFor="email" className="form-label">
+                    <label htmlFor="email" className="form-label small">
                       <i className="bi bi-envelope me-2"></i>
                       Email
                     </label>
@@ -352,7 +361,7 @@ export default function ProfilePage() {
                       required
                     />
                     {profileErrors.email && (
-                      <div className="invalid-feedback">
+                      <div className="invalid-feedback small">
                         {profileErrors.email}
                       </div>
                     )}
@@ -402,7 +411,7 @@ export default function ProfilePage() {
             {/* Change Password Card - Moved Above Security & Privacy */}
             <div className="card shadow-sm">
               <div className="card-header">
-                <h5 className="mb-0">
+                <h5 className="mb-0 fs-6">
                   <i className="bi bi-shield-lock me-2"></i>
                   Change Password
                 </h5>
@@ -410,7 +419,7 @@ export default function ProfilePage() {
               <div className="card-body">
                 <p
                   className="small mb-3"
-                  style={{ color: "var(--text-secondary)" }}
+                  style={{ color: "var(--text-secondary)", fontSize: "0.8rem" }}
                 >
                   Keep your account secure by updating your password
                 </p>
@@ -427,13 +436,13 @@ export default function ProfilePage() {
             {/* Security Actions */}
             <div className="card shadow-sm mb-3 mt-2">
               <div className="card-body">
-                <h6 className="card-title mb-2">
+                <h6 className="card-title mb-2 fs-6">
                   <i className="bi bi-shield-lock me-2"></i>
                   Security & Privacy
                 </h6>
                 <p
                   className="small mb-3"
-                  style={{ color: "var(--text-secondary)" }}
+                  style={{ color: "var(--text-secondary)", fontSize: "0.8rem" }}
                 >
                   Manage your account security settings.
                 </p>
@@ -442,7 +451,7 @@ export default function ProfilePage() {
                     href="/security/settings"
                     className="btn btn-outline-primary d-flex justify-content-between align-items-center"
                   >
-                    <span>
+                    <span className="small">
                       <i className="bi bi-gear me-2"></i>
                       Security Settings
                     </span>
@@ -452,7 +461,7 @@ export default function ProfilePage() {
                     href="/security/sessions"
                     className="btn btn-outline-primary d-flex justify-content-between align-items-center"
                   >
-                    <span>
+                    <span className="small">
                       <i className="bi bi-laptop me-2"></i>
                       Active Sessions
                     </span>
@@ -464,7 +473,7 @@ export default function ProfilePage() {
                     href="/security/login-history"
                     className="btn btn-outline-secondary d-flex justify-content-between align-items-center"
                   >
-                    <span>
+                    <span className="small">
                       <i className="bi bi-clock-history me-2"></i>
                       Login History
                     </span>
@@ -492,7 +501,7 @@ export default function ProfilePage() {
         >
           <div className="alert alert-warning mb-4 d-flex flex-column flex-sm-row align-items-start">
             <i className="bi bi-shield-exclamation me-2 mb-2 mb-sm-0 flex-shrink-0"></i>
-            <div className="small">
+            <div className="small" style={{ fontSize: "0.8rem" }}>
               <strong className="d-block mb-2">Password Requirements:</strong>
               <ul className="mb-0 ps-3">
                 <li>At least 8 characters long</li>
@@ -505,7 +514,7 @@ export default function ProfilePage() {
 
           <form onSubmit={handlePasswordSubmit}>
             <div className="mb-3">
-              <label htmlFor="currentPassword" className="form-label">
+              <label htmlFor="currentPassword" className="form-label small">
                 <i className="bi bi-lock me-2"></i>
                 Current Password
               </label>
@@ -518,14 +527,14 @@ export default function ProfilePage() {
                 required
               />
               {passwordErrors.currentPassword && (
-                <div className="invalid-feedback">
+                <div className="invalid-feedback small">
                   {passwordErrors.currentPassword}
                 </div>
               )}
             </div>
 
             <div className="mb-3">
-              <label htmlFor="newPassword" className="form-label">
+              <label htmlFor="newPassword" className="form-label small">
                 <i className="bi bi-shield-lock me-2"></i>
                 New Password
               </label>
@@ -538,14 +547,14 @@ export default function ProfilePage() {
                 required
               />
               {passwordErrors.newPassword && (
-                <div className="invalid-feedback">
+                <div className="invalid-feedback small">
                   {passwordErrors.newPassword}
                 </div>
               )}
             </div>
 
             <div className="mb-4">
-              <label htmlFor="confirmPassword" className="form-label">
+              <label htmlFor="confirmPassword" className="form-label small">
                 <i className="bi bi-shield-check me-2"></i>
                 Confirm New Password
               </label>
@@ -558,7 +567,7 @@ export default function ProfilePage() {
                 required
               />
               {passwordErrors.confirmPassword && (
-                <div className="invalid-feedback">
+                <div className="invalid-feedback small">
                   {passwordErrors.confirmPassword}
                 </div>
               )}

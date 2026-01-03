@@ -211,13 +211,15 @@ export default function SecuritySettingsPage() {
       <div className="container py-5">
         <div className="row">
           <div className="col-lg-10 col-xl-8 mx-auto">
-            <h1 className="h3 mb-4">Security Settings</h1>
+            <h1 className="h4 h-md-3 mb-4">Security Settings</h1>
 
             {/* MFA Section */}
             <div className="card mb-4">
               <div className="card-body">
-                <h5 className="card-title">Two-Factor Authentication (2FA)</h5>
-                <p style={{ color: "var(--text-secondary)" }}>
+                <h5 className="card-title fs-6 fs-md-5">
+                  Two-Factor Authentication (2FA)
+                </h5>
+                <p className="small" style={{ color: "var(--text-secondary)" }}>
                   Add an extra layer of security to your account by requiring a
                   code from your authenticator app when signing in.
                 </p>
@@ -241,7 +243,7 @@ export default function SecuritySettingsPage() {
                     </div>
 
                     <div className="mb-3">
-                      <label className="form-label">Password</label>
+                      <label className="form-label small">Password</label>
                       <input
                         type="password"
                         className="form-control"
@@ -271,10 +273,13 @@ export default function SecuritySettingsPage() {
                   </button>
                 ) : setupStep === "qr" && mfaSetup ? (
                   <div>
-                    <h6>Step 1: Scan QR Code</h6>
+                    <h6 className="fs-6 small">Step 1: Scan QR Code</h6>
                     <p
                       className="small"
-                      style={{ color: "var(--text-secondary)" }}
+                      style={{
+                        color: "var(--text-secondary)",
+                        fontSize: "0.8rem",
+                      }}
                     >
                       Scan this QR code with your authenticator app (Google
                       Authenticator, Authy, etc.)
@@ -292,13 +297,18 @@ export default function SecuritySettingsPage() {
 
                     <p
                       className="small"
-                      style={{ color: "var(--text-secondary)" }}
+                      style={{
+                        color: "var(--text-secondary)",
+                        fontSize: "0.75rem",
+                      }}
                     >
                       Or enter this code manually:{" "}
                       <code>{mfaSetup.secret}</code>
                     </p>
 
-                    <h6 className="mt-4">Step 2: Enter Verification Code</h6>
+                    <h6 className="mt-4 fs-6 small">
+                      Step 2: Enter Verification Code
+                    </h6>
                     <div className="mb-3">
                       <input
                         type="text"
@@ -334,8 +344,8 @@ export default function SecuritySettingsPage() {
                   </div>
                 ) : setupStep === "backup" && mfaSetup ? (
                   <div>
-                    <h6>Backup Codes</h6>
-                    <div className="alert alert-warning">
+                    <h6 className="fs-6">Backup Codes</h6>
+                    <div className="alert alert-warning small">
                       <i className="bi bi-exclamation-triangle me-2"></i>
                       Save these backup codes in a safe place. You can use them
                       to access your account if you lose your device.
@@ -346,7 +356,7 @@ export default function SecuritySettingsPage() {
                         <div className="row g-2">
                           {mfaSetup.backupCodes.map((code, index) => (
                             <div key={index} className="col-6">
-                              <code className="d-block p-2 bg-white rounded">
+                              <code className="d-block p-2 bg-white rounded small">
                                 {code}
                               </code>
                             </div>
@@ -375,7 +385,9 @@ export default function SecuritySettingsPage() {
             <div className="card mb-4">
               <div className="card-body">
                 <div className="d-flex justify-content-between align-items-center mb-3">
-                  <h5 className="card-title mb-0">Recent Login Activity</h5>
+                  <h5 className="card-title mb-0 fs-6 fs-md-5">
+                    Recent Login Activity
+                  </h5>
                   <a
                     href="/security/login-history"
                     className="btn btn-sm btn-outline-primary"
@@ -386,7 +398,7 @@ export default function SecuritySettingsPage() {
 
                 {loginHistory.length === 0 ? (
                   <p
-                    className="text-center py-3"
+                    className="text-center py-3 small"
                     style={{ color: "var(--text-secondary)" }}
                   >
                     No login history available
@@ -426,21 +438,30 @@ export default function SecuritySettingsPage() {
                             </div>
                             <div
                               className="small"
-                              style={{ color: "var(--text-secondary)" }}
+                              style={{
+                                color: "var(--text-secondary)",
+                                fontSize: "0.8rem",
+                              }}
                             >
                               <i className="bi bi-laptop me-1"></i>
                               {item.device}
                             </div>
                             <div
                               className="small"
-                              style={{ color: "var(--text-secondary)" }}
+                              style={{
+                                color: "var(--text-secondary)",
+                                fontSize: "0.8rem",
+                              }}
                             >
                               <i className="bi bi-browser-chrome me-1"></i>
                               {item.browser} on {item.os}
                             </div>
                             <div
                               className="small"
-                              style={{ color: "var(--text-secondary)" }}
+                              style={{
+                                color: "var(--text-secondary)",
+                                fontSize: "0.8rem",
+                              }}
                             >
                               <i className="bi bi-geo-alt me-1"></i>
                               {item.location || item.ipAddress}
@@ -464,7 +485,7 @@ export default function SecuritySettingsPage() {
             {/* Quick Links */}
             <div className="card">
               <div className="card-body">
-                <h5 className="card-title">Additional Security</h5>
+                <h5 className="card-title fs-6 fs-md-5">Additional Security</h5>
                 <div className="d-grid gap-2">
                   <a
                     href="/security/sessions"
